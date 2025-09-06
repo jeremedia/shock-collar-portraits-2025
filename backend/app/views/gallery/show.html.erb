@@ -69,18 +69,23 @@
       <% @photos.each_with_index do |photo, index| %>
         <div data-image-viewer-target="image" 
              data-index="<%= index %>"
+             data-face-data="<%= photo.face_data.to_json if photo.face_data.present? %>"
              class="<%= index == 0 ? '' : 'hidden' %> w-full h-full flex items-center justify-center image-container">
-          <% if photo.image.attached? %>
-            <%= image_tag rails_blob_url(photo.image.variant(:large)), 
-                          alt: "Photo #{index + 1}",
-                          class: "max-w-full max-h-full object-contain cursor-pointer",
-                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
-          <% else %>
-            <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
-                          alt: "Photo #{index + 1}",
-                          class: "max-w-full max-h-full object-contain cursor-pointer",
-                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
-          <% end %>
+          <div class="relative inline-block" data-image-viewer-target="imageWrapper">
+            <% if photo.image.attached? %>
+              <%= image_tag rails_blob_url(photo.image.variant(:large)), 
+                            alt: "Photo #{index + 1}",
+                            class: "max-w-full max-h-full object-contain cursor-pointer",
+                            data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+            <% else %>
+              <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
+                            alt: "Photo #{index + 1}",
+                            class: "max-w-full max-h-full object-contain cursor-pointer",
+                            data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+            <% end %>
+            <!-- Face Rectangle Overlay -->
+            <div class="absolute inset-0 pointer-events-none hidden" data-image-viewer-target="faceOverlay"></div>
+          </div>
         </div>
       <% end %>
     </div>
@@ -102,8 +107,19 @@
   <!-- Fixed Footer with Thumbnails -->
   <footer class="flex-shrink-0 bg-black/90 backdrop-blur-sm border-t border-gray-700/50">
     <div class="px-6 py-2">
-      <!-- Action Buttons (centered above thumbnails) -->
-      <div class="flex justify-center gap-3 mb-2">
+      <!-- Action Buttons and Controls (centered above thumbnails) -->
+      <div class="flex justify-between items-center mb-2">
+        <!-- Face Rectangle Toggle -->
+        <label class="flex items-center gap-2 text-sm text-yellow-500 cursor-pointer select-none">
+          <input type="checkbox" 
+                 data-action="change->image-viewer#toggleFaceRectangles"
+                 data-image-viewer-target="faceRectangleToggle"
+                 class="w-4 h-4 appearance-none bg-black/50 border-2 border-yellow-500 rounded checked:bg-yellow-500 focus:ring-yellow-500 focus:ring-offset-0">
+          <span>Show Face Rectangle</span>
+        </label>
+        
+        <!-- Action Buttons -->
+        <div class="flex justify-center gap-3">
         <%= form_with url: update_hero_gallery_path(@session.burst_id), 
                       data: { 
                         turbo_frame: "_top",
@@ -145,6 +161,10 @@
                 class="px-3 py-1 bg-orange-600/90 text-white font-semibold text-sm rounded-full hover:bg-orange-500 transition-colors cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
           ✂️ Split Session Here
         </button>
+        </div>
+        
+        <!-- Spacer for layout balance -->
+        <div class="w-48"></div>
       </div>
       
       <!-- Horizontal Thumbnail Strip -->

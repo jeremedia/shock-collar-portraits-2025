@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton"]
+  static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton", "imageWrapper", "faceOverlay", "faceRectangleToggle"]
   static values = { total: Number, sessionId: String, showRejected: Boolean, prevSession: String, nextSession: String }
   
   connect() {
@@ -22,6 +22,12 @@ export default class extends Controller {
       }
     } else {
       this.currentIndex = 0
+    }
+    
+    // Load face rectangle preference
+    if (this.hasFaceRectangleToggleTarget) {
+      const showRectangles = localStorage.getItem('showFaceRectangles') === 'true'
+      this.faceRectangleToggleTarget.checked = showRectangles
     }
     
     this.setupImageLoading()
@@ -269,6 +275,97 @@ export default class extends Controller {
     const activeThumbnail = this.thumbnailTargets[this.currentIndex]
     if (activeThumbnail) {
       activeThumbnail.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" })
+    }
+    
+    // Update face rectangles for current image
+    this.updateFaceRectangles()
+  }
+  
+  toggleFaceRectangles(event) {
+    const showRectangles = event.target.checked
+    localStorage.setItem('showFaceRectangles', showRectangles)
+    this.updateFaceRectangles()
+  }
+  
+  updateFaceRectangles() {
+    const showRectangles = this.hasFaceRectangleToggleTarget ? 
+                          this.faceRectangleToggleTarget.checked : 
+                          localStorage.getItem('showFaceRectangles') === 'true'
+    
+    const currentImage = this.imageTargets[this.currentIndex]
+    if (!currentImage) return
+    
+    const faceDataStr = currentImage.dataset.faceData
+    const overlay = this.faceOverlayTargets[this.currentIndex]
+    
+    if (!overlay) return
+    
+    // Clear existing rectangles
+    overlay.innerHTML = ''
+    
+    if (!showRectangles || !faceDataStr) {
+      overlay.classList.add('hidden')
+      return
+    }
+    
+    try {
+      const faceData = JSON.parse(faceDataStr)
+      if (!faceData.faces || faceData.faces.length === 0) {
+        overlay.classList.add('hidden')
+        return
+      }
+      
+      overlay.classList.remove('hidden')
+      
+      // Draw rectangles for each face
+      faceData.faces.forEach(face => {
+        const rect = document.createElement('div')
+        rect.style.position = 'absolute'
+        
+        // Check if coordinates are normalized (0-1) or pixel values
+        if (faceData.image_width && faceData.image_height) {
+          // Convert pixel coordinates to percentages
+          const xPercent = (face.x / faceData.image_width) * 100
+          const yPercent = (face.y / faceData.image_height) * 100
+          const widthPercent = (face.width / faceData.image_width) * 100
+          const heightPercent = (face.height / faceData.image_height) * 100
+          
+          rect.style.left = `${xPercent}%`
+          rect.style.top = `${yPercent}%`
+          rect.style.width = `${widthPercent}%`
+          rect.style.height = `${heightPercent}%`
+        } else {
+          // Assume normalized coordinates
+          rect.style.left = `${face.x * 100}%`
+          rect.style.top = `${face.y * 100}%`
+          rect.style.width = `${face.width * 100}%`
+          rect.style.height = `${face.height * 100}%`
+        }
+        
+        rect.style.border = '3px solid #fbbf24' // Yellow border
+        rect.style.borderRadius = '4px'
+        rect.style.pointerEvents = 'none'
+        
+        // Add confidence label if available
+        if (face.confidence) {
+          const label = document.createElement('div')
+          label.style.position = 'absolute'
+          label.style.bottom = '-20px'
+          label.style.left = '0'
+          label.style.fontSize = '12px'
+          label.style.color = '#fbbf24'
+          label.style.backgroundColor = 'rgba(0,0,0,0.7)'
+          label.style.padding = '2px 4px'
+          label.style.borderRadius = '2px'
+          label.textContent = `${Math.round(face.confidence * 100)}%`
+          rect.appendChild(label)
+        }
+        
+        overlay.appendChild(rect)
+      })
+    } catch (e) {
+      console.error('Error parsing face data:', e)
+      overlay.classList.add('hidden')
     }
   }
   
