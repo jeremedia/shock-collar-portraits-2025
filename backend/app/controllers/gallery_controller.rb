@@ -13,7 +13,19 @@ class GalleryController < ApplicationController
   
   def show
     @session = PhotoSession.includes(:photos, :sittings).find_by!(burst_id: params[:id])
-    @photos = @session.photos.order(:position)
+    
+    # Handle rejected photo filtering
+    @show_rejected = params[:show_rejected] == 'true'
+    
+    if @show_rejected
+      @photos = @session.photos.order(:position)
+    else
+      @photos = @session.photos.accepted.order(:position)
+    end
+    
+    # Get rejected photo count for toggle button
+    @rejected_count = @session.photos.rejected.count
+    
     @sitting = @session.sittings.first
     @hero_photo = @sitting&.hero_photo || @photos[@photos.length / 2]
     
@@ -51,6 +63,50 @@ class GalleryController < ApplicationController
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_to gallery_path(@session.burst_id) }
+    end
+  end
+  
+  def reject_photo
+    @session = PhotoSession.find_by!(burst_id: params[:id])
+    @photo = @session.photos.find(params[:photo_id])
+    
+    @photo.update!(rejected: !@photo.rejected)
+    
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_to gallery_path(@session.burst_id, show_rejected: params[:show_rejected]) }
+    end
+  end
+  
+  def split_session
+    @session = PhotoSession.find_by!(burst_id: params[:id])
+    @photo = @session.photos.find(params[:photo_id])
+    
+    new_session = @session.split_at_photo(@photo.id)
+    
+    if new_session
+      respond_to do |format|
+        format.json { render json: { success: true, new_session_id: new_session.burst_id } }
+        format.html { redirect_to gallery_path(new_session.burst_id), notice: "Session split successfully" }
+      end
+    else
+      respond_to do |format|
+        format.json { 
+          render json: { 
+            success: false, 
+            error: @session.errors.full_messages.join(", "),
+            errors: @session.errors.full_messages 
+          }, status: :unprocessable_entity 
+        }
+        format.html { 
+          redirect_to gallery_path(@session.burst_id), alert: @session.errors.full_messages.join(", ")
+        }
+      end
+    end
+  rescue ActiveRecord::RecordNotFound
+    respond_to do |format|
+      format.json { render json: { success: false, error: "Photo not found", errors: ["Photo not found"] }, status: :not_found }
+      format.html { redirect_to gallery_path(@session.burst_id), alert: "Photo not found" }
     end
   end
 end

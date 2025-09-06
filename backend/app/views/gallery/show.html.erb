@@ -2,141 +2,211 @@
   session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
 %>
 
-<div class="min-h-screen bg-black text-white" data-controller="image-viewer" 
+<!-- Lightroom-style Photo Viewer: Full viewport, no vertical scrolling -->
+<div class="h-screen bg-black text-white flex flex-col overflow-hidden relative" data-controller="image-viewer" 
      data-image-viewer-total-value="<%= @photos.length %>"
-     data-image-viewer-session-id-value="<%= @session.burst_id %>">
+     data-image-viewer-session-id-value="<%= @session.burst_id %>"
+     data-image-viewer-show-rejected-value="<%= @show_rejected %>"
+     data-image-viewer-prev-session-value="<%= @prev_session ? gallery_path(@prev_session) : '' %>"
+     data-image-viewer-next-session-value="<%= @next_session ? gallery_path(@next_session) : '' %>">
   
-  <!-- Header -->
-  <header class="sticky top-0 z-40 bg-gradient-to-b from-black to-black/80 backdrop-blur-sm border-b-2 border-red-700">
-    <div class="container mx-auto px-4">
-      <div class="flex items-center justify-between py-4">
-        <%= link_to "← Gallery", root_path, class: "text-yellow-500 hover:text-yellow-400" %>
-        <h2 class="text-2xl font-bold text-yellow-500">Session <%= session_number %></h2>
-        <div class="flex gap-2">
-          <% if @prev_session %>
-            <%= link_to "← Prev", gallery_path(@prev_session), 
-                class: "px-4 py-2 bg-red-900/50 text-white rounded hover:bg-red-800" %>
+  <!-- Fixed Header -->
+  <header class="flex-shrink-0 bg-black/90 backdrop-blur-sm border-b border-red-700/50">
+    <div class="px-6 py-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <%= link_to "← Gallery", root_path, class: "text-yellow-500 hover:text-yellow-400 font-medium" %>
+          <div class="text-gray-400">|</div>
+          <h2 class="text-lg font-bold text-yellow-500">Session <%= session_number %></h2>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <!-- Session Navigation -->
+          <div class="flex gap-1">
+            <% if @prev_session %>
+              <%= link_to "← Prev", gallery_path(@prev_session), 
+                  class: "px-3 py-1 text-sm bg-red-900/30 text-white rounded hover:bg-red-800/50 transition-colors" %>
+            <% end %>
+            <% if @next_session %>
+              <%= link_to "Next →", gallery_path(@next_session), 
+                  class: "px-3 py-1 text-sm bg-red-900/30 text-white rounded hover:bg-red-800/50 transition-colors" %>
+            <% end %>
+          </div>
+          
+          <!-- Toggle Rejected Photos -->
+          <% if @rejected_count > 0 %>
+            <%= link_to gallery_path(@session.burst_id, show_rejected: !@show_rejected), 
+                class: "px-3 py-1 text-sm bg-gray-700/50 text-gray-300 rounded hover:bg-gray-600/50 transition-colors" do %>
+              <%= @show_rejected ? "Hide" : "Show" %> Rejected (<%= @rejected_count %>)
+            <% end %>
           <% end %>
-          <% if @next_session %>
-            <%= link_to "Next →", gallery_path(@next_session), 
-                class: "px-4 py-2 bg-red-900/50 text-white rounded hover:bg-red-800" %>
+          
+          <!-- Image Counter -->
+          <div class="text-sm text-gray-400" data-image-viewer-target="counter">1 / <%= @photos.length %></div>
+          
+          <!-- Email Status -->
+          <% if @sitting&.email.present? %>
+            <div class="text-xs text-green-500 flex items-center gap-1">
+              <span>✓</span>
+              <button data-action="click->image-viewer#showEmailForm" 
+                      class="hover:text-green-400 underline"><%= @sitting.email %></button>
+            </div>
+          <% else %>
+            <button data-action="click->image-viewer#showEmailForm" 
+                    class="text-xs px-2 py-1 bg-yellow-600 text-black font-medium rounded hover:bg-yellow-500 transition-colors">
+              📧 Add Email
+            </button>
           <% end %>
         </div>
       </div>
     </div>
   </header>
   
-  <!-- Main Image Viewer -->
-  <div class="container mx-auto px-4 py-8">
-    <div class="max-w-6xl mx-auto">
-      <!-- Main Image -->
-      <div class="relative bg-gray-900 rounded-lg overflow-hidden mb-4">
-        <div class="aspect-[4/3] flex items-center justify-center">
-          <% @photos.each_with_index do |photo, index| %>
-            <div data-image-viewer-target="image" 
-                 data-index="<%= index %>"
-                 class="<%= index == 0 ? '' : 'hidden' %> w-full h-full">
-              <% if photo.image.attached? %>
-                <%= image_tag rails_blob_url(photo.image.variant(:large)), 
-                              alt: "Photo #{index + 1}",
-                              class: "w-full h-full object-contain cursor-pointer",
-                              data: { action: "click->image-viewer#next", photo_id: photo.id } %>
-              <% else %>
-                <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
-                              alt: "Photo #{index + 1}",
-                              class: "w-full h-full object-contain cursor-pointer",
-                              data: { action: "click->image-viewer#next", photo_id: photo.id } %>
-              <% end %>
-            </div>
+  <!-- Flexible Photo Viewport -->
+  <main class="flex-grow-1 relative flex items-center justify-center bg-black overflow-hidden">
+    <!-- Main Image Container -->
+    <div class="absolute inset-0 flex items-center justify-center">
+      <% @photos.each_with_index do |photo, index| %>
+        <div data-image-viewer-target="image" 
+             data-index="<%= index %>"
+             class="<%= index == 0 ? '' : 'hidden' %> w-full h-full flex items-center justify-center image-container">
+          <% if photo.image.attached? %>
+            <%= image_tag rails_blob_url(photo.image.variant(:large)), 
+                          alt: "Photo #{index + 1}",
+                          class: "max-w-full max-h-full object-contain cursor-pointer",
+                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+          <% else %>
+            <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
+                          alt: "Photo #{index + 1}",
+                          class: "max-w-full max-h-full object-contain cursor-pointer",
+                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
           <% end %>
         </div>
-        
-        <!-- Navigation Controls -->
-        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-black/70 px-6 py-3 rounded-full">
-          <button data-action="click->image-viewer#previous" 
-                  class="text-white hover:text-yellow-500 text-2xl">←</button>
-          <span class="text-white" data-image-viewer-target="counter">1 / <%= @photos.length %></span>
-          <button data-action="click->image-viewer#next" 
-                  class="text-white hover:text-yellow-500 text-2xl">→</button>
-        </div>
-        
-        <!-- Hero Selection Button -->
+      <% end %>
+    </div>
+    
+    <!-- Left Navigation -->
+    <button data-action="click->image-viewer#previousSession" 
+            class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full flex items-center justify-center text-white hover:text-yellow-500 text-xl transition-colors z-10">
+      ←
+    </button>
+    
+    <!-- Right Navigation -->
+    <button data-action="click->image-viewer#nextSession" 
+            class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full flex items-center justify-center text-white hover:text-yellow-500 text-xl transition-colors z-10">
+      →
+    </button>
+    
+  </main>
+  
+  <!-- Fixed Footer with Thumbnails -->
+  <footer class="flex-shrink-0 bg-black/90 backdrop-blur-sm border-t border-gray-700/50">
+    <div class="px-6 py-2">
+      <!-- Action Buttons (centered above thumbnails) -->
+      <div class="flex justify-center gap-3 mb-2">
         <%= form_with url: update_hero_gallery_path(@session.burst_id), 
-                      data: { turbo_frame: "_top" },
-                      class: "absolute top-4 right-4" do |f| %>
+                      data: { 
+                        turbo_frame: "_top",
+                        action: "turbo:submit-end->image-viewer#heroSelected"
+                      },
+                      local: true do |f| %>
           <%= hidden_field_tag :photo_id, @photos.first&.id, data: { image_viewer_target: "heroInput" } %>
+          <%= hidden_field_tag :hero_photo_id, @hero_photo&.id, data: { image_viewer_target: "heroPhotoId" } %>
           <%= f.submit "☆ Select as Hero", 
-                       data: { image_viewer_target: "heroButton" },
-                       class: "px-4 py-2 bg-yellow-600/80 text-black font-bold rounded hover:bg-yellow-500 cursor-pointer" %>
+                       data: { 
+                         image_viewer_target: "heroButton",
+                         hero_text: "★ Selected as Hero",
+                         select_text: "☆ Select as Hero",
+                         action: "click->image-viewer#heroSelected"
+                       },
+                       class: "px-3 py-1 bg-yellow-600/90 text-black font-semibold text-sm rounded-full hover:bg-yellow-500 transition-colors cursor-pointer shadow-lg" %>
         <% end %>
+        
+        <%= form_with url: reject_photo_gallery_path(@session.burst_id), 
+                      method: :patch,
+                      data: { 
+                        turbo_frame: "_top",
+                        action: "turbo:submit-end->image-viewer#photoRejected"
+                      },
+                      local: true do |f| %>
+          <%= hidden_field_tag :photo_id, @photos.first&.id, data: { image_viewer_target: "rejectInput" } %>
+          <%= hidden_field_tag :show_rejected, @show_rejected %>
+          <%= f.submit "🗑️ Reject", 
+                       data: { 
+                         image_viewer_target: "rejectButton",
+                         rejected_text: "✅ Rejected",
+                         reject_text: "🗑️ Reject"
+                       },
+                       class: "px-3 py-1 bg-gray-600/90 text-white font-semibold text-sm rounded-full hover:bg-gray-500 transition-colors cursor-pointer shadow-lg" %>
+        <% end %>
+        
+        <button data-action="click->image-viewer#confirmSplit"
+                data-image-viewer-target="splitButton"
+                class="px-3 py-1 bg-orange-600/90 text-white font-semibold text-sm rounded-full hover:bg-orange-500 transition-colors cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+          ✂️ Split Session Here
+        </button>
       </div>
       
-      <!-- Email Collection -->
-      <div class="bg-gray-900 rounded-lg p-6 mb-4">
-        <% if @sitting&.email.present? %>
-          <div class="flex items-center justify-between">
-            <div class="text-green-500">
-              ✓ <%= @sitting.name || 'No name' %> - <%= @sitting.email %>
-            </div>
-            <button data-action="click->image-viewer#showEmailForm" 
-                    class="text-yellow-500 hover:text-yellow-400">Edit</button>
-          </div>
-        <% else %>
-          <button data-action="click->image-viewer#showEmailForm" 
-                  class="px-4 py-2 bg-yellow-600 text-black font-bold rounded hover:bg-yellow-500">
-            📧 Add Email
+      <!-- Horizontal Thumbnail Strip -->
+      <div class="flex gap-2 overflow-x-auto scrollbar-hide">
+        <% @photos.each_with_index do |photo, index| %>
+          <button data-action="click->image-viewer#goToImage"
+                  data-index="<%= index %>"
+                  data-photo-id="<%= photo.id %>"
+                  data-rejected="<%= photo.rejected %>"
+                  data-image-viewer-target="thumbnail"
+                  class="flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 image-container <%= 
+                    if @hero_photo&.id == photo.id
+                      'border-yellow-500 border-4'
+                    elsif index == 0 
+                      'border-red-500' 
+                    else 
+                      'border-gray-600' 
+                    end 
+                  %> hover:border-red-400 transition-colors">
+            <% if photo.image.attached? %>
+              <%= image_tag rails_blob_url(photo.image.variant(:thumb)), 
+                            alt: "Thumbnail #{index + 1}",
+                            loading: "lazy",
+                            class: "w-full h-full object-cover" %>
+            <% else %>
+              <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', ''), variant: 'thumb'), 
+                            alt: "Thumbnail #{index + 1}",
+                            loading: "lazy",
+                            class: "w-full h-full object-cover" %>
+            <% end %>
           </button>
         <% end %>
-        
-        <div data-image-viewer-target="emailForm" class="hidden mt-4">
-          <%= form_with url: save_email_gallery_path(@session.burst_id), 
-                        data: { turbo_frame: "_top" } do |f| %>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <%= f.text_field :name, 
-                               placeholder: "Name (optional)",
-                               value: @sitting&.name,
-                               class: "px-4 py-2 bg-black border border-gray-700 rounded text-white" %>
-              <%= f.email_field :email, 
-                                placeholder: "Email address",
-                                value: @sitting&.email,
-                                required: true,
-                                class: "px-4 py-2 bg-black border border-gray-700 rounded text-white" %>
-            </div>
-            <div class="mt-4 flex gap-2">
-              <%= f.submit "Save", class: "px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 cursor-pointer" %>
-              <button type="button" 
-                      data-action="click->image-viewer#hideEmailForm"
-                      class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">
-                Cancel
-              </button>
-            </div>
-          <% end %>
-        </div>
       </div>
-      
-      <!-- Thumbnails -->
-      <div class="bg-gray-900 rounded-lg p-4">
-        <div class="flex gap-2 overflow-x-auto pb-2">
-          <% @photos.each_with_index do |photo, index| %>
-            <button data-action="click->image-viewer#goToImage"
-                    data-index="<%= index %>"
-                    data-image-viewer-target="thumbnail"
-                    class="flex-shrink-0 w-20 h-20 rounded overflow-hidden border-2 <%= index == 0 ? 'border-yellow-500' : 'border-gray-700' %> hover:border-yellow-400 transition-colors">
-              <% if photo.image.attached? %>
-                <%= image_tag rails_blob_url(photo.image.variant(:thumb)), 
-                              alt: "Thumbnail #{index + 1}",
-                              loading: "lazy",
-                              class: "w-full h-full object-cover" %>
-              <% else %>
-                <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', ''), variant: 'thumb'), 
-                              alt: "Thumbnail #{index + 1}",
-                              loading: "lazy",
-                              class: "w-full h-full object-cover" %>
-              <% end %>
-            </button>
-          <% end %>
+    </div>
+  </footer>
+  
+  <!-- Email Collection Overlay -->
+  <div data-image-viewer-target="emailForm" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-96 max-w-sm mx-4">
+      <h3 class="text-lg font-semibold text-white mb-4">Contact Information</h3>
+      <%= form_with url: save_email_gallery_path(@session.burst_id), 
+                    data: { turbo_frame: "_top" } do |f| %>
+        <div class="space-y-4">
+          <%= f.text_field :name, 
+                           placeholder: "Name (optional)",
+                           value: @sitting&.name,
+                           class: "w-full px-4 py-3 bg-black/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none" %>
+          <%= f.email_field :email, 
+                            placeholder: "Email address",
+                            value: @sitting&.email,
+                            required: true,
+                            class: "w-full px-4 py-3 bg-black/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none" %>
         </div>
-      </div>
+        <div class="mt-6 flex gap-3">
+          <%= f.submit "Save", class: "flex-1 px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-500 transition-colors cursor-pointer" %>
+          <button type="button" 
+                  data-action="click->image-viewer#hideEmailForm"
+                  class="flex-1 px-4 py-3 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-500 transition-colors">
+            Cancel
+          </button>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>

@@ -4,6 +4,8 @@ Rails.application.routes.draw do
     member do
       post :update_hero
       post :save_email
+      patch :reject_photo
+      post :split_session
     end
   end
   
