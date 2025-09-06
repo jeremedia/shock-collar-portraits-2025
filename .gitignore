@@ -1,0 +1,137 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Editor directories and files
+.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Frontend (Vue/Node)
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+frontend/coverage/
+frontend/.nyc_output
+frontend/.npm
+frontend/.eslintcache
+frontend/.yarn-integrity
+frontend/.cache
+frontend/server/cache/
+
+# Backend (Rails)
+backend/log/*
+backend/tmp/*
+backend/storage/*
+backend/!log/.keep
+backend/!tmp/.keep
+backend/!storage/.keep
+backend/.byebug_history
+backend/config/master.key
+backend/config/credentials/*.key
+backend/.env*
+backend/!.env.example
+backend/public/assets
+backend/public/packs
+backend/public/packs-test
+backend/vendor/bundle
+backend/db/*.sqlite3
+backend/db/*.sqlite3-*
+backend/.bundle
+backend/node_modules
+backend/yarn-error.log
+backend/.yarn-integrity
+backend/coverage/
+
+# Photo data (keep out of repo)
+sessions/
+card_download*/
+iphone_sessions/
+recovered_files/
+zero_byte_files*/
+*.jpg
+*.jpeg
+*.heic
+*.png
+*.raw
+*.cr2
+*.nef
+*.arw
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+*.cache
+tmpfile*
+
+# Data exports
+*.csv
+*.json
+!package.json
+!package-lock.json
+!composer.json
+!composer.lock
+!tsconfig.json
+!jsconfig.json
+
+# Archive
+data-archive/*
+!data-archive/.gitkeep
+
+# Documentation build
+docs/_build/
+docs/.doctrees/
+
+# Python (for scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Deployment
+.env.production
+.env.staging
+deploy_key
+deploy_key.pub

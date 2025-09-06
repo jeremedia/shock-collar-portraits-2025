@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Icons</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #333; }
+        canvas { margin: 10px; border: 1px solid #666; }
+    </style>
+</head>
+<body>
+    <canvas id="icon192" width="192" height="192"></canvas>
+    <canvas id="icon512" width="512" height="512"></canvas>
+    <canvas id="icon1024" width="1024" height="1024"></canvas>
+    
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Black background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Gold border
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = size * 0.02;
+            ctx.strokeRect(size * 0.05, size * 0.05, size * 0.9, size * 0.9);
+            
+            // Red accent
+            ctx.fillStyle = '#c9302c';
+            ctx.fillRect(0, 0, size * 0.15, size * 0.15);
+            ctx.fillRect(size * 0.85, size * 0.85, size * 0.15, size * 0.15);
+            
+            // OKNOTOK text
+            ctx.fillStyle = '#d4af37';
+            ctx.font = `bold ${size * 0.15}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = '#c9302c';
+            ctx.shadowBlur = size * 0.02;
+            ctx.shadowOffsetX = size * 0.01;
+            ctx.shadowOffsetY = size * 0.01;
+            ctx.fillText('OKNOTOK', size / 2, size * 0.4);
+            
+            // Lightning bolt emoji
+            ctx.font = `${size * 0.25}px Arial`;
+            ctx.shadowBlur = size * 0.03;
+            ctx.fillText('⚡', size / 2, size * 0.65);
+            
+            // Download link
+            const link = document.createElement('a');
+            link.download = `icon-${size}.png`;
+            link.href = canvas.toDataURL();
+            link.textContent = `Download ${size}x${size}`;
+            link.style.display = 'block';
+            link.style.color = '#d4af37';
+            link.style.marginTop = '10px';
+            canvas.parentNode.insertBefore(link, canvas.nextSibling);
+        }
+        
+        drawIcon('icon192', 192);
+        drawIcon('icon512', 512);
+        drawIcon('icon1024', 1024);
+    </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<div class="min-h-screen bg-gray-100">
+  <div class="container mx-auto px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold text-red-600">OKNOTOK Shock Collar Portraits</h1>
+      <p class="text-gray-600 mt-2">Admin Dashboard - Rails Backend</p>
+    </header>
+    
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div class="bg-white p-6 rounded-lg shadow">
+        <div class="text-3xl font-bold text-red-600"><%= @stats[:total_sessions] %></div>
+        <div class="text-gray-600">Total Sessions</div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-lg shadow">
+        <div class="text-3xl font-bold text-yellow-600"><%= @stats[:total_photos] %></div>
+        <div class="text-gray-600">Total Photos</div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-lg shadow">
+        <div class="text-3xl font-bold text-green-600"><%= @stats[:total_sittings] %></div>
+        <div class="text-gray-600">Sittings with Email</div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-lg shadow">
+        <div class="text-3xl font-bold text-blue-600"><%= @stats[:sessions_with_sittings] %></div>
+        <div class="text-gray-600">Sessions w/ Email</div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-lg shadow">
+        <div class="text-3xl font-bold text-gray-600"><%= @stats[:sessions_without_sittings] %></div>
+        <div class="text-gray-600">Sessions w/o Email</div>
+      </div>
+    </div>
+    
+    <!-- Days Overview -->
+    <div class="bg-white rounded-lg shadow mb-8 p-6">
+      <h2 class="text-2xl font-bold mb-4">Sessions by Day</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <% @days.each do |day| %>
+          <div class="border rounded p-4">
+            <div class="font-bold capitalize text-red-600"><%= day.day_name %></div>
+            <div class="text-sm text-gray-600"><%= day.date.strftime('%b %d') %></div>
+            <div class="text-2xl font-bold mt-2"><%= day.photo_sessions.count %></div>
+            <div class="text-sm text-gray-600">sessions</div>
+            <div class="text-sm text-gray-500 mt-1">
+              <%= day.photo_sessions.sum(&:photo_count) %> photos
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    
+    <!-- Recent Sittings -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">Recent Email Collections</h2>
+        <%= link_to "Export All Emails (CSV)", "/admin/export_emails.csv", 
+            class: "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" %>
+      </div>
+      
+      <% if @recent_sittings.any? %>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b">
+                <th class="text-left py-2">Session</th>
+                <th class="text-left py-2">Day</th>
+                <th class="text-left py-2">Name</th>
+                <th class="text-left py-2">Email</th>
+                <th class="text-left py-2">Notes</th>
+                <th class="text-left py-2">Collected</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @recent_sittings.each do |sitting| %>
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="py-2">#<%= sitting.photo_session.session_number %></td>
+                  <td class="py-2 capitalize"><%= sitting.photo_session.session_day.day_name %></td>
+                  <td class="py-2"><%= sitting.name || '-' %></td>
+                  <td class="py-2"><%= sitting.email %></td>
+                  <td class="py-2 text-sm text-gray-600"><%= sitting.notes || '-' %></td>
+                  <td class="py-2 text-sm text-gray-600">
+                    <%= sitting.created_at.strftime('%b %d %H:%M') %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-gray-600">No email collections yet.</p>
+      <% end %>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="mt-8 flex gap-4">
+      <%= link_to "Import Instructions", "/admin/import", 
+          class: "bg-yellow-600 text-white px-6 py-3 rounded hover:bg-yellow-700" %>
+    </div>
+  </div>
+</div>

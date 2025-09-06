@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Export localStorage Data for Rails Import</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #c9302c;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #c9302c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #a02622;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .stats {
+            margin-top: 10px;
+            color: #666;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OKNOTOK Shock Collar Portraits</h1>
+        <p class="subtitle">Export localStorage Data for Rails Import</p>
+        
+        <div class="section">
+            <h2>Step 1: Open the Gallery App</h2>
+            <p>Open your gallery app at <a href="http://100.97.169.52:5173" target="_blank">http://100.97.169.52:5173</a></p>
+            <p>Make sure you have been using the app and have selections saved.</p>
+        </div>
+        
+        <div class="section">
+            <h2>Step 2: Export Email Collection Data</h2>
+            <button onclick="exportEmails()">Export Emails</button>
+            <div id="emailStats" class="stats"></div>
+            <textarea id="emailData" placeholder="Email data will appear here..."></textarea>
+        </div>
+        
+        <div class="section">
+            <h2>Step 3: Export Hero Selections</h2>
+            <button onclick="exportHeroes()">Export Hero Selections</button>
+            <div id="heroStats" class="stats"></div>
+            <textarea id="heroData" placeholder="Hero selection data will appear here..."></textarea>
+        </div>
+        
+        <div class="section">
+            <h2>Step 4: Save to Files</h2>
+            <button onclick="downloadEmails()">Download emails_export.json</button>
+            <button onclick="downloadHeroes()">Download hero_selections_export.json</button>
+            <p style="margin-top: 10px;">Save these files to: <code>shock-collar-vue/</code></p>
+        </div>
+        
+        <div class="section">
+            <h2>Step 5: Import to Rails</h2>
+            <p>Run these commands in the Rails directory:</p>
+            <pre style="background: #f0f0f0; padding: 10px; border-radius: 4px;">
+cd shock_collar_rails
+rails import:emails
+rails import:heroes</pre>
+        </div>
+    </div>
+    
+    <script>
+        function exportEmails() {
+            const emails = localStorage.getItem('emails');
+            if (emails) {
+                const data = JSON.parse(emails);
+                const count = Object.keys(data).length;
+                document.getElementById('emailData').value = JSON.stringify(data, null, 2);
+                document.getElementById('emailStats').innerHTML = 
+                    `<span class="success">✓ Found ${count} email entries</span>`;
+            } else {
+                document.getElementById('emailStats').innerHTML = 
+                    `<span class="warning">⚠ No email data found in localStorage</span>`;
+                document.getElementById('emailData').value = '{}';
+            }
+        }
+        
+        function exportHeroes() {
+            const heroes = localStorage.getItem('heroSelections');
+            if (heroes) {
+                const data = JSON.parse(heroes);
+                const count = Object.keys(data).length;
+                document.getElementById('heroData').value = JSON.stringify(data, null, 2);
+                document.getElementById('heroStats').innerHTML = 
+                    `<span class="success">✓ Found ${count} hero selections</span>`;
+            } else {
+                document.getElementById('heroStats').innerHTML = 
+                    `<span class="warning">⚠ No hero selection data found in localStorage</span>`;
+                document.getElementById('heroData').value = '{}';
+            }
+        }
+        
+        function downloadEmails() {
+            const data = document.getElementById('emailData').value;
+            if (!data || data === '{}') {
+                alert('No email data to download. Please export first.');
+                return;
+            }
+            downloadFile('emails_export.json', data);
+        }
+        
+        function downloadHeroes() {
+            const data = document.getElementById('heroData').value;
+            if (!data || data === '{}') {
+                alert('No hero selection data to download. Please export first.');
+                return;
+            }
+            downloadFile('hero_selections_export.json', data);
+        }
+        
+        function downloadFile(filename, content) {
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Auto-export on page load
+        window.onload = function() {
+            exportEmails();
+            exportHeroes();
+        };
+    </script>
+</body>
+</html>
