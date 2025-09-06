@@ -1,0 +1,56 @@
+<div class="min-h-screen bg-black text-white">
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-gradient-to-b from-black to-black/80 backdrop-blur-sm border-b-2 border-red-700">
+    <div class="container mx-auto px-4">
+      <div class="py-6">
+        <h1 class="text-4xl font-bold text-center bg-gradient-to-r from-red-600 to-yellow-600 bg-clip-text text-transparent">
+          OKNOTOK SHOCK COLLAR PORTRAITS
+        </h1>
+        <p class="text-center text-red-500 mt-2">Burning Man 2025 • Art Therapy</p>
+        
+        <!-- Stats -->
+        <div class="flex justify-center gap-8 mt-4 text-sm">
+          <span class="text-yellow-500"><%= @stats[:total_sessions] %> Sessions</span>
+          <span class="text-yellow-500"><%= @stats[:total_photos] %> Photos</span>
+          <% @stats[:by_day].each do |day, count| %>
+            <span class="text-gray-400"><%= day.capitalize %>: <%= count %></span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Gallery -->
+  <main class="container mx-auto px-4 py-8">
+    <% %w[sunday monday tuesday wednesday thursday friday].each do |day| %>
+      <% sessions = @sessions_by_day[day] || [] %>
+      <% next if sessions.empty? %>
+      
+      <div class="mb-12" data-controller="collapsible">
+        <!-- Day Header -->
+        <button 
+          data-action="click->collapsible#toggle"
+          data-collapsible-target="trigger"
+          class="w-full text-left mb-6 group"
+        >
+          <div class="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-red-900/30 to-transparent rounded-lg hover:from-red-900/50 transition-colors">
+            <h2 class="text-2xl font-bold text-yellow-500">
+              <%= day.capitalize %>
+              <span class="text-sm text-gray-400 ml-3"><%= sessions.size %> sessions</span>
+            </h2>
+            <svg class="w-6 h-6 text-yellow-500 transform transition-transform" data-collapsible-target="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
+        
+        <!-- Sessions Grid -->
+        <div data-collapsible-target="content" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <% sessions.each do |session| %>
+            <%= render 'session_card', session: session %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </main>
+</div>

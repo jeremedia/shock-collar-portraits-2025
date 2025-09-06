@@ -42,6 +42,9 @@ class Api::SessionsController < ApplicationController
   private
   
   def session_json(session, include_photos: false)
+    hero_index = session.sittings.first&.hero_photo&.position || (session.photo_count / 2)
+    hero_photo = session.photos.find_by(position: hero_index) || session.photos.first
+    
     json = {
       id: session.burst_id,
       sessionNumber: session.session_number,
@@ -50,17 +53,36 @@ class Api::SessionsController < ApplicationController
       source: session.source,
       photoCount: session.photo_count,
       duration: session.ended_at ? (session.ended_at - session.started_at).to_i : 0,
-      heroIndex: session.sittings.first&.hero_photo&.position || (session.photo_count / 2)
+      heroIndex: hero_index,
+      heroPhoto: hero_photo&.filename,
+      firstPhoto: session.photos.first&.filename
     }
+    
+    # Add Active Storage URLs if available
+    if hero_photo&.image&.attached?
+      json[:heroPhotoUrl] = rails_blob_url(hero_photo.image.variant(:thumb))
+    end
     
     if include_photos
       json[:photos] = session.photos.order(:position).map do |photo|
-        {
+        photo_data = {
           filename: photo.filename,
           path: photo.original_path.sub(Rails.root.join('..').to_s + '/', ''),
           position: photo.position,
           rejected: photo.rejected
         }
+        
+        # Include Active Storage URLs if available
+        if photo.image.attached?
+          photo_data[:urls] = {
+            thumb: rails_blob_url(photo.image.variant(:thumb)),
+            medium: rails_blob_url(photo.image.variant(:medium)),
+            large: rails_blob_url(photo.image.variant(:large)),
+            original: rails_blob_url(photo.image)
+          }
+        end
+        
+        photo_data
       end
     end
     

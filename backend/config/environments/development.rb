@@ -2,6 +2,12 @@ require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
+  
+  # Allow requests from custom domains
+  config.hosts << "scp-25-dev.oknotok.com"
+  config.hosts << "scp-25.oknotok.com"
+  config.hosts << /.*\.oknotok\.com/
+  config.hosts << /.*\.local/
 
   # Make code changes take effect immediately without server restart.
   config.enable_reloading = true
@@ -28,8 +34,13 @@ Rails.application.configure do
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Store uploaded files on S3 for development testing
+  config.active_storage.service = :amazon
+  
+  # Set default URL options for Active Storage
+  # Use the domain if accessed via domain, otherwise localhost
+  Rails.application.routes.default_url_options[:host] = ENV['HOST'] || 'scp-25-dev.oknotok.com'
+  Rails.application.routes.default_url_options[:port] = 4000
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false

@@ -1,0 +1,42 @@
+<%
+  hero_photo = session.sittings.first&.hero_photo || session.photos.find_by(position: session.photo_count / 2) || session.photos.first
+  session_number = session.burst_id.match(/burst_(\d+)/)&.[](1) || session.burst_id
+%>
+
+<%= link_to gallery_path(session.burst_id), 
+    class: "block bg-black border-2 border-red-700 rounded-lg overflow-hidden hover:translate-y-[-2px] hover:shadow-lg hover:shadow-yellow-600/30 hover:border-yellow-600 transition-all",
+    data: { turbo_frame: "_top" } do %>
+  
+  <div class="relative aspect-square bg-gray-900">
+    <% if hero_photo&.image&.attached? %>
+      <%= image_tag rails_blob_url(hero_photo.image.variant(:thumb)), 
+                    alt: "Session #{session_number}",
+                    loading: "lazy",
+                    class: "w-full h-full object-cover" %>
+    <% elsif hero_photo %>
+      <%= image_tag photo_path(path: hero_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
+                    alt: "Session #{session_number}",
+                    loading: "lazy",
+                    class: "w-full h-full object-cover" %>
+    <% else %>
+      <div class="flex items-center justify-center h-full text-gray-600">
+        No Image
+      </div>
+    <% end %>
+  </div>
+  
+  <div class="p-4 bg-gradient-to-b from-red-900/10 to-black/50">
+    <h4 class="text-lg font-bold text-yellow-500 uppercase mb-2">
+      Session <%= session_number %>
+    </h4>
+    <p class="text-white text-sm mb-1">
+      <%= session.started_at.strftime("%-l:%M %p") %>
+    </p>
+    <p class="text-red-500 text-sm font-semibold">
+      <%= session.photo_count %> photos
+      <% if session.ended_at && session.started_at %>
+        <span class="text-gray-400">• <%= ((session.ended_at - session.started_at) / 60).round %>m</span>
+      <% end %>
+    </p>
+  </div>
+<% end %>

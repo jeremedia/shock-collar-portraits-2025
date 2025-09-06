@@ -1,5 +1,13 @@
 Rails.application.routes.draw do
-  # API routes for Vue frontend
+  # Gallery routes (main UI)
+  resources :gallery, only: [:index, :show] do
+    member do
+      post :update_hero
+      post :save_email
+    end
+  end
+  
+  # API routes for Vue frontend (keeping for compatibility)
   namespace :api do
     resources :sessions, only: [:index, :show] do
       member do
@@ -22,12 +30,12 @@ Rails.application.routes.draw do
     resources :sittings, only: [:new, :create]
   end
   
-  # Static photo serving (until Active Storage is configured)
-  get '/photos/*path', to: 'photos#serve', format: false
+  # Static photo serving
+  get '/photos/*path', to: 'photos#serve', format: false, as: :photo
   
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check
   
-  # Root path
-  root to: redirect('/admin')
+  # Root path - now points to gallery
+  root to: 'gallery#index'
 end
