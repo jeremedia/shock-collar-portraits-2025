@@ -9,6 +9,8 @@ class Photo < ApplicationRecord
   end
 
   scope :not_rejected, -> { where(rejected: false) }
+  scope :accepted, -> { where(rejected: false) }
+  scope :rejected, -> { where(rejected: true) }
   scope :heroes, -> { joins("INNER JOIN sittings ON sittings.hero_photo_id = photos.id") }
 
   # Rails 8 uses coder instead of second argument for serialize
@@ -26,5 +28,65 @@ class Photo < ApplicationRecord
     else
       image.url
     end
+  end
+  
+  # Face detection methods
+  def detect_faces!
+    ::FaceDetectionService.detect_for_photo(self)
+  end
+  
+  def has_faces?
+    return false unless face_data.present? && face_data['faces'].present?
+    faces = face_data['faces']
+    faces.is_a?(Array) && faces.any?
+  end
+  
+  def face_count
+    return 0 unless has_faces?
+    face_data['faces'].length
+  end
+  
+  def primary_face
+    return nil unless has_faces?
+    face_data['faces'].max_by { |face| face['width'] * face['height'] }
+  end
+  
+  # Dynamic face crop variant
+  def face_crop_variant(size)
+    crop_params = ::FaceDetectionService.face_crop_params(self)
+    
+    if crop_params
+      {
+        crop: "#{crop_params[:width]}x#{crop_params[:height]}+#{crop_params[:left]}+#{crop_params[:top]}",
+        resize_to_fill: [size, size]
+      }
+    else
+      # Fallback to center crop if no face detected
+      { resize_to_fill: [size, size] }
+    end
+  end
+  
+  # Get face crop URL
+  def face_crop_url(size: 300)
+    return nil unless has_faces? && image.attached?
+    
+    crop_params = ::FaceDetectionService.face_crop_params(self)
+    return nil unless crop_params
+    
+    # Generate dynamic variant for face crop
+    # Using extract_area for vips processor
+    variant_params = {
+      extract_area: [crop_params[:left], crop_params[:top], crop_params[:width], crop_params[:height]],
+      resize_to_fill: [size, size],
+      format: :webp,
+      saver: { quality: 85 }
+    }
+    
+    Rails.application.routes.url_helpers.rails_blob_url(image.variant(variant_params).processed, only_path: true)
+  end
+  
+  # Check if face detection is needed
+  def needs_face_detection?
+    face_detected_at.nil? && (image.attached? || original_path.present?)
   end
 end

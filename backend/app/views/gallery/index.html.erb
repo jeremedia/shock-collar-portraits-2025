@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-black text-white">
+<div class="min-h-screen bg-black text-white pb-20" data-controller="thumbnail-size">
   <!-- Header -->
   <header class="sticky top-0 z-40 bg-gradient-to-b from-black to-black/80 backdrop-blur-sm border-b-2 border-red-700">
     <div class="container mx-auto px-4">
@@ -45,7 +45,7 @@
         </button>
         
         <!-- Sessions Grid -->
-        <div data-collapsible-target="content" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div data-collapsible-target="content" data-thumbnail-size-target="grid" class="hidden grid grid-cols-4 gap-4 transition-all duration-300">
           <% sessions.each do |session| %>
             <%= render 'session_card', session: session %>
           <% end %>
@@ -53,4 +53,44 @@
       </div>
     <% end %>
   </main>
+
+  <!-- Sticky Footer with Size Slider and Face Mode -->
+  <footer class="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-black/80 backdrop-blur-sm border-t-2 border-red-700">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex items-center justify-center gap-6">
+        <!-- Size Slider -->
+        <div class="flex items-center gap-3">
+          <label class="text-yellow-500 text-sm font-semibold">Size:</label>
+          <span class="text-gray-400 text-xs">Small</span>
+          <input type="range" 
+                 data-thumbnail-size-target="slider"
+                 data-action="input->thumbnail-size#updateSize"
+                 min="2" 
+                 max="8" 
+                 value="4" 
+                 step="1"
+                 class="w-48 h-2 bg-red-900 rounded-lg appearance-none cursor-pointer slider"
+                 style="background: linear-gradient(to right, #dc2626 0%, #dc2626 33%, #374151 33%, #374151 100%);">
+          <span class="text-gray-400 text-xs">Large</span>
+          <span data-thumbnail-size-target="count" class="text-yellow-500 text-sm ml-2">(4 per row)</span>
+        </div>
+        
+        <!-- Divider -->
+        <div class="w-px h-8 bg-red-700/50"></div>
+        
+        <!-- Face Mode Checkbox -->
+        <div class="flex items-center gap-2">
+          <input type="checkbox" 
+                 id="face-mode-toggle"
+                 data-thumbnail-size-target="faceMode"
+                 data-action="change->thumbnail-size#toggleFaceMode"
+                 class="w-4 h-4 rounded border-red-700 bg-black text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0">
+          <label for="face-mode-toggle" class="text-yellow-500 text-sm font-semibold cursor-pointer select-none">
+            Faces Only
+          </label>
+          <span data-thumbnail-size-target="faceStatus" class="text-gray-400 text-xs ml-1"></span>
+        </div>
+      </div>
+    </div>
+  </footer>
 </div>

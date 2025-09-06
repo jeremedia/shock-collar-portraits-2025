@@ -1,31 +1,84 @@
 <%
   hero_photo = session.sittings.first&.hero_photo || session.photos.find_by(position: session.photo_count / 2) || session.photos.first
   session_number = session.burst_id.match(/burst_(\d+)/)&.[](1) || session.burst_id
+  
+  # Check if any photos in this session have faces
+  # Load photos with face data and check if they actually have valid face arrays
+  photos_with_faces = session.photos.where.not(face_data: nil).select { |p| p.has_faces? }
+  has_faces = photos_with_faces.any?
+  
+  # For face mode, prefer a photo with a face (use hero if it has a face, otherwise first with face)
+  face_photo = has_faces ? (photos_with_faces.find { |p| p == hero_photo } || photos_with_faces.first) : hero_photo
+  
+  # Debug output for development
+  if Rails.env.development? && has_faces
+    Rails.logger.debug "Session #{session.burst_id}: has_faces=#{has_faces}, face_photo_id=#{face_photo&.id}"
+  end
 %>
 
 <%= link_to gallery_path(session.burst_id), 
-    class: "block bg-black border-2 border-red-700 rounded-lg overflow-hidden hover:translate-y-[-2px] hover:shadow-lg hover:shadow-yellow-600/30 hover:border-yellow-600 transition-all",
-    data: { turbo_frame: "_top" } do %>
+    class: "session-card block bg-black border-2 border-red-700 rounded-lg overflow-hidden hover:translate-y-[-2px] hover:shadow-lg hover:shadow-yellow-600/30 hover:border-yellow-600 transition-all",
+    data: { 
+      turbo_frame: "_top",
+      has_faces: has_faces.to_s
+    } do %>
   
   <div class="relative aspect-square bg-gray-900">
-    <% if hero_photo&.image&.attached? %>
-      <%= image_tag rails_blob_url(hero_photo.image.variant(:thumb)), 
-                    alt: "Session #{session_number}",
-                    loading: "lazy",
-                    class: "w-full h-full object-cover" %>
-    <% elsif hero_photo %>
-      <%= image_tag photo_path(path: hero_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
-                    alt: "Session #{session_number}",
-                    loading: "lazy",
-                    class: "w-full h-full object-cover" %>
-    <% else %>
-      <div class="flex items-center justify-center h-full text-gray-600">
-        No Image
-      </div>
-    <% end %>
+    <!-- Regular thumbnail (shown by default) -->
+    <div class="regular-thumbnail w-full h-full">
+      <% if hero_photo&.image&.attached? %>
+        <%= image_tag rails_blob_url(hero_photo.image.variant(:thumb)), 
+                      alt: "Session #{session_number}",
+                      loading: "lazy",
+                      class: "w-full h-full object-cover" %>
+      <% elsif hero_photo %>
+        <%= image_tag photo_path(path: hero_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
+                      alt: "Session #{session_number}",
+                      loading: "lazy",
+                      class: "w-full h-full object-cover" %>
+      <% else %>
+        <div class="flex items-center justify-center h-full text-gray-600">
+          No Image
+        </div>
+      <% end %>
+    </div>
+    
+    <!-- Face crop thumbnail (shown in face mode) -->
+    <div class="face-thumbnail w-full h-full hidden">
+      <% if has_faces && face_photo&.image&.attached? %>
+        <% face_url = face_photo.face_crop_url(size: 300) %>
+        <% if face_url.present? %>
+          <%= image_tag face_url, 
+                        alt: "Session #{session_number}",
+                        loading: "lazy",
+                        class: "w-full h-full object-cover" %>
+        <% else %>
+          <!-- Fallback to regular thumbnail if no face crop URL -->
+          <%= image_tag rails_blob_url(face_photo.image.variant(:thumb)), 
+                        alt: "Session #{session_number}",
+                        loading: "lazy",
+                        class: "w-full h-full object-cover" %>
+        <% end %>
+      <% elsif hero_photo&.image&.attached? %>
+        <!-- No face data, show regular thumbnail -->
+        <%= image_tag rails_blob_url(hero_photo.image.variant(:thumb)), 
+                      alt: "Session #{session_number}",
+                      loading: "lazy",
+                      class: "w-full h-full object-cover" %>
+      <% elsif hero_photo %>
+        <%= image_tag photo_path(path: hero_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
+                      alt: "Session #{session_number}",
+                      loading: "lazy",
+                      class: "w-full h-full object-cover" %>
+      <% else %>
+        <div class="flex items-center justify-center h-full text-gray-600">
+          No Image
+        </div>
+      <% end %>
+    </div>
   </div>
   
-  <div class="p-4 bg-gradient-to-b from-red-900/10 to-black/50">
+  <div class="session-info p-4 bg-gradient-to-b from-red-900/10 to-black/50">
     <h4 class="text-lg font-bold text-yellow-500 uppercase mb-2">
       Session <%= session_number %>
     </h4>

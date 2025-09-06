@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_28_061719) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_06_215806) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -71,6 +71,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_28_061719) do
     t.text "exif_data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.json "face_data"
+    t.datetime "face_detected_at"
+    t.index ["face_data"], name: "index_photos_on_face_data"
     t.index ["photo_session_id"], name: "index_photos_on_photo_session_id"
     t.index ["sitting_id"], name: "index_photos_on_sitting_id"
   end
