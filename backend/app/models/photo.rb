@@ -12,6 +12,11 @@ class Photo < ApplicationRecord
   scope :accepted, -> { where(rejected: false) }
   scope :rejected, -> { where(rejected: true) }
   scope :heroes, -> { joins("INNER JOIN sittings ON sittings.hero_photo_id = photos.id") }
+  scope :without_face_detection, -> { where(face_data: nil) }
+  
+  # Automatically enqueue image attachment and face detection for new photos
+  after_create :enqueue_image_attachment
+  after_create :enqueue_face_detection
 
   # Rails 8 uses coder instead of second argument for serialize
   serialize :metadata, coder: JSON
@@ -33,6 +38,19 @@ class Photo < ApplicationRecord
   # Face detection methods
   def detect_faces!
     ::FaceDetectionService.detect_for_photo(self)
+  end
+  
+  # Enqueue image attachment job for this photo
+  def enqueue_image_attachment
+    return if image.attached? # Skip if already attached
+    return unless original_path.present? # Skip if no file path
+    ImageAttachmentJob.perform_later(id)
+  end
+  
+  # Enqueue face detection job for this photo
+  def enqueue_face_detection
+    return if face_data.present? # Skip if already processed
+    FaceDetectionJob.perform_later(id)
   end
   
   def has_faces?

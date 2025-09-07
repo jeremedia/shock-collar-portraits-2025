@@ -1,1 +1,148 @@
 @import "tailwindcss";
+
+/* Custom styles for photo viewer */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner-small {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.image-container {
+  position: relative;
+}
+
+/* Rejected photo styles */
+.rejected-photo {
+  opacity: 0.5;
+  position: relative;
+}
+
+.rejected-photo::after {
+  content: "✗";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.rejected-thumbnail {
+  border-color: rgb(239, 68, 68) !important;
+  opacity: 0.7;
+}
+
+/* Custom slider styles */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+input[type="range"].slider:hover {
+  opacity: 1;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #fbbf24;
+  border: 2px solid #dc2626;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #fbbf24;
+  border: 2px solid #dc2626;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #f59e0b;
+}
+
+input[type="range"].slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  background: #f59e0b;
+}
+
+/* Compact thumbnail mode for 5+ columns */
+.compact-thumbnails .session-info {
+  display: none;
+}
+
+/* Face mode - show face crops instead of regular thumbnails */
+.face-mode .regular-thumbnail {
+  display: none !important; /* Hide regular thumbnails in face mode */
+}
+
+.face-mode .face-thumbnail {
+  display: block !important; /* Show face thumbnails in face mode */
+}
+
+/* Regular mode - ensure face thumbnails are hidden */
+.face-thumbnail {
+  display: none; /* Hidden by default */
+}
+
+/* Hide sessions without faces in face mode */
+.face-mode .session-card[data-has-faces="false"] {
+  opacity: 0.3;
+  filter: grayscale(1);
+}

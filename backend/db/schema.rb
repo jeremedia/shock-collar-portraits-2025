@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_06_215806) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_07_152148) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -57,6 +57,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_06_215806) do
     t.integer "photo_count"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "hidden", default: false, null: false
     t.index ["session_day_id"], name: "index_photo_sessions_on_session_day_id"
   end
 
@@ -66,7 +67,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_06_215806) do
     t.string "filename"
     t.string "original_path"
     t.integer "position"
-    t.boolean "rejected"
+    t.boolean "rejected", default: false
     t.text "metadata"
     t.text "exif_data"
     t.datetime "created_at", null: false

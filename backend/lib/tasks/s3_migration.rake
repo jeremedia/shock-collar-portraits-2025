@@ -26,12 +26,16 @@ namespace :s3 do
       exit
     end
     
-    # Confirm before proceeding
-    print "Continue? (y/n): "
-    response = STDIN.gets.chomp.downcase
-    unless response == 'y'
-      puts "Migration cancelled"
-      exit
+    # Confirm before proceeding (skip in non-interactive mode)
+    if STDIN.tty?
+      print "Continue? (y/n): "
+      response = STDIN.gets.chomp.downcase
+      unless response == 'y'
+        puts "Migration cancelled"
+        exit
+      end
+    else
+      puts "Running in non-interactive mode, proceeding automatically..."
     end
     
     success_count = 0

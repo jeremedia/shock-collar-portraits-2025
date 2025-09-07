@@ -5,6 +5,8 @@ class PhotoSession < ApplicationRecord
 
   scope :with_sittings, -> { joins(:sittings).distinct }
   scope :without_sittings, -> { left_joins(:sittings).where(sittings: { id: nil }) }
+  scope :visible, -> { where(hidden: false) }
+  scope :hidden_sessions, -> { where(hidden: true) }
 
   validates :session_number, presence: true
   validates :burst_id, presence: true, uniqueness: true

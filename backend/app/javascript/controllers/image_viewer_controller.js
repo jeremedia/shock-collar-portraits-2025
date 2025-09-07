@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton", "imageWrapper", "faceOverlay", "faceRectangleToggle"]
+  static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton", "imageWrapper", "faceOverlay", "faceRectangleToggle", "downloadButton"]
   static values = { total: Number, sessionId: String, showRejected: Boolean, prevSession: String, nextSession: String }
   
   connect() {
@@ -35,6 +35,9 @@ export default class extends Controller {
     
     // Add keyboard navigation
     document.addEventListener("keydown", this.handleKeyPress.bind(this))
+    
+    // Preload session thumbnails in service worker cache
+    this.preloadSessionThumbnails()
   }
   
   setupImageLoading() {
@@ -76,7 +79,11 @@ export default class extends Controller {
     if (img.complete && img.naturalHeight > 0) {
       removeOverlay()
     } else {
-      img.addEventListener('load', removeOverlay, { once: true })
+      img.addEventListener('load', () => {
+        removeOverlay()
+        // Update face rectangles after image loads
+        this.updateFaceRectangles()
+      }, { once: true })
       img.addEventListener('error', removeOverlay, { once: true })
     }
   }
@@ -317,51 +324,92 @@ export default class extends Controller {
       
       overlay.classList.remove('hidden')
       
-      // Draw rectangles for each face
-      faceData.faces.forEach(face => {
-        const rect = document.createElement('div')
-        rect.style.position = 'absolute'
+      // Get the img element to calculate scaling
+      const img = currentImage.querySelector('img')
+      if (!img || !img.complete) {
+        overlay.classList.add('hidden')
+        return
+      }
+      
+      // Wait for next frame to ensure layout is complete
+      requestAnimationFrame(() => {
+        const containerRect = overlay.getBoundingClientRect()
+        const imgRect = img.getBoundingClientRect()
         
-        // Check if coordinates are normalized (0-1) or pixel values
-        if (faceData.image_width && faceData.image_height) {
-          // Convert pixel coordinates to percentages
-          const xPercent = (face.x / faceData.image_width) * 100
-          const yPercent = (face.y / faceData.image_height) * 100
-          const widthPercent = (face.width / faceData.image_width) * 100
-          const heightPercent = (face.height / faceData.image_height) * 100
-          
-          rect.style.left = `${xPercent}%`
-          rect.style.top = `${yPercent}%`
-          rect.style.width = `${widthPercent}%`
-          rect.style.height = `${heightPercent}%`
+        // Calculate the actual displayed image dimensions within the container
+        // img uses object-contain so we need to find the actual image boundaries
+        const imgNaturalRatio = img.naturalWidth / img.naturalHeight
+        const containerRatio = containerRect.width / containerRect.height
+        
+        let displayedWidth, displayedHeight, offsetX = 0, offsetY = 0
+        
+        if (imgNaturalRatio > containerRatio) {
+          // Image is wider - constrained by container width
+          displayedWidth = containerRect.width
+          displayedHeight = containerRect.width / imgNaturalRatio
+          offsetY = (containerRect.height - displayedHeight) / 2
         } else {
-          // Assume normalized coordinates
-          rect.style.left = `${face.x * 100}%`
-          rect.style.top = `${face.y * 100}%`
-          rect.style.width = `${face.width * 100}%`
-          rect.style.height = `${face.height * 100}%`
+          // Image is taller - constrained by container height  
+          displayedHeight = containerRect.height
+          displayedWidth = containerRect.height * imgNaturalRatio
+          offsetX = (containerRect.width - displayedWidth) / 2
         }
         
-        rect.style.border = '3px solid #fbbf24' // Yellow border
-        rect.style.borderRadius = '4px'
-        rect.style.pointerEvents = 'none'
-        
-        // Add confidence label if available
-        if (face.confidence) {
-          const label = document.createElement('div')
-          label.style.position = 'absolute'
-          label.style.bottom = '-20px'
-          label.style.left = '0'
-          label.style.fontSize = '12px'
-          label.style.color = '#fbbf24'
-          label.style.backgroundColor = 'rgba(0,0,0,0.7)'
-          label.style.padding = '2px 4px'
-          label.style.borderRadius = '2px'
-          label.textContent = `${Math.round(face.confidence * 100)}%`
-          rect.appendChild(label)
-        }
-        
-        overlay.appendChild(rect)
+        // Draw rectangles for each face
+        faceData.faces.forEach(face => {
+          const rect = document.createElement('div')
+          rect.style.position = 'absolute'
+          
+          // Convert face coordinates to displayed image coordinates
+          let faceX, faceY, faceWidth, faceHeight
+          
+          if (faceData.image_width && faceData.image_height) {
+            // Convert pixel coordinates to normalized coordinates first
+            faceX = face.x / faceData.image_width
+            faceY = face.y / faceData.image_height
+            faceWidth = face.width / faceData.image_width
+            faceHeight = face.height / faceData.image_height
+          } else {
+            // Already normalized coordinates
+            faceX = face.x
+            faceY = face.y
+            faceWidth = face.width
+            faceHeight = face.height
+          }
+          
+          // Convert to pixel positions within the displayed image
+          const rectLeft = offsetX + (faceX * displayedWidth)
+          const rectTop = offsetY + (faceY * displayedHeight)
+          const rectWidth = faceWidth * displayedWidth
+          const rectHeight = faceHeight * displayedHeight
+          
+          // Convert to percentages of the container
+          rect.style.left = `${(rectLeft / containerRect.width) * 100}%`
+          rect.style.top = `${(rectTop / containerRect.height) * 100}%`
+          rect.style.width = `${(rectWidth / containerRect.width) * 100}%`
+          rect.style.height = `${(rectHeight / containerRect.height) * 100}%`
+          
+          rect.style.border = '3px solid #fbbf24' // Yellow border
+          rect.style.borderRadius = '4px'
+          rect.style.pointerEvents = 'none'
+          
+          // Add confidence label if available
+          if (face.confidence) {
+            const label = document.createElement('div')
+            label.style.position = 'absolute'
+            label.style.bottom = '-20px'
+            label.style.left = '0'
+            label.style.fontSize = '12px'
+            label.style.color = '#fbbf24'
+            label.style.backgroundColor = 'rgba(0,0,0,0.7)'
+            label.style.padding = '2px 4px'
+            label.style.borderRadius = '2px'
+            label.textContent = `${Math.round(face.confidence * 100)}%`
+            rect.appendChild(label)
+          }
+          
+          overlay.appendChild(rect)
+        })
       })
     } catch (e) {
       console.error('Error parsing face data:', e)
@@ -497,5 +545,103 @@ export default class extends Controller {
     
     // Update URL without causing page reload
     window.history.replaceState({}, '', url)
+  }
+
+  // Download current photo
+  downloadCurrentPhoto(event) {
+    event.preventDefault()
+    
+    // Get the current photo ID
+    const currentImage = this.imageTargets[this.currentIndex]
+    if (!currentImage) return
+    
+    const img = currentImage.querySelector('img')
+    if (!img) return
+    
+    const photoId = img.dataset.photoId
+    if (!photoId) return
+    
+    // Create download URL
+    const downloadUrl = `/gallery/${this.sessionIdValue}/download_photo?photo_id=${photoId}`
+    
+    // Trigger download
+    window.location.href = downloadUrl
+  }
+
+  // Confirm hide session with detailed dialog
+  confirmHideSession(event) {
+    event.preventDefault()
+    
+    const sessionNumber = event.currentTarget.dataset.sessionNumber
+    const photoCount = event.currentTarget.dataset.photoCount
+    
+    const message = `Hide Session ${sessionNumber}?\n\n` +
+                   `This session contains ${photoCount} photos and will be removed from the gallery.\n\n` +
+                   `This action cannot be easily undone. Continue?`
+    
+    if (confirm(message)) {
+      // Submit the form
+      event.currentTarget.closest('form').submit()
+    }
+  }
+
+  // Preload session thumbnails for caching
+  preloadSessionThumbnails() {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+      return
+    }
+
+    // Get all thumbnail URLs from current session
+    const thumbnailUrls = []
+    
+    // Get main image URLs (medium size)
+    this.imageTargets.forEach((container) => {
+      const img = container.querySelector('img')
+      if (img && img.src) {
+        thumbnailUrls.push(img.src)
+      }
+    })
+    
+    // Get thumbnail strip URLs
+    this.thumbnailTargets.forEach((thumb) => {
+      const img = thumb.querySelector('img')
+      if (img && img.src) {
+        thumbnailUrls.push(img.src)
+      }
+    })
+    
+    if (thumbnailUrls.length > 0) {
+      console.log(`Requesting cache for ${thumbnailUrls.length} session images`)
+      navigator.serviceWorker.controller.postMessage({
+        type: 'CACHE_THUMBNAILS',
+        data: { urls: [...new Set(thumbnailUrls)] } // Remove duplicates
+      })
+    }
+  }
+
+  // Get cache status (for debugging)
+  getCacheStatus() {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+      console.log('Service Worker not available')
+      return
+    }
+
+    navigator.serviceWorker.controller.postMessage({
+      type: 'GET_CACHE_STATUS'
+    })
+  }
+
+  // Clear thumbnail cache (for debugging)
+  clearThumbnailCache() {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+      console.log('Service Worker not available')
+      return
+    }
+
+    navigator.serviceWorker.controller.postMessage({
+      type: 'CLEAR_CACHE'
+    })
+    
+    console.log('Thumbnail cache clear requested')
   }
 }

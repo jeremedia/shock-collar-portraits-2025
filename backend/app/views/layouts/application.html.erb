@@ -24,5 +24,57 @@
 
   <body>
     <%= yield %>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then(function(registration) {
+            console.log('Service Worker registered successfully:', registration.scope);
+            
+            // Listen for updates
+            registration.addEventListener('updatefound', function() {
+              const newWorker = registration.installing;
+              console.log('New Service Worker found, installing...');
+              
+              newWorker.addEventListener('statechange', function() {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('New Service Worker installed, ready to activate');
+                }
+              });
+            });
+          })
+          .catch(function(error) {
+            console.log('Service Worker registration failed:', error);
+          });
+
+        // Listen for messages from service worker
+        navigator.serviceWorker.addEventListener('message', function(event) {
+          const { type, data } = event.data;
+          
+          if (type === 'CACHE_STATUS') {
+            console.log('Thumbnail cache status:', data);
+          }
+        });
+
+        // Preload thumbnails for current session (if we're on a session page)
+        document.addEventListener('DOMContentLoaded', function() {
+          const sessionContainer = document.querySelector('[data-controller="image-viewer"]');
+          if (sessionContainer && navigator.serviceWorker.controller) {
+            // Get all thumbnail URLs from the page
+            const thumbnailImages = document.querySelectorAll('.image-container img[loading="lazy"]');
+            const thumbnailUrls = Array.from(thumbnailImages).map(img => img.src).filter(Boolean);
+            
+            if (thumbnailUrls.length > 0) {
+              console.log(`Preloading ${thumbnailUrls.length} thumbnails...`);
+              navigator.serviceWorker.controller.postMessage({
+                type: 'CACHE_THUMBNAILS',
+                data: { urls: thumbnailUrls }
+              });
+            }
+          }
+        });
+      }
+    </script>
   </body>
 </html>

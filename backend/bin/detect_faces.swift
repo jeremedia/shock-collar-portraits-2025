@@ -30,10 +30,22 @@ struct DetectionResult: Codable {
 func detectFaces(imagePath: String) {
     let fileURL = URL(fileURLWithPath: imagePath)
     
-    // Load image and get dimensions
-    guard let imageSource = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
-          let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+    // Load image and get dimensions, respecting EXIF orientation
+    guard let imageSource = CGImageSourceCreateWithURL(fileURL as CFURL, nil) else {
         let result = DetectionResult(success: false, imageWidth: 0, imageHeight: 0, faces: [], error: "Failed to load image")
+        outputJSON(result)
+        return
+    }
+    
+    // Create options to respect orientation
+    let options: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: 4000
+    ]
+    
+    guard let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) else {
+        let result = DetectionResult(success: false, imageWidth: 0, imageHeight: 0, faces: [], error: "Failed to create oriented image")
         outputJSON(result)
         return
     }

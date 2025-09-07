@@ -47,6 +47,11 @@ const sessionNumber = computed(() => {
 });
 
 const thumbnailUrl = computed(() => {
+  // Check if we have an Active Storage URL first
+  if (props.session.heroPhotoUrl) {
+    return props.session.heroPhotoUrl;
+  }
+  
   const photo = props.session.heroPhoto || props.session.firstPhoto;
   if (!photo) {
     // Return a placeholder if no photo available

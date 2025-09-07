@@ -7,3 +7,6 @@ application.register("collapsible", CollapsibleController)
 
 import ImageViewerController from "controllers/image_viewer_controller"
 application.register("image-viewer", ImageViewerController)
+
+import ThumbnailSizeController from "controllers/thumbnail_size_controller"
+application.register("thumbnail-size", ThumbnailSizeController)

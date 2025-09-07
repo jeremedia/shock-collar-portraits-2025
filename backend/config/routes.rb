@@ -6,6 +6,10 @@ Rails.application.routes.draw do
       post :save_email
       patch :reject_photo
       post :split_session
+      patch :hide_session
+      get :download_all
+      get :download_photo
+      get :download_test
     end
   end
   
@@ -21,11 +25,20 @@ Rails.application.routes.draw do
   
   # Admin routes
   namespace :admin do
-    root to: 'dashboard#index'
+    get 'dashboard', to: 'dashboard#index'
     get 'export_emails', to: 'dashboard#export_emails'
     resources :sessions, only: [:index]
     resources :sittings, only: [:index]
   end
+  
+  # Face detection admin
+  get 'admin', to: 'admin#index'
+  get 'admin/face_detection', to: 'admin#face_detection'
+  post 'admin/enqueue_all', to: 'admin#enqueue_all'
+  post 'admin/enqueue_session/:session_id', to: 'admin#enqueue_session', as: 'admin_enqueue_session'
+  post 'admin/retry_failed', to: 'admin#retry_failed'
+  post 'admin/clear_completed_jobs', to: 'admin#clear_completed_jobs'
+  post 'admin/pause_queue', to: 'admin#pause_queue'
   
   # Mobile email collection
   namespace :mobile do

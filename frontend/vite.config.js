@@ -6,9 +6,15 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    allowedHosts: [
+      'localhost',
+      'scp-25-dev.oknotok.com',
+      'scp-25.oknotok.com',
+      '.oknotok.com'
+    ],
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:4000',
         changeOrigin: true
       }
     }

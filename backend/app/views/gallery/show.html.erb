@@ -1,5 +1,6 @@
 <%
   session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
+  day_name = @session.session_day.day_name if @session.session_day
 %>
 
 <!-- Lightroom-style Photo Viewer: Full viewport, no vertical scrolling -->
@@ -17,7 +18,7 @@
         <div class="flex items-center gap-4">
           <%= link_to "← Gallery", root_path, class: "text-yellow-500 hover:text-yellow-400 font-medium" %>
           <div class="text-gray-400">|</div>
-          <h2 class="text-lg font-bold text-yellow-500">Session <%= session_number %></h2>
+          <h2 class="text-lg font-bold text-yellow-500"><%= day_name %><%= ", " if day_name %>Sitting <%= session_number %></h2>
         </div>
         
         <div class="flex items-center gap-3">
@@ -32,6 +33,22 @@
                   class: "px-3 py-1 text-sm bg-red-900/30 text-white rounded hover:bg-red-800/50 transition-colors" %>
             <% end %>
           </div>
+          
+          <!-- Hide Session Button -->
+          <%= form_with url: hide_session_gallery_path(@session.burst_id), 
+                        method: :patch,
+                        data: { 
+                          turbo_frame: "_top"
+                        },
+                        local: true do |f| %>
+            <%= f.submit "🗂️ Hide Session", 
+                         data: { 
+                           action: "click->image-viewer#confirmHideSession",
+                           session_number: session_number,
+                           photo_count: @photos.length 
+                         },
+                         class: "px-3 py-1 text-sm bg-gray-700/70 text-gray-300 rounded hover:bg-red-700/70 hover:text-white transition-colors cursor-pointer" %>
+          <% end %>
           
           <!-- Toggle Rejected Photos -->
           <% if @rejected_count > 0 %>
@@ -63,32 +80,30 @@
   </header>
   
   <!-- Flexible Photo Viewport -->
-  <main class="flex-grow-1 relative flex items-center justify-center bg-black overflow-hidden">
-    <!-- Main Image Container -->
-    <div class="absolute inset-0 flex items-center justify-center">
-      <% @photos.each_with_index do |photo, index| %>
-        <div data-image-viewer-target="image" 
-             data-index="<%= index %>"
-             data-face-data="<%= photo.face_data.to_json if photo.face_data.present? %>"
-             class="<%= index == 0 ? '' : 'hidden' %> w-full h-full flex items-center justify-center image-container">
-          <div class="relative inline-block" data-image-viewer-target="imageWrapper">
-            <% if photo.image.attached? %>
-              <%= image_tag rails_blob_url(photo.image.variant(:large)), 
-                            alt: "Photo #{index + 1}",
-                            class: "max-w-full max-h-full object-contain cursor-pointer",
-                            data: { action: "click->image-viewer#next", photo_id: photo.id } %>
-            <% else %>
-              <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
-                            alt: "Photo #{index + 1}",
-                            class: "max-w-full max-h-full object-contain cursor-pointer",
-                            data: { action: "click->image-viewer#next", photo_id: photo.id } %>
-            <% end %>
-            <!-- Face Rectangle Overlay -->
-            <div class="absolute inset-0 pointer-events-none hidden" data-image-viewer-target="faceOverlay"></div>
-          </div>
+  <main class="flex-1 min-h-0 relative bg-black overflow-hidden">
+    <!-- Images -->
+    <% @photos.each_with_index do |photo, index| %>
+      <div data-image-viewer-target="image" 
+           data-index="<%= index %>"
+           data-face-data="<%= photo.face_data.to_json if photo.face_data.present? %>"
+           class="<%= index == 0 ? '' : 'hidden' %> w-full h-full image-container">
+        <div class="relative w-full h-full" data-image-viewer-target="imageWrapper">
+          <% if photo.image.attached? %>
+            <%= image_tag rails_blob_url(photo.image.variant(:large)), 
+                          alt: "Photo #{index + 1}",
+                          class: "w-full h-full object-contain cursor-pointer",
+                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+          <% else %>
+            <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
+                          alt: "Photo #{index + 1}",
+                          class: "w-full h-full object-contain cursor-pointer",
+                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+          <% end %>
+          <!-- Face Rectangle Overlay -->
+          <div class="absolute inset-0 pointer-events-none hidden" data-image-viewer-target="faceOverlay"></div>
         </div>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
     
     <!-- Left Navigation -->
     <button data-action="click->image-viewer#previousSession" 
@@ -106,7 +121,7 @@
   
   <!-- Fixed Footer with Thumbnails -->
   <footer class="flex-shrink-0 bg-black/90 backdrop-blur-sm border-t border-gray-700/50">
-    <div class="px-6 py-2">
+    <div class="px-4 py-1">
       <!-- Action Buttons and Controls (centered above thumbnails) -->
       <div class="flex justify-between items-center mb-2">
         <!-- Face Rectangle Toggle -->
@@ -161,6 +176,21 @@
                 class="px-3 py-1 bg-orange-600/90 text-white font-semibold text-sm rounded-full hover:bg-orange-500 transition-colors cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
           ✂️ Split Session Here
         </button>
+        
+        <!-- Download Buttons -->
+        <%= link_to download_all_gallery_path(@session.burst_id), 
+                    class: "px-3 py-1 bg-green-600/90 text-white font-semibold text-sm rounded-full hover:bg-green-500 transition-colors cursor-pointer shadow-lg",
+                    title: "Download all photos in this session as a ZIP file" do %>
+          📦 Download All
+        <% end %>
+        
+        <a href="#" 
+           data-action="click->image-viewer#downloadCurrentPhoto"
+           data-image-viewer-target="downloadButton"
+           class="px-3 py-1 bg-blue-600/90 text-white font-semibold text-sm rounded-full hover:bg-blue-500 transition-colors cursor-pointer shadow-lg"
+           title="Download the currently visible photo">
+          💾 Download Photo
+        </a>
         </div>
         
         <!-- Spacer for layout balance -->

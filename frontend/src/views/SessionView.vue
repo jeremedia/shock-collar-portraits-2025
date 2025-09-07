@@ -154,6 +154,13 @@ const currentImageUrl = computed(() => {
   if (!session.value || !session.value.photos) return '';
   const photo = session.value.photos[currentIndex.value];
   if (!photo) return '';
+  
+  // Use Active Storage URL if available
+  if (photo.urls && photo.urls.large) {
+    return photo.urls.large;
+  }
+  
+  // Fallback to direct file serving
   const sessionId = session.value.id || session.value.session_id;
   return api.getImageUrl(sessionId, photo.filename, 'large', 'webp');
 });
@@ -171,6 +178,15 @@ const sessionEmail = computed(() => {
 });
 
 const getThumbnailUrl = (filename) => {
+  // Find the photo object to check for Active Storage URL
+  const photo = session.value.photos.find(p => p.filename === filename);
+  
+  // Use Active Storage URL if available
+  if (photo && photo.urls && photo.urls.thumb) {
+    return photo.urls.thumb;
+  }
+  
+  // Fallback to direct file serving
   const sessionId = session.value.id || session.value.session_id;
   return api.getImageUrl(sessionId, filename, 'small', 'webp');
 };
