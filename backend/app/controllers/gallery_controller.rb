@@ -179,27 +179,26 @@ class GalleryController < ApplicationController
     
     require 'tempfile'
     require 'fileutils'
-    require 'shellwords'
+    require 'zip'
     
     temp_zip = nil
-    temp_dir = nil
     
     begin
-      # Create temporary directory for organizing files
-      temp_dir = Dir.mktmpdir('session_photos')
-      Rails.logger.info "Created temp directory: #{temp_dir}"
-      
-      # Copy photos to temp directory with clean names
+      # Create ZIP file using RubyZip to avoid shelling out
+      temp_zip = Tempfile.new(['session_photos', '.zip'])
       copied_count = 0
-      photos.each do |photo|
-        if File.exist?(photo.original_path)
-          filename = "#{photo.position.to_s.rjust(3, '0')}_#{File.basename(photo.original_path)}"
-          dest_path = File.join(temp_dir, filename)
-          FileUtils.cp(photo.original_path, dest_path)
+      
+      Zip::OutputStream.open(temp_zip.path) do |zos|
+        photos.each do |photo|
+          src = photo.original_path
+          unless src && File.exist?(src)
+            Rails.logger.warn "Photo file not found: #{src}"
+            next
+          end
+          filename = "#{photo.position.to_s.rjust(3, '0')}_#{File.basename(src)}"
+          zos.put_next_entry(filename)
+          File.open(src, 'rb') { |f| IO.copy_stream(f, zos) }
           copied_count += 1
-          Rails.logger.info "Copied #{filename}"
-        else
-          Rails.logger.warn "Photo file not found: #{photo.original_path}"
         end
       end
       
@@ -208,26 +207,8 @@ class GalleryController < ApplicationController
         return
       end
       
-      # Create ZIP file using system command (most reliable)
-      temp_zip = Tempfile.new(['session_photos', '.zip'])
-      
-      # Use absolute paths and proper escaping
-      zip_command = "cd #{Shellwords.escape(temp_dir)} && zip -q -r #{Shellwords.escape(temp_zip.path)} ."
-      Rails.logger.info "Running ZIP command: #{zip_command}"
-      
-      zip_result = system(zip_command)
-      zip_exit_status = $?.exitstatus
-      
-      Rails.logger.info "ZIP command result: #{zip_result}, exit status: #{zip_exit_status}"
-      
-      unless zip_result && zip_exit_status == 0
-        Rails.logger.error "ZIP command failed with exit status #{zip_exit_status}"
-        redirect_to gallery_path(@session.burst_id), alert: "Failed to create download archive"
-        return
-      end
-      
-      # Check if zip file was created and has content
-      unless File.exist?(temp_zip.path) && File.size(temp_zip.path) > 0
+      # Verify zip has content
+      if !File.exist?(temp_zip.path) || File.size(temp_zip.path) == 0
         Rails.logger.error "ZIP file was not created or is empty"
         redirect_to gallery_path(@session.burst_id), alert: "Failed to create download archive"
         return
@@ -252,11 +233,6 @@ class GalleryController < ApplicationController
       Rails.logger.error e.backtrace.join("\n")
       redirect_to gallery_path(@session.burst_id), alert: "An error occurred while preparing the download"
     ensure
-      # Clean up temp files
-      if temp_dir && Dir.exist?(temp_dir)
-        FileUtils.remove_entry(temp_dir)
-        Rails.logger.info "Cleaned up temp directory"
-      end
       if temp_zip
         temp_zip.close
         temp_zip.unlink rescue nil
