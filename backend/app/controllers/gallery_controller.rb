@@ -1,10 +1,19 @@
 class GalleryController < ApplicationController
   skip_before_action :verify_authenticity_token, only: [:update_hero, :reject_photo, :save_email, :hide_session]
   def index
+    # Don't load all photos - just get the sessions with their hero photos
     @sessions_by_day = PhotoSession.visible
-                                   .includes(:session_day, :photos, sittings: :hero_photo)
+                                   .includes(:session_day, 
+                                           sittings: { hero_photo: { image_attachment: :blob } })
                                    .order('session_days.date ASC, photo_sessions.started_at ASC')
                                    .group_by { |s| s.session_day.day_name }
+    
+    # Pre-load face detection info separately (more efficient than loading all photos)
+    session_ids = @sessions_by_day.values.flatten.map(&:id)
+    @face_counts = Photo.where(photo_session_id: session_ids)
+                        .where.not(face_data: nil)
+                        .group(:photo_session_id)
+                        .count
     
     @stats = {
       total_sessions: PhotoSession.visible.count,
@@ -289,5 +298,16 @@ class GalleryController < ApplicationController
               disposition: 'attachment'
   ensure
     temp_file&.unlink
+  end
+  
+  def day_sessions
+    day = params[:day]
+    @sessions = PhotoSession.visible
+                           .includes(:session_day, :photos, sittings: :hero_photo)
+                           .joins(:session_day)
+                           .where(session_days: { day_name: day })
+                           .order(:started_at)
+    
+    render partial: 'day_sessions', locals: { sessions: @sessions }
   end
 end

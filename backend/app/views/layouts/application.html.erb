@@ -23,6 +23,33 @@
   </head>
 
   <body>
+    <!-- Flash messages for Devise -->
+    <% if notice.present? %>
+      <div class="bg-green-600 text-white px-4 py-2 text-center">
+        <%= notice %>
+      </div>
+    <% end %>
+    <% if alert.present? %>
+      <div class="bg-red-600 text-white px-4 py-2 text-center">
+        <%= alert %>
+      </div>
+    <% end %>
+    
+    <!-- User info bar -->
+    <% if user_signed_in? %>
+      <div class="bg-gray-900 text-white px-4 py-2 text-sm flex justify-between items-center">
+        <div>
+          Logged in as: <strong><%= current_user.name || current_user.email %></strong>
+          <% if current_user.admin? %>
+            <span class="ml-2 px-2 py-1 bg-yellow-600 text-black text-xs rounded">Admin</span>
+          <% end %>
+        </div>
+        <div>
+          <%= link_to "Logout", destroy_user_session_path, method: :delete, data: { turbo_method: :delete }, class: "text-red-400 hover:text-red-300" %>
+        </div>
+      </div>
+    <% end %>
+    
     <%= yield %>
     
     <!-- Service Worker Registration -->

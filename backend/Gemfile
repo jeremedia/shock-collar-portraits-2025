@@ -48,6 +48,10 @@ gem "aws-sdk-s3", require: false
 # CORS support for API
 gem "rack-cors"
 
+# Authentication
+gem "devise", "~> 4.9"
+gem "devise_invitable", "~> 2.0"
+
 # CSV support for exports
 gem "csv"
 

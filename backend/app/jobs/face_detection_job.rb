@@ -1,5 +1,5 @@
 class FaceDetectionJob < ApplicationJob
-  queue_as :default
+  queue_as :face_detection
 
   # Process face detection for a single photo
   def perform(photo_id)

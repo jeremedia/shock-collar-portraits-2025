@@ -16,6 +16,21 @@ class AdminController < ApplicationController
     @failed_face_jobs = failed_face_detection_jobs(10)
   end
   
+  def queue_status
+    @queue_stats = get_detailed_queue_statistics
+    @processing_rate = get_processing_rate
+    @estimated_completion = calculate_estimated_completion
+    
+    respond_to do |format|
+      format.html
+      format.json { render json: { 
+        queues: @queue_stats, 
+        rate: @processing_rate,
+        completion: @estimated_completion
+      }}
+    end
+  end
+  
   def enqueue_all
     photos_count = Photo.without_face_detection.count
     
@@ -198,5 +213,67 @@ class AdminController < ApplicationController
                                 .includes(:job)
                                 .order(created_at: :desc)
                                 .limit(limit)
+  end
+  
+  def get_detailed_queue_statistics
+    # Get pending jobs by queue
+    pending = SolidQueue::Job.where(finished_at: nil).group(:queue_name).count
+    
+    # Get completed jobs in last hour for rate calculation
+    completed_last_hour = SolidQueue::Job
+      .where('finished_at > ?', 1.hour.ago)
+      .where.not(finished_at: nil)
+      .group(:queue_name)
+      .count
+    
+    # Get total jobs ever created by queue (for progress calculation)
+    total_jobs = SolidQueue::Job.group(:queue_name).count
+    
+    # Calculate statistics for each queue
+    queues = {}
+    all_queues = (pending.keys + completed_last_hour.keys + total_jobs.keys).uniq
+    
+    all_queues.each do |queue_name|
+      pending_count = pending[queue_name] || 0
+      completed_count = total_jobs[queue_name] || 0
+      completed_recent = completed_last_hour[queue_name] || 0
+      
+      # Calculate progress percentage
+      total_ever = pending_count + completed_count
+      progress = total_ever > 0 ? ((completed_count.to_f / total_ever) * 100).round(1) : 0
+      
+      queues[queue_name] = {
+        pending: pending_count,
+        completed: completed_count,
+        completed_last_hour: completed_recent,
+        total: total_ever,
+        progress: progress,
+        rate_per_hour: completed_recent,
+        rate_per_minute: (completed_recent / 60.0).round(2)
+      }
+    end
+    
+    queues
+  end
+
+  def get_processing_rate
+    # Jobs completed in last 5 minutes for current rate
+    recent_jobs = SolidQueue::Job
+      .where('finished_at > ?', 5.minutes.ago)
+      .where.not(finished_at: nil)
+      .count
+    
+    (recent_jobs / 5.0).round(2) # jobs per minute
+  end
+
+  def calculate_estimated_completion
+    total_pending = SolidQueue::Job.where(finished_at: nil).count
+    return nil if total_pending == 0
+    
+    current_rate = get_processing_rate
+    return nil if current_rate == 0
+    
+    minutes_remaining = (total_pending / current_rate).round
+    Time.current + minutes_remaining.minutes
   end
 end

@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-black text-white pb-20" data-controller="thumbnail-size">
+<div class="min-h-screen bg-black text-white pb-20" data-controller="thumbnail-size day-accordion">
   <!-- Header -->
   <header class="sticky top-0 z-40 bg-gradient-to-b from-black to-black/80 backdrop-blur-sm border-b-2 border-red-700">
     <div class="container mx-auto px-4">
@@ -10,7 +10,7 @@
         
         <!-- Stats -->
         <div class="flex justify-center gap-8 mt-4 text-sm">
-          <span class="text-yellow-500"><%= @stats[:total_sessions] %> Sessions</span>
+          <span class="text-yellow-500"><%= @stats[:total_sessions] %> Sittings</span>
           <span class="text-yellow-500"><%= @stats[:total_photos] %> Photos</span>
           <% @stats[:by_day].each do |day, count| %>
             <span class="text-gray-400"><%= day.capitalize %>: <%= count %></span>
@@ -26,29 +26,30 @@
       <% sessions = @sessions_by_day[day] || [] %>
       <% next if sessions.empty? %>
       
-      <div class="mb-12" data-controller="collapsible">
+      <div class="mb-12" data-day-accordion-target="day" data-day-name="<%= day %>">
         <!-- Day Header -->
         <button 
-          data-action="click->collapsible#toggle"
-          data-collapsible-target="trigger"
+          data-action="click->day-accordion#toggle"
           class="w-full text-left mb-6 group"
         >
           <div class="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-red-900/30 to-transparent rounded-lg hover:from-red-900/50 transition-colors">
             <h2 class="text-2xl font-bold text-yellow-500">
               <%= day.capitalize %>
-              <span class="text-sm text-gray-400 ml-3"><%= sessions.size %> sessions</span>
+              <span class="text-sm text-gray-400 ml-3"><%= sessions.size %> sittings</span>
             </h2>
-            <svg class="w-6 h-6 text-yellow-500 transform transition-transform" data-collapsible-target="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 text-yellow-500 transform transition-transform" data-day-accordion-target="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </button>
         
-        <!-- Sessions Grid -->
-        <div data-collapsible-target="content" data-thumbnail-size-target="grid" class="hidden grid grid-cols-4 gap-4 transition-all duration-300">
-          <% sessions.each do |session| %>
-            <%= render 'session_card', session: session %>
-          <% end %>
+        <!-- Sittings Grid Container -->
+        <div data-day-accordion-target="content" class="hidden">
+          <div data-day-accordion-target="grid" data-thumbnail-size-target="grid" class="grid grid-cols-4 gap-4 transition-all duration-300">
+            <% sessions.each do |session| %>
+              <%= render 'session_card', session: session %>
+            <% end %>
+          </div>
         </div>
       </div>
     <% end %>
@@ -61,7 +62,7 @@
         <!-- Size Slider -->
         <div class="flex items-center gap-3">
           <label class="text-yellow-500 text-sm font-semibold">Size:</label>
-          <span class="text-gray-400 text-xs">Small</span>
+          <span class="text-gray-400 text-xs">Large</span>
           <input type="range" 
                  data-thumbnail-size-target="slider"
                  data-action="input->thumbnail-size#updateSize"
@@ -71,7 +72,7 @@
                  step="1"
                  class="w-48 h-2 bg-red-900 rounded-lg appearance-none cursor-pointer slider"
                  style="background: linear-gradient(to right, #dc2626 0%, #dc2626 33%, #374151 33%, #374151 100%);">
-          <span class="text-gray-400 text-xs">Large</span>
+          <span class="text-gray-400 text-xs">Small</span>
           <span data-thumbnail-size-target="count" class="text-yellow-500 text-sm ml-2">(4 per row)</span>
         </div>
         

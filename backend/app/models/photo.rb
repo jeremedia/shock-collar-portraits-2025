@@ -14,9 +14,10 @@ class Photo < ApplicationRecord
   scope :heroes, -> { joins("INNER JOIN sittings ON sittings.hero_photo_id = photos.id") }
   scope :without_face_detection, -> { where(face_data: nil) }
   
-  # Automatically enqueue image attachment and face detection for new photos
+  # Automatically enqueue processing for new photos
   after_create :enqueue_image_attachment
   after_create :enqueue_face_detection
+  after_create :enqueue_variant_generation
 
   # Rails 8 uses coder instead of second argument for serialize
   serialize :metadata, coder: JSON
@@ -51,6 +52,12 @@ class Photo < ApplicationRecord
   def enqueue_face_detection
     return if face_data.present? # Skip if already processed
     FaceDetectionJob.perform_later(id)
+  end
+  
+  # Enqueue variant generation job for this photo
+  def enqueue_variant_generation
+    # Queue variant generation after attachment (will be skipped if no attachment)
+    VariantGenerationJob.perform_later(id, [:thumb, :large, :gallery])
   end
   
   def has_faces?
@@ -100,7 +107,12 @@ class Photo < ApplicationRecord
       saver: { quality: 85 }
     }
     
-    Rails.application.routes.url_helpers.rails_blob_url(image.variant(variant_params).processed, only_path: true)
+    begin
+      Rails.application.routes.url_helpers.rails_blob_url(image.variant(variant_params).processed, only_path: true)
+    rescue ActiveStorage::FileNotFoundError
+      # Return nil if the file doesn't exist (e.g., still being uploaded to S3)
+      nil
+    end
   end
   
   # Check if face detection is needed

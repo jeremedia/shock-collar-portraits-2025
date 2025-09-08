@@ -1,5 +1,5 @@
 class ImageAttachmentJob < ApplicationJob
-  queue_as :default
+  queue_as :attachments
   
   retry_on StandardError, wait: :polynomially_longer, attempts: 3
 

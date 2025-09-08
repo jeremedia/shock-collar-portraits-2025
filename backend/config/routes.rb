@@ -1,6 +1,10 @@
 Rails.application.routes.draw do
+  devise_for :users
   # Gallery routes (main UI)
   resources :gallery, only: [:index, :show] do
+    collection do
+      get :day_sessions
+    end
     member do
       post :update_hero
       post :save_email
@@ -34,6 +38,7 @@ Rails.application.routes.draw do
   # Face detection admin
   get 'admin', to: 'admin#index'
   get 'admin/face_detection', to: 'admin#face_detection'
+  get 'admin/queue_status', to: 'admin#queue_status'
   post 'admin/enqueue_all', to: 'admin#enqueue_all'
   post 'admin/enqueue_session/:session_id', to: 'admin#enqueue_session', as: 'admin_enqueue_session'
   post 'admin/retry_failed', to: 'admin#retry_failed'

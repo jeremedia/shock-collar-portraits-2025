@@ -3,9 +3,17 @@ default: &default
     - polling_interval: 1
       batch_size: 500
   workers:
-    - queues: "*"
+    - queues: "default"
+      threads: 5
+      processes: <%= ENV.fetch("JOB_CONCURRENCY", 4) %>
+      polling_interval: 0.1
+    - queues: "face_detection"
       threads: 3
-      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      processes: <%= ENV.fetch("FACE_DETECTION_CONCURRENCY", 2) %>
+      polling_interval: 0.1
+    - queues: "attachments"
+      threads: 5
+      processes: <%= ENV.fetch("ATTACHMENT_CONCURRENCY", 3) %>
       polling_interval: 0.1
 
 development:
