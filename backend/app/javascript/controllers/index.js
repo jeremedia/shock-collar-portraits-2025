@@ -4,6 +4,9 @@
 
 import { application } from "controllers/application"
 
+import AdminEditorController from "controllers/admin_editor_controller"
+application.register("admin-editor", AdminEditorController)
+
 import CollapsibleController from "controllers/collapsible_controller"
 application.register("collapsible", CollapsibleController)
 
@@ -12,6 +15,9 @@ application.register("day-accordion", DayAccordionController)
 
 import ImageViewerController from "controllers/image_viewer_controller"
 application.register("image-viewer", ImageViewerController)
+
+import QueueStatusController from "controllers/queue_status_controller"
+application.register("queue-status", QueueStatusController)
 
 import ThumbnailSizeController from "controllers/thumbnail_size_controller"
 application.register("thumbnail-size", ThumbnailSizeController)

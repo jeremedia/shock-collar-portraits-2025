@@ -6,7 +6,9 @@ Rails.application.configure do
   # Allow requests from custom domains
   config.hosts << "scp-25-dev.oknotok.com"
   config.hosts << "scp-25.oknotok.com"
+  config.hosts << "scp-dev.zice.app"
   config.hosts << /.*\.oknotok\.com/
+  config.hosts << /.*\.zice\.app/
   config.hosts << /.*\.local/
 
   # Make code changes take effect immediately without server restart.
@@ -39,8 +41,8 @@ Rails.application.configure do
   
   # Set default URL options for Active Storage
   # Use the domain if accessed via domain, otherwise localhost
-  Rails.application.routes.default_url_options[:host] = ENV['HOST'] || 'scp-25-dev.oknotok.com'
-  Rails.application.routes.default_url_options[:port] = 4000
+  Rails.application.routes.default_url_options[:host] = ENV['HOST'] || 'scp-dev.zice.app'
+  Rails.application.routes.default_url_options[:port] = ENV['PORT'] || 3225
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false

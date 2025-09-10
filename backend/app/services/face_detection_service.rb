@@ -113,18 +113,37 @@ class FaceDetectionService
     face = primary_face(photo)
     return nil unless face
     
-    image_width = photo.face_data['image_width']
-    image_height = photo.face_data['image_height']
+    face_data_width = photo.face_data['image_width']
+    face_data_height = photo.face_data['image_height']
     
-    # Calculate padding
-    padding_x = face['width'] * (padding_percent / 100.0)
-    padding_y = face['height'] * (padding_percent / 100.0)
+    # Get actual image dimensions from blob if available
+    actual_width = face_data_width
+    actual_height = face_data_height
+    
+    if photo.image.attached? && photo.image.blob.metadata['width']
+      actual_width = photo.image.blob.metadata['width']
+      actual_height = photo.image.blob.metadata['height']
+    end
+    
+    # Calculate scale factors if dimensions don't match
+    scale_x = actual_width.to_f / face_data_width.to_f
+    scale_y = actual_height.to_f / face_data_height.to_f
+    
+    # Scale face coordinates to match actual image dimensions
+    scaled_x = face['x'] * scale_x
+    scaled_y = face['y'] * scale_y
+    scaled_width = face['width'] * scale_x
+    scaled_height = face['height'] * scale_y
+    
+    # Calculate padding based on scaled dimensions
+    padding_x = scaled_width * (padding_percent / 100.0)
+    padding_y = scaled_height * (padding_percent / 100.0)
     
     # Calculate crop with padding
-    left = [(face['x'] - padding_x), 0].max
-    top = [(face['y'] - padding_y), 0].max
-    width = [face['width'] + (padding_x * 2), image_width - left].min
-    height = [face['height'] + (padding_y * 2), image_height - top].min
+    left = [(scaled_x - padding_x), 0].max
+    top = [(scaled_y - padding_y), 0].max
+    width = [scaled_width + (padding_x * 2), actual_width - left].min
+    height = [scaled_height + (padding_y * 2), actual_height - top].min
     
     {
       left: left.round,

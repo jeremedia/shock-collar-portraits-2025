@@ -1,0 +1,77 @@
+<div id="session_<%= session.burst_id %>" class="mb-8">
+  <!-- Session Header -->
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="text-lg font-semibold text-gray-300">
+      Session <%= session.burst_id.match(/\d+/)[0] %>
+      <span class="text-sm font-normal text-gray-500 ml-2">
+        <%= session.started_at.in_time_zone('America/Los_Angeles').strftime('%l:%M %p PST').strip %>
+        (<%= session.photos.count %> photos)
+      </span>
+    </h3>
+    <div class="flex gap-2">
+      <%= link_to "View Session", gallery_path(session.burst_id), 
+          class: "px-3 py-1 text-xs bg-gray-700/50 text-gray-300 rounded hover:bg-gray-600/50 transition-colors" %>
+      <% if session.sittings.any? && session.sittings.first.hero_photo %>
+        <span class="px-3 py-1 text-xs bg-yellow-600/30 text-yellow-500 rounded">
+          Hero: #<%= session.photos.find_index(session.sittings.first.hero_photo) + 1 if session.sittings.first.hero_photo %>
+        </span>
+      <% end %>
+    </div>
+  </div>
+  
+  <!-- Photo Thumbnails Grid -->
+  <div class="grid grid-cols-12 md:grid-cols-16 lg:grid-cols-20 xl:grid-cols-24 2xl:grid-cols-30 gap-1">
+    <% session.photos.order(:position).each_with_index do |photo, index| %>
+      <div class="relative group">
+        <% if photo.image.attached? %>
+          <button
+              data-action="click->admin-editor#selectPhoto"
+              data-admin-editor-target="thumbnail"
+              data-index="<%= (defined?(global_indices) ? global_indices : @global_indices)[photo.id] %>"
+              data-photo-id="<%= photo.id %>"
+              data-session-id="<%= session.burst_id %>"
+              data-session-number="<%= session.burst_id.match(/\d+/)[0] %>"
+              data-filename="<%= photo.filename %>"
+              data-position="<%= photo.position %>"
+              data-image-url="<%= smart_variant_url(photo.image, :thumb) %>"
+              data-large-url="<%= smart_variant_url(photo.image, :large) %>"
+              data-rejected="<%= photo.rejected %>"
+              data-is-hero="<%= session.sittings.any? && session.sittings.first.hero_photo_id == photo.id %>"
+              data-day-name="<%= day&.day_name&.capitalize || session.session_day.day_name.capitalize %>"
+              data-session-time="<%= session.started_at.in_time_zone('America/Los_Angeles').strftime('%l:%M %p PST').strip %>"
+              data-face-count="<%= photo.face_count %>"
+              class="relative block w-full aspect-square overflow-hidden rounded border border-gray-700 hover:border-yellow-500 transition-colors cursor-pointer"
+              title="Photo #{index + 1} - #{photo.filename}">
+            <%= image_tag smart_variant_url(photo.image, :thumb), 
+                          alt: "Photo #{index + 1}",
+                          loading: "lazy",
+                          "data-lazy": "true",
+                          class: "w-full h-full object-cover thumbnail-image" %>
+            
+            <!-- Photo indicators -->
+            <% if photo.rejected %>
+              <div class="reject-indicator absolute top-1 left-1 w-2 h-2 bg-red-500 rounded-full pointer-events-none z-10"></div>
+            <% end %>
+            <% if session.sittings.any? && session.sittings.first.hero_photo_id == photo.id %>
+              <div class="hero-indicator absolute top-1 right-1 w-2 h-2 bg-yellow-500 rounded-full pointer-events-none z-10"></div>
+            <% end %>
+            <% if photo.face_count > 0 %>
+              <div class="absolute bottom-1 left-1 text-xs bg-black/70 text-white px-1 rounded pointer-events-none z-10">
+                <%= photo.face_count %>
+              </div>
+            <% end %>
+          </button>
+        <% else %>
+          <div class="w-full aspect-square bg-gray-800 rounded border border-gray-700 flex items-center justify-center">
+            <span class="text-xs text-gray-500">No image</span>
+          </div>
+        <% end %>
+        
+        <!-- Hover tooltip -->
+        <div class="absolute bottom-0 left-0 right-0 bg-black/90 text-white text-xs p-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+          #<%= index + 1 %> <%= photo.filename %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

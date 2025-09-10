@@ -11,6 +11,9 @@ class PhotoSession < ApplicationRecord
   validates :session_number, presence: true
   validates :burst_id, presence: true, uniqueness: true
   
+  # Merge another session's photos into this session
+  # Photos are automatically reordered chronologically by their actual taken time
+  # This prevents interleaving when merging sessions taken at different times
   def merge_with(other_session)
     return false if other_session.id == self.id
     
@@ -25,11 +28,19 @@ class PhotoSession < ApplicationRecord
         updated_at: Time.current
       )
       
-      # Renumber all photos to maintain sequence
-      all_photos = photos.reload.order(:position)
-      all_photos.each_with_index do |photo, index|
+      # Reorder all photos chronologically by their actual taken time
+      # This prevents interleaving when merging sessions that were taken at different times
+      all_photos = photos.reload
+      
+      # Sort by photo_taken_at (which uses EXIF or calculated time)
+      sorted_photos = all_photos.sort_by { |p| [p.photo_taken_at, p.filename] }
+      
+      # Update positions based on chronological order
+      sorted_photos.each_with_index do |photo, index|
         photo.update_columns(position: index)
       end
+      
+      Rails.logger.info "Reordered #{sorted_photos.length} photos chronologically after merge"
       
       # Update our photo count
       self.update!(photo_count: all_photos.count)
@@ -58,6 +69,9 @@ class PhotoSession < ApplicationRecord
     false
   end
   
+  # Split a session at a specific photo, creating a new session with all photos from that point onward
+  # CRITICAL: The new session's started_at MUST use the actual photo taken time (from EXIF or calculated)
+  # This ensures split sessions appear in correct chronological order, not at end of day
   def split_at_photo(photo_id)
     photo = photos.find(photo_id)
     
@@ -86,11 +100,14 @@ class PhotoSession < ApplicationRecord
         new_burst_id = "#{burst_id}-split-#{counter}"
       end
       
+      # Create new session with proper timestamp
+      # IMPORTANT: Use photo.photo_taken_at which extracts EXIF time (converted to UTC)
+      # or falls back to calculated time based on burst timestamp + position
       new_session = PhotoSession.create!(
         burst_id: new_burst_id,
         session_number: session_number,
         session_day: session_day,
-        started_at: photo.created_at || started_at,
+        started_at: photo.photo_taken_at,  # Uses actual photo time, not database created_at!
         ended_at: ended_at,
         photo_count: photos_to_move.count,
         source: source,
@@ -105,13 +122,21 @@ class PhotoSession < ApplicationRecord
         )
       end
       
+      # Update new session's ended_at based on last photo's actual taken time
+      # This ensures the session time range accurately reflects when photos were taken
+      last_moved_photo = photos_to_move.last
+      if last_moved_photo
+        new_session.update!(ended_at: last_moved_photo.photo_taken_at)
+      end
+      
       # Update original session's photo count and end time
+      # The ended_at must use actual photo time to maintain chronological accuracy
       remaining_photos = photos.reload
       if remaining_photos.any?
         last_photo = remaining_photos.order(:position).last
         update!(
           photo_count: remaining_photos.count,
-          ended_at: last_photo.created_at || started_at
+          ended_at: last_photo.photo_taken_at  # Use actual photo time, not database time
         )
       else
         update!(photo_count: 0)

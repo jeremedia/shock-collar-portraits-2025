@@ -15,6 +15,10 @@
           <% @stats[:by_day].each do |day, count| %>
             <span class="text-gray-400"><%= day.capitalize %>: <%= count %></span>
           <% end %>
+          <% if current_user&.admin? %>
+            <span class="text-gray-400">|</span>
+            <%= link_to "All Thumbnails", admin_thumbnails_path, class: "text-blue-400 hover:text-blue-300" %>
+          <% end %>
         </div>
       </div>
     </div>
@@ -44,7 +48,7 @@
         </button>
         
         <!-- Sittings Grid Container -->
-        <div data-day-accordion-target="content" class="hidden">
+        <div data-day-accordion-target="content" class="">
           <div data-day-accordion-target="grid" data-thumbnail-size-target="grid" class="grid grid-cols-4 gap-4 transition-all duration-300">
             <% sessions.each do |session| %>
               <%= render 'session_card', session: session %>

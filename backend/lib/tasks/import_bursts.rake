@@ -78,7 +78,9 @@ namespace :import do
       date_str = match[2]
       time_str = match[3]
       
-      # Parse timestamp
+      # Parse timestamp from burst folder name
+      # IMPORTANT: These timestamps are already in UTC (converted from PST during camera download)
+      # Format: burst_016_20250825_081448 where timestamp represents UTC time
       begin
         started_at = DateTime.strptime("#{date_str}_#{time_str}", "%Y%m%d_%H%M%S")
       rescue => e

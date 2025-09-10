@@ -59,14 +59,20 @@
           .then(function(registration) {
             console.log('Service Worker registered successfully:', registration.scope);
             
+            // Force update check
+            registration.update();
+            
             // Listen for updates
             registration.addEventListener('updatefound', function() {
               const newWorker = registration.installing;
               console.log('New Service Worker found, installing...');
               
               newWorker.addEventListener('statechange', function() {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('New Service Worker installed, ready to activate');
+                console.log('Service Worker state:', newWorker.state);
+                if (newWorker.state === 'activated') {
+                  console.log('New Service Worker activated!');
+                  // Reload to use new service worker
+                  window.location.reload();
                 }
               });
             });

@@ -1,7 +1,11 @@
 class GalleryController < ApplicationController
+  helper VariantUrlHelper
   skip_before_action :verify_authenticity_token, only: [:update_hero, :reject_photo, :save_email, :hide_session]
   def index
     # Don't load all photos - just get the sessions with their hero photos
+    # CRITICAL: Sessions are sorted by started_at which represents the actual photo taken time
+    # For split sessions, this ensures they appear chronologically correct (not at end of day)
+    # started_at uses either EXIF DateTimeOriginal (converted to UTC) or calculated burst time
     @sessions_by_day = PhotoSession.visible
                                    .includes(:session_day, 
                                            sittings: { hero_photo: { image_attachment: :blob } })
@@ -39,6 +43,13 @@ class GalleryController < ApplicationController
     
     @sitting = @session.sittings.first
     @hero_photo = @sitting&.hero_photo || @photos[@photos.length / 2]
+    
+    # Calculate the initial photo index (hero or first)
+    if @hero_photo && @photos.include?(@hero_photo)
+      @initial_index = @photos.index(@hero_photo)
+    else
+      @initial_index = 0
+    end
     
     # Find adjacent sessions for navigation (only visible sessions)
     all_sessions = PhotoSession.visible
@@ -106,12 +117,84 @@ class GalleryController < ApplicationController
     new_session = @session.split_at_photo(@photo.id)
     
     if new_session
+      # Reload both sessions with all associations
+      @session.reload
+      new_session.reload
+      
+      # For Turbo Stream response, we need to recalculate global indices
+      if request.format.turbo_stream? || (request.format.json? && params[:turbo])
+        # Get the day for both sessions
+        @day = @session.session_day
+        
+        # Get all sessions for this day to maintain order
+        day_sessions = PhotoSession.visible
+                                   .includes(:session_day, photos: { image_attachment: :blob }, sittings: {})
+                                   .where(session_day: @day)
+                                   .order(:started_at)
+        
+        # Recalculate global indices for all photos in this day
+        @global_indices = {}
+        global_index = 0
+        
+        # First count photos from sessions before this day
+        PhotoSession.visible
+                    .joins(:session_day)
+                    .where('session_days.date < ?', @day.date)
+                    .order('session_days.date ASC, photo_sessions.started_at ASC')
+                    .each do |s|
+          global_index += s.photos.count
+        end
+        
+        # Then calculate indices for this day's sessions
+        day_sessions.each do |s|
+          s.photos.order(:position).each do |photo|
+            @global_indices[photo.id] = global_index
+            global_index += 1
+          end
+        end
+      end
+      
       respond_to do |format|
-        format.json { render json: { success: true, new_session_id: new_session.burst_id } }
+        format.turbo_stream {
+          render turbo_stream: [
+            turbo_stream.replace("session_#{@session.burst_id}", 
+                                partial: 'admin/thumbnails/session', 
+                                locals: { session: @session, day: @day, global_indices: @global_indices }),
+            turbo_stream.after("session_#{@session.burst_id}", 
+                              partial: 'admin/thumbnails/session', 
+                              locals: { session: new_session, day: @day, global_indices: @global_indices }),
+            turbo_stream.append('body', 
+                               "<script>document.dispatchEvent(new CustomEvent('sessions:updated', { detail: { sessionId: '#{@session.burst_id}', newSessionId: '#{new_session.burst_id}' } }))</script>".html_safe)
+          ]
+        }
+        format.json { 
+          if params[:turbo]
+            render json: { 
+              success: true, 
+              new_session_id: new_session.burst_id,
+              turbo_streams: render_to_string(
+                turbo_stream: [
+                  turbo_stream.replace("session_#{@session.burst_id}", 
+                                      partial: 'admin/thumbnails/session', 
+                                      locals: { session: @session, day: @day, global_indices: @global_indices }),
+                  turbo_stream.after("session_#{@session.burst_id}", 
+                                    partial: 'admin/thumbnails/session', 
+                                    locals: { session: new_session, day: @day, global_indices: @global_indices })
+                ]
+              )
+            }
+          else
+            render json: { success: true, new_session_id: new_session.burst_id }
+          end
+        }
         format.html { redirect_to gallery_path(new_session.burst_id), notice: "Session split successfully" }
       end
     else
       respond_to do |format|
+        format.turbo_stream { 
+          render turbo_stream: turbo_stream.append('body', 
+            "<script>alert('Failed to split session: #{@session.errors.full_messages.join(", ")}')</script>".html_safe)
+        }
         format.json { 
           render json: { 
             success: false, 
@@ -126,6 +209,10 @@ class GalleryController < ApplicationController
     end
   rescue ActiveRecord::RecordNotFound
     respond_to do |format|
+      format.turbo_stream { 
+        render turbo_stream: turbo_stream.append('body', 
+          "<script>alert('Photo not found')</script>".html_safe)
+      }
       format.json { render json: { success: false, error: "Photo not found", errors: ["Photo not found"] }, status: :not_found }
       format.html { redirect_to gallery_path(@session.burst_id), alert: "Photo not found" }
     end

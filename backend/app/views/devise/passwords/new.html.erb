@@ -1,0 +1,46 @@
+<div class="min-h-screen bg-black flex items-center justify-center px-4">
+  <div class="max-w-md w-full">
+    <!-- Logo/Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-red-600 to-yellow-600 bg-clip-text text-transparent">
+        SHOCK COLLAR PORTRAITS
+      </h1>
+      <p class="text-red-500 mt-2">Burning Man 2025 • Art Therapy</p>
+    </div>
+
+    <!-- Password Reset Form -->
+    <div class="bg-gray-900/50 backdrop-blur-sm border-2 border-red-700 rounded-lg p-8">
+      <h2 class="text-2xl font-bold text-yellow-500 mb-2 text-center">Forgot your password?</h2>
+      <p class="text-gray-400 text-sm text-center mb-6">We'll send you instructions to reset it.</p>
+
+      <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post, class: "space-y-6" }) do |f| %>
+        <%= render "devise/shared/error_messages", resource: resource %>
+
+        <!-- Email Field -->
+        <div>
+          <%= f.label :email, class: "block text-sm font-medium text-gray-300 mb-2" %>
+          <%= f.email_field :email, 
+              autofocus: true, 
+              autocomplete: "email",
+              required: true,
+              class: "w-full px-4 py-2 bg-black/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent",
+              placeholder: "your@email.com" %>
+        </div>
+
+        <!-- Submit Button -->
+        <div>
+          <%= f.submit "Send Reset Instructions", 
+              class: "w-full px-6 py-3 bg-gradient-to-r from-red-600 to-yellow-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-black transition-colors cursor-pointer" %>
+        </div>
+      <% end %>
+
+      <!-- Links -->
+      <%= render "devise/shared/links" %>
+    </div>
+
+    <!-- Footer -->
+    <p class="text-center text-gray-500 text-xs mt-8">
+      © 2025 OKNOTOK • Private Gallery
+    </p>
+  </div>
+</div>

@@ -127,4 +127,65 @@ namespace :variants do
     variant_jobs = SolidQueue::Job.where("class_name = 'VariantGenerationJob'").where(finished_at: nil).count
     puts "\nPending variant generation jobs: #{variant_jobs}"
   end
+
+  desc "Process large variants synchronously in batches"
+  task process_large_sync: :environment do
+    photos = Photo.joins(:image_attachment).order(:id)
+    total = photos.count
+    
+    puts "=== Processing Large Variants Synchronously ==="
+    puts "Total photos: #{total}"
+    puts "Using proxy mode: #{Rails.application.config.active_storage.resolve_model_to_route}"
+    puts "\nThis will process variants immediately, not through background jobs."
+    print "Continue? (y/n): "
+    
+    response = STDIN.gets.chomp
+    unless response.downcase == 'y'
+      puts "Cancelled"
+      exit
+    end
+    
+    processed = 0
+    errors = []
+    start_time = Time.now
+    
+    photos.find_in_batches(batch_size: 50) do |batch|
+      batch.each do |photo|
+        begin
+          # Process the large variant synchronously
+          variant = photo.image.variant(:large)
+          variant.processed
+          
+          processed += 1
+          
+          # Progress update every 10 photos
+          if processed % 10 == 0
+            elapsed = Time.now - start_time
+            rate = processed / elapsed
+            remaining = (total - processed) / rate
+            
+            print "\rProcessed: #{processed}/#{total} (#{(processed.to_f/total * 100).round(1)}%) | " \
+                  "Rate: #{rate.round(1)}/sec | ETA: #{(remaining/60).round(1)} min"
+          end
+        rescue => e
+          errors << { photo_id: photo.id, error: e.message }
+          print "E"
+        end
+      end
+    end
+    
+    puts "\n\n" + "="*50
+    puts "Processing complete!"
+    puts "Total processed: #{processed}/#{total}"
+    puts "Errors: #{errors.count}"
+    puts "Time taken: #{((Time.now - start_time)/60).round(1)} minutes"
+    
+    if errors.any?
+      puts "\nErrors encountered:"
+      errors.first(10).each do |error|
+        puts "  Photo #{error[:photo_id]}: #{error[:error]}"
+      end
+      puts "  ... and #{errors.count - 10} more" if errors.count > 10
+    end
+  end
 end

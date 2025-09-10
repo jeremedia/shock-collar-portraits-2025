@@ -1,6 +1,14 @@
 <%
   session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
   day_name = @session.session_day.day_name if @session.session_day
+  
+  # Get first photo's timestamp in PST
+  first_photo = @photos.first
+  if first_photo&.photo_taken_at
+    # photo_taken_at returns UTC, convert to PST for display
+    photo_time_pst = first_photo.photo_taken_at.in_time_zone('America/Los_Angeles')
+    time_display = photo_time_pst.strftime('%l:%M %p PST').strip
+  end
 %>
 
 <!-- Lightroom-style Photo Viewer: Full viewport, no vertical scrolling -->
@@ -8,6 +16,7 @@
      data-image-viewer-total-value="<%= @photos.length %>"
      data-image-viewer-session-id-value="<%= @session.burst_id %>"
      data-image-viewer-show-rejected-value="<%= @show_rejected %>"
+     data-image-viewer-initial-index-value="<%= @initial_index %>"
      data-image-viewer-prev-session-value="<%= @prev_session ? gallery_path(@prev_session) : '' %>"
      data-image-viewer-next-session-value="<%= @next_session ? gallery_path(@next_session) : '' %>">
   
@@ -18,7 +27,12 @@
         <div class="flex items-center gap-4">
           <%= link_to "← Gallery", root_path, class: "text-yellow-500 hover:text-yellow-400 font-medium" %>
           <div class="text-gray-400">|</div>
-          <h2 class="text-lg font-bold text-yellow-500"><%= day_name %><%= ", " if day_name %>Sitting <%= session_number %></h2>
+          <h2 class="text-lg font-bold text-yellow-500">
+            <%= day_name&.capitalize %><%= ", " if day_name %>Sitting <%= session_number %>
+            <% if time_display %>
+              <span class="text-sm font-normal text-gray-400 ml-2">(<%= time_display %>)</span>
+            <% end %>
+          </h2>
         </div>
         
         <div class="flex items-center gap-3">
@@ -61,7 +75,7 @@
           <% end %>
           
           <!-- Image Counter -->
-          <div class="text-sm text-gray-400" data-image-viewer-target="counter">1 / <%= @photos.length %></div>
+          <div class="text-sm text-gray-400" data-image-viewer-target="counter"><%= @initial_index + 1 %> / <%= @photos.length %></div>
           
           <!-- Email Status -->
           <% if @sitting&.email.present? %>
@@ -88,18 +102,32 @@
       <div data-image-viewer-target="image" 
            data-index="<%= index %>"
            data-face-data="<%= photo.face_data.to_json if photo.face_data.present? %>"
-           class="<%= index == 0 ? '' : 'hidden' %> w-full h-full image-container">
+           <% if photo.image.attached? %>
+             data-large-url="<%= rails_blob_url(photo.image.variant(:large)) %>"
+           <% else %>
+             data-fallback-url="<%= photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')) %>"
+           <% end %>
+           data-photo-id="<%= photo.id %>"
+           class="<%= index == @initial_index ? '' : 'hidden' %> w-full h-full image-container">
         <div class="relative w-full h-full" data-image-viewer-target="imageWrapper">
-          <% if photo.image.attached? %>
-            <%= image_tag rails_blob_url(photo.image.variant(:large)), 
-                          alt: "Photo #{index + 1}",
-                          class: "w-full h-full object-contain cursor-pointer",
-                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+          <% if index == @initial_index %>
+            <!-- Only load the initially visible image -->
+            <% if photo.image.attached? %>
+              <%= image_tag rails_blob_url(photo.image.variant(:large)), 
+                            alt: "Photo #{index + 1}",
+                            class: "w-full h-full object-contain cursor-pointer",
+                            data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+            <% else %>
+              <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
+                            alt: "Photo #{index + 1}",
+                            class: "w-full h-full object-contain cursor-pointer",
+                            data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+            <% end %>
           <% else %>
-            <%= image_tag photo_path(path: photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
-                          alt: "Photo #{index + 1}",
-                          class: "w-full h-full object-contain cursor-pointer",
-                          data: { action: "click->image-viewer#next", photo_id: photo.id } %>
+            <!-- Placeholder for lazy loading -->
+            <div class="w-full h-full flex items-center justify-center">
+              <div class="text-gray-500">Loading...</div>
+            </div>
           <% end %>
           <!-- Face Rectangle Overlay -->
           <div class="absolute inset-0 pointer-events-none hidden" data-image-viewer-target="faceOverlay"></div>
@@ -212,7 +240,7 @@
                   class="flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 image-container <%= 
                     if @hero_photo&.id == photo.id
                       'border-yellow-500 border-4'
-                    elsif index == 0 
+                    elsif index == @initial_index 
                       'border-red-500' 
                     else 
                       'border-gray-600' 

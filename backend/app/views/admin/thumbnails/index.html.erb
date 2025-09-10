@@ -1,0 +1,358 @@
+<div class="min-h-screen bg-black text-white" data-controller="admin-editor">
+  <!-- Header -->
+  <header class="bg-black/90 backdrop-blur-sm border-b border-red-700/50 sticky top-0 z-40">
+    <div class="container mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-yellow-500">All Thumbnails Admin View</h1>
+          <p class="text-sm text-gray-400 mt-1">
+            <%= @total_photos %> photos across <%= @total_sessions %> sessions
+            <span class="ml-4">Images with attachments: <%= @photos_with_thumb %></span>
+          </p>
+        </div>
+        <div class="flex items-center gap-4">
+          <!-- Cache Status -->
+          <div id="cache-status" class="text-xs text-gray-400"></div>
+          
+          <!-- Lazy Loading Toggle -->
+          <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <input type="checkbox" id="lazy-loading-toggle" checked
+                   class="w-4 h-4 rounded border-gray-600 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0 bg-black">
+            <span>Lazy Loading</span>
+          </label>
+          
+          <!-- Preload All Button -->
+          <button id="preload-all-btn" class="px-3 py-1 text-sm bg-yellow-600/30 text-yellow-500 rounded hover:bg-yellow-600/50 transition-colors hidden">
+            Preload All
+          </button>
+          
+          <%= link_to "← Back to Gallery", root_path, class: "px-4 py-2 bg-red-900/30 text-white rounded hover:bg-red-800/50 transition-colors" %>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8">
+    <% @sessions_by_day.each do |day, sessions| %>
+      <div class="mb-12">
+        <!-- Day Header (Sticky) -->
+        <h2 class="sticky top-[73px] z-30 text-xl font-bold text-yellow-500 mb-4 border-b border-gray-700 pb-2 bg-black/95 backdrop-blur-sm">
+          <%= day.day_name.capitalize %> - <%= day.date.strftime('%B %d, %Y') %>
+          <span class="text-sm font-normal text-gray-400 ml-2">(<%= sessions.sum { |s| s.photos.count } %> photos)</span>
+        </h2>
+        
+        <!-- Sessions for this day -->
+        <div id="day_<%= day.day_name %>_sessions">
+          <% sessions.each do |session| %>
+            <%= render 'session', session: session, day: day %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </main>
+  
+  <!-- Loading indicator for lazy loaded images -->
+  <div id="loading-indicator" class="fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded-lg hidden">
+    Loading thumbnails...
+  </div>
+  
+  <!-- Admin Editor Overlay -->
+  <div data-admin-editor-target="overlay" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm hidden">
+    <!-- Close button -->
+    <button data-action="click->admin-editor#closeOverlay" 
+            class="absolute top-4 right-4 text-white hover:text-yellow-500 z-10">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+    
+    <!-- Content -->
+    <div class="flex flex-col h-full">
+      <!-- Info Bar -->
+      <div data-admin-editor-target="info" class="flex-shrink-0 p-4 text-center border-b border-gray-700">
+        <!-- Info will be updated by JS -->
+      </div>
+      
+      <!-- Image Container -->
+      <div class="flex-1 flex items-center justify-center p-8 min-h-0">
+        <img data-admin-editor-target="image" 
+             src="" 
+             alt="" 
+             class="max-w-full max-h-full object-contain transition-opacity duration-300"/>
+      </div>
+      
+      <!-- Controls -->
+      <div class="flex-shrink-0 p-6 border-t border-gray-700">
+        <div class="flex justify-center gap-4">
+          <button data-action="click->admin-editor#setHero"
+                  data-admin-editor-target="heroButton"
+                  class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-yellow-600 transition-colors">
+            ☆ Set as Hero
+          </button>
+          
+          <button data-action="click->admin-editor#toggleReject"
+                  data-admin-editor-target="rejectButton"
+                  class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors">
+            🗑️ Reject
+          </button>
+          
+          <button data-action="click->admin-editor#splitSession"
+                  data-admin-editor-target="splitButton"
+                  class="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-500 transition-colors">
+            ✂️ Split Session Here
+          </button>
+        </div>
+        
+        <!-- Navigation hints -->
+        <div class="text-center text-gray-400 text-sm mt-4">
+          Use ← → arrow keys to navigate • Press ESC to close • Shortcuts: H (hero), R (reject), S (split)
+        </div>
+      </div>
+    </div>
+    
+    <!-- Loading spinner -->
+    <div data-admin-editor-target="loading" class="absolute inset-0 bg-black/50 flex items-center justify-center hidden">
+      <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-600 border-t-yellow-500 mb-4"></div>
+        <div class="text-white text-xl">Loading image...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Custom grid columns for different screen sizes */
+  @media (min-width: 768px) {
+    .md\:grid-cols-16 { grid-template-columns: repeat(16, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1024px) {
+    .lg\:grid-cols-20 { grid-template-columns: repeat(20, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1280px) {
+    .xl\:grid-cols-24 { grid-template-columns: repeat(24, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1536px) {
+    .2xl\:grid-cols-30 { grid-template-columns: repeat(30, minmax(0, 1fr)); }
+  }
+</style>
+
+<script>
+  // Cache management and monitoring
+  class ImageCacheManager {
+    constructor() {
+      this.cacheStatus = document.getElementById('cache-status');
+      this.preloadBtn = document.getElementById('preload-all-btn');
+      this.isServiceWorkerAvailable = false;
+      this.checkServiceWorker();
+    }
+    
+    async checkServiceWorker() {
+      if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (registration) {
+            this.isServiceWorkerAvailable = true;
+            this.preloadBtn.classList.remove('hidden');
+            await this.updateCacheStatus();
+            
+            // Listen for cache updates
+            navigator.serviceWorker.addEventListener('message', (event) => {
+              if (event.data.type === 'CACHE_STATUS') {
+                this.displayCacheStatus(event.data.data);
+              }
+            });
+          }
+        } catch (error) {
+          console.log('Service Worker not available:', error);
+        }
+      } else {
+        this.cacheStatus.textContent = window.location.protocol === 'https:' 
+          ? 'Cache unavailable' 
+          : 'HTTPS required for caching';
+      }
+    }
+    
+    async updateCacheStatus() {
+      if (this.isServiceWorkerAvailable && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'GET_CACHE_STATUS'
+        });
+      }
+    }
+    
+    displayCacheStatus(status) {
+      if (status && status.entries !== undefined) {
+        const percentage = Math.round((status.entries / status.maxEntries) * 100);
+        this.cacheStatus.innerHTML = `
+          Cache: <span class="${status.entries > 0 ? 'text-green-400' : 'text-gray-400'}">
+            ${status.entries}/${status.maxEntries} images (${percentage}%)
+          </span>
+        `;
+      }
+    }
+    
+    async preloadAllImages() {
+      if (!this.isServiceWorkerAvailable) return;
+      
+      const images = document.querySelectorAll('img.thumbnail-image');
+      const urls = Array.from(images).map(img => img.src).filter(src => src);
+      
+      if (urls.length === 0) return;
+      
+      this.preloadBtn.disabled = true;
+      this.preloadBtn.textContent = `Preloading 0/${urls.length}...`;
+      
+      // Send URLs to service worker for background caching
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'CACHE_THUMBNAILS',
+          data: { urls: urls }
+        });
+      }
+      
+      // Track progress
+      let loaded = 0;
+      const updateProgress = () => {
+        loaded++;
+        this.preloadBtn.textContent = `Preloading ${loaded}/${urls.length}...`;
+        if (loaded >= urls.length) {
+          setTimeout(() => {
+            this.preloadBtn.textContent = 'All Cached!';
+            setTimeout(() => {
+              this.preloadBtn.textContent = 'Preload All';
+              this.preloadBtn.disabled = false;
+              this.updateCacheStatus();
+            }, 2000);
+          }, 500);
+        }
+      };
+      
+      // Load images in batches
+      const batchSize = 10;
+      for (let i = 0; i < urls.length; i += batchSize) {
+        const batch = urls.slice(i, i + batchSize);
+        await Promise.allSettled(batch.map(url => 
+          fetch(url)
+            .then(() => updateProgress())
+            .catch(() => updateProgress())
+        ));
+      }
+    }
+  }
+  
+  // Monitor lazy loading and show indicator
+  document.addEventListener('DOMContentLoaded', function() {
+    const lazyToggle = document.getElementById('lazy-loading-toggle');
+    const indicator = document.getElementById('loading-indicator');
+    const cacheManager = new ImageCacheManager();
+    
+    // Setup preload button
+    const preloadBtn = document.getElementById('preload-all-btn');
+    if (preloadBtn) {
+      preloadBtn.addEventListener('click', () => cacheManager.preloadAllImages());
+    }
+    
+    function updateLazyLoading() {
+      const images = document.querySelectorAll('img.thumbnail-image');
+      const isLazy = lazyToggle.checked;
+      
+      images.forEach(img => {
+        if (isLazy) {
+          img.setAttribute('loading', 'lazy');
+        } else {
+          img.removeAttribute('loading');
+          // Force load the image if not already loaded
+          if (!img.complete && img.src) {
+            img.src = img.src;
+          }
+        }
+      });
+      
+      // Show loading indicator when loading all images
+      if (!isLazy) {
+        let loadedCount = 0;
+        const totalImages = images.length;
+        
+        if (totalImages > 0) {
+          indicator.classList.remove('hidden');
+          indicator.textContent = `Loading all thumbnails... (0/${totalImages})`;
+          
+          images.forEach(img => {
+            if (img.complete) {
+              loadedCount++;
+              indicator.textContent = `Loading all thumbnails... (${loadedCount}/${totalImages})`;
+            } else {
+              img.addEventListener('load', function onLoad() {
+                loadedCount++;
+                indicator.textContent = `Loading all thumbnails... (${loadedCount}/${totalImages})`;
+                
+                if (loadedCount === totalImages) {
+                  setTimeout(() => {
+                    indicator.classList.add('hidden');
+                  }, 1000);
+                }
+                img.removeEventListener('load', onLoad);
+              });
+              
+              img.addEventListener('error', function onError() {
+                loadedCount++;
+                if (loadedCount === totalImages) {
+                  indicator.classList.add('hidden');
+                }
+                img.removeEventListener('error', onError);
+              });
+            }
+          });
+          
+          // Check if all already loaded
+          if (loadedCount === totalImages) {
+            setTimeout(() => {
+              indicator.classList.add('hidden');
+            }, 500);
+          }
+        }
+      } else {
+        indicator.classList.add('hidden');
+      }
+    }
+    
+    // Toggle lazy loading on checkbox change
+    lazyToggle.addEventListener('change', updateLazyLoading);
+    
+    // Initial setup for lazy loading monitoring
+    const images = document.querySelectorAll('img[loading="lazy"]');
+    let loadedCount = 0;
+    const totalImages = images.length;
+    
+    if (totalImages > 0 && lazyToggle.checked) {
+      images.forEach(img => {
+        if (img.complete) {
+          loadedCount++;
+        } else {
+          img.addEventListener('load', () => {
+            loadedCount++;
+          });
+          
+          img.addEventListener('error', () => {
+            loadedCount++;
+          });
+        }
+      });
+      
+      // Force load visible images with Intersection Observer
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            if (img.dataset.src && !img.src) {
+              img.src = img.dataset.src;
+            }
+          }
+        });
+      });
+      
+      images.forEach(img => observer.observe(img));
+    }
+  });
+</script>

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton", "imageWrapper", "faceOverlay", "faceRectangleToggle", "downloadButton"]
-  static values = { total: Number, sessionId: String, showRejected: Boolean, prevSession: String, nextSession: String }
+  static values = { total: Number, sessionId: String, showRejected: Boolean, initialIndex: Number, prevSession: String, nextSession: String }
   
   connect() {
     // Check URL parameter for starting position
@@ -18,10 +18,11 @@ export default class extends Controller {
       if (imageIndex >= 0 && imageIndex < this.totalValue) {
         this.currentIndex = imageIndex
       } else {
-        this.currentIndex = 0
+        this.currentIndex = this.hasInitialIndexValue ? this.initialIndexValue : 0
       }
     } else {
-      this.currentIndex = 0
+      // Use the initial index (hero photo or first photo)
+      this.currentIndex = this.hasInitialIndexValue ? this.initialIndexValue : 0
     }
     
     // Load face rectangle preference
@@ -161,6 +162,9 @@ export default class extends Controller {
   updateDisplay() {
     // Update URL with current image position
     this.updateURL()
+    
+    // Load image for current index if not already loaded
+    this.loadImageForIndex(this.currentIndex)
     
     // Hide all images and apply rejected styling
     this.imageTargets.forEach((img, index) => {
@@ -643,5 +647,88 @@ export default class extends Controller {
     })
     
     console.log('Thumbnail cache clear requested')
+  }
+  
+  // Load image for a specific index
+  loadImageForIndex(index) {
+    const container = this.imageTargets[index]
+    if (!container) return
+    
+    // Check if image is already loaded
+    const existingImg = container.querySelector('img')
+    if (existingImg && existingImg.src && !existingImg.src.includes('data:')) {
+      return // Image already loaded
+    }
+    
+    // Get image URL from data attributes
+    const largeUrl = container.dataset.largeUrl
+    const fallbackUrl = container.dataset.fallbackUrl
+    const photoId = container.dataset.photoId
+    
+    if (!largeUrl && !fallbackUrl) return
+    
+    // Create wrapper if it doesn't exist
+    let wrapper = container.querySelector('[data-image-viewer-target="imageWrapper"]')
+    if (!wrapper) {
+      wrapper = container.querySelector('.relative')
+    }
+    
+    if (!wrapper) return
+    
+    // Clear existing content
+    const existingContent = wrapper.querySelector('img, div')
+    if (existingContent) {
+      existingContent.remove()
+    }
+    
+    // Create and insert the image
+    const img = document.createElement('img')
+    img.src = largeUrl || fallbackUrl
+    img.alt = `Photo ${index + 1}`
+    img.className = 'w-full h-full object-contain cursor-pointer'
+    img.dataset.action = 'click->image-viewer#next'
+    img.dataset.photoId = photoId
+    
+    // Add loading overlay
+    this.addLoadingOverlay(container, 'loading-spinner')
+    
+    wrapper.appendChild(img)
+    
+    // Preload adjacent images for smoother navigation
+    this.preloadAdjacentImages(index)
+  }
+  
+  // Preload images before and after current index
+  preloadAdjacentImages(index) {
+    // Preload next image
+    if (index < this.totalValue - 1) {
+      this.preloadImage(index + 1)
+    }
+    
+    // Preload previous image
+    if (index > 0) {
+      this.preloadImage(index - 1)
+    }
+  }
+  
+  // Preload a single image without displaying it
+  preloadImage(index) {
+    const container = this.imageTargets[index]
+    if (!container) return
+    
+    // Check if already loaded
+    const existingImg = container.querySelector('img')
+    if (existingImg && existingImg.src && !existingImg.src.includes('data:')) {
+      return
+    }
+    
+    const largeUrl = container.dataset.largeUrl
+    const fallbackUrl = container.dataset.fallbackUrl
+    
+    if (!largeUrl && !fallbackUrl) return
+    
+    // Create a hidden image to trigger download
+    const preloadImg = new Image()
+    preloadImg.src = largeUrl || fallbackUrl
   }
 }

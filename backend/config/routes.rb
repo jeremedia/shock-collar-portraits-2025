@@ -31,6 +31,7 @@ Rails.application.routes.draw do
   namespace :admin do
     get 'dashboard', to: 'dashboard#index'
     get 'export_emails', to: 'dashboard#export_emails'
+    get 'thumbnails', to: 'thumbnails#index'
     resources :sessions, only: [:index]
     resources :sittings, only: [:index]
   end

@@ -18,6 +18,7 @@ class Photo < ApplicationRecord
   after_create :enqueue_image_attachment
   after_create :enqueue_face_detection
   after_create :enqueue_variant_generation
+  after_create :enqueue_exif_extraction
 
   # Rails 8 uses coder instead of second argument for serialize
   serialize :metadata, coder: JSON
@@ -58,6 +59,14 @@ class Photo < ApplicationRecord
   def enqueue_variant_generation
     # Queue variant generation after attachment (will be skipped if no attachment)
     VariantGenerationJob.perform_later(id, [:thumb, :large, :gallery])
+  end
+  
+  # Enqueue EXIF extraction job for this photo
+  # Extracts DateTimeOriginal to determine actual photo taken time
+  # Important for maintaining correct chronological order when sessions are split
+  def enqueue_exif_extraction
+    return if exif_data && exif_data['DateTimeOriginal'].present? # Skip if already extracted
+    ExifExtractionJob.perform_later(id)
   end
   
   def has_faces?
@@ -118,5 +127,68 @@ class Photo < ApplicationRecord
   # Check if face detection is needed
   def needs_face_detection?
     face_detected_at.nil? && (image.attached? || original_path.present?)
+  end
+  
+  # Extract EXIF datetime from original file using exiftool
+  # The DateTimeOriginal field contains when the photo was actually taken
+  # Format: "2025:08:25 15:14:48" (in camera's local time - PST at Burning Man)
+  def extract_exif_datetime
+    return unless original_path && File.exist?(original_path)
+    
+    # Use exiftool to extract DateTimeOriginal
+    # -s3 flag returns just the value without field name
+    result = `exiftool -DateTimeOriginal -s3 "#{original_path}" 2>/dev/null`.strip
+    
+    if result.present?
+      self.exif_data ||= {}
+      self.exif_data['DateTimeOriginal'] = result
+      save! if persisted?
+      result
+    end
+  end
+  
+  # Get the actual time the photo was taken
+  # CRITICAL: This method is used for chronological sorting of sessions!
+  # Returns UTC time to match the burst folder timestamps
+  def photo_taken_at
+    # First try to get from stored EXIF data
+    if exif_data && exif_data['DateTimeOriginal']
+      begin
+        # EXIF datetime is in camera's local time (PST at Burning Man)
+        # Format: "2025:08:25 15:14:48" - this is PST time
+        # Must convert to UTC to match burst folder timestamps which are already UTC
+        local_time = DateTime.strptime(exif_data['DateTimeOriginal'], '%Y:%m:%d %H:%M:%S')
+        # Burning Man is in PST (UTC-7), so add 7 hours to get UTC
+        local_time.change(offset: '-0700').utc
+      rescue => e
+        Rails.logger.warn "Failed to parse EXIF datetime for photo #{id}: #{e.message}"
+        calculated_taken_at
+      end
+    else
+      # Extract EXIF if not already done
+      datetime_str = extract_exif_datetime
+      if datetime_str.present?
+        begin
+          # EXIF datetime is in camera's local time (PST at Burning Man)
+          local_time = DateTime.strptime(datetime_str, '%Y:%m:%d %H:%M:%S')
+          # Burning Man is in PST (UTC-7)
+          local_time.change(offset: '-0700').utc
+        rescue => e
+          Rails.logger.warn "Failed to parse extracted EXIF datetime for photo #{id}: #{e.message}"
+          calculated_taken_at
+        end
+      else
+        calculated_taken_at
+      end
+    end
+  end
+  
+  # Fallback calculated time based on position in burst
+  # Used when EXIF data is not available
+  # Burst folder timestamp (already UTC) + offset based on photo position
+  def calculated_taken_at
+    # Canon R5 shoots approximately 0.5fps in burst mode (2 seconds per photo)
+    # Position 0 = burst start time, Position 1 = +2 seconds, etc.
+    photo_session.started_at + (position * 2).seconds
   end
 end

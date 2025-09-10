@@ -31,7 +31,6 @@
       <% if hero_photo&.image&.attached? %>
         <%= image_tag rails_blob_url(hero_photo.image.variant(:thumb)), 
                       alt: "Sitting #{session_number}",
-                      loading: "lazy",
                       class: "w-full h-full object-cover" %>
       <% elsif hero_photo %>
         <%= image_tag photo_path(path: hero_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
