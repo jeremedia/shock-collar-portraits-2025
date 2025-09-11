@@ -38,10 +38,21 @@
     <!-- User info bar -->
     <% if user_signed_in? %>
       <div class="bg-gray-900 text-white px-4 py-2 text-sm flex justify-between items-center">
-        <div>
-          Logged in as: <strong><%= current_user.name || current_user.email %></strong>
+        <div class="flex items-center gap-4">
+          <span>Logged in as: <strong><%= current_user.name || current_user.email %></strong></span>
+          <% if current_user.superadmin? %>
+            <span class="px-2 py-1 bg-red-600 text-white text-xs rounded">SUPERADMIN</span>
+          <% elsif current_user.admin? %>
+            <span class="px-2 py-1 bg-yellow-600 text-black text-xs rounded">ADMIN</span>
+          <% end %>
+          <%= link_to "Gallery", root_path, class: "text-blue-400 hover:text-blue-300" %>
+          <%= link_to "Heroes", heroes_path, class: "text-yellow-400 hover:text-yellow-300" %>
+          <%= link_to "Stats", stats_path, class: "text-green-400 hover:text-green-300" %>
           <% if current_user.admin? %>
-            <span class="ml-2 px-2 py-1 bg-yellow-600 text-black text-xs rounded">Admin</span>
+            <%= link_to "Admin Thumbnails", admin_thumbnails_path, class: "text-purple-400 hover:text-purple-300" %>
+          <% end %>
+          <% if current_user.superadmin? %>
+            <%= link_to "Manage Admins", admin_invites_path, class: "text-red-400 hover:text-red-300" %>
           <% end %>
         </div>
         <div>

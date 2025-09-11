@@ -1,0 +1,59 @@
+<div class="min-h-screen bg-black text-white p-8">
+  <div class="max-w-2xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold mb-2 text-yellow-500">Invite New Admin</h1>
+      <p class="text-red-400">Grant admin privileges to an OKNOTOK team member</p>
+    </div>
+    
+    <!-- Invite Form -->
+    <div class="bg-gray-900 border border-red-600 rounded-lg p-6">
+      <%= form_with url: admin_invites_path, local: true do |f| %>
+        <div class="mb-6">
+          <%= f.label :email, "Email Address", class: "block text-yellow-500 mb-2" %>
+          <%= f.email_field :email, 
+              required: true,
+              placeholder: "friend@oknotok.com",
+              class: "w-full px-4 py-2 bg-black border border-red-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" %>
+          <p class="text-sm text-gray-400 mt-2">
+            They'll receive an invitation to create an account with admin privileges
+          </p>
+        </div>
+        
+        <div class="mb-6">
+          <%= f.label :name, "Name (optional)", class: "block text-yellow-500 mb-2" %>
+          <%= f.text_field :name, 
+              placeholder: "Playa Name",
+              class: "w-full px-4 py-2 bg-black border border-red-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500" %>
+        </div>
+        
+        <div class="bg-gray-800 border border-yellow-600 rounded p-4 mb-6">
+          <h3 class="text-yellow-500 font-semibold mb-2">Admin Privileges Include:</h3>
+          <ul class="text-gray-300 space-y-1 text-sm">
+            <li>• Select hero photos for each sitting</li>
+            <li>• Mark photos as rejected</li>
+            <li>• Split and merge photo sessions</li>
+            <li>• Hide sessions from gallery</li>
+            <li>• Access admin dashboard and stats</li>
+          </ul>
+        </div>
+        
+        <div class="flex gap-4">
+          <%= f.submit "Send Admin Invitation", 
+              class: "px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition cursor-pointer" %>
+          <%= link_to "Cancel", admin_invites_path, 
+              class: "px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition" %>
+        </div>
+      <% end %>
+    </div>
+    
+    <!-- Note about existing users -->
+    <div class="mt-6 p-4 bg-gray-900 border border-gray-700 rounded">
+      <p class="text-sm text-gray-400">
+        <strong class="text-yellow-500">Note:</strong> 
+        If the email already has an account, they'll be upgraded to admin immediately. 
+        Otherwise, they'll receive an invitation email to create an account.
+      </p>
+    </div>
+  </div>
+</div>

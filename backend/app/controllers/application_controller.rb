@@ -14,8 +14,22 @@ class ApplicationController < ActionController::Base
   protected
   
   def configure_permitted_parameters
-    devise_parameter_sanitizer.permit(:invite, keys: [:name])
+    devise_parameter_sanitizer.permit(:invite, keys: [:name, :admin])
     devise_parameter_sanitizer.permit(:accept_invitation, keys: [:name])
     devise_parameter_sanitizer.permit(:account_update, keys: [:name])
+  end
+  
+  def require_admin!
+    unless current_user&.admin? || current_user&.superadmin?
+      flash[:alert] = "You must be an admin to access this page"
+      redirect_to root_path
+    end
+  end
+  
+  def require_superadmin!
+    unless current_user&.superadmin?
+      flash[:alert] = "Only superadmins can access this page"
+      redirect_to root_path
+    end
   end
 end

@@ -1,0 +1,102 @@
+<div class="min-h-screen bg-black text-white">
+  <!-- Header -->
+  <div class="bg-gray-900 border-b-2 border-red-600 mb-8">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <h1 class="text-5xl font-bold text-yellow-500 mb-2">⚡ OKNOTOK Heroes ⚡</h1>
+      <p class="text-red-400 text-xl">Shock Collar Portrait Champions • Burning Man 2025</p>
+      <div class="mt-4 flex gap-6 text-sm">
+        <span class="text-gray-400">
+          <span class="text-yellow-500 font-bold text-2xl"><%= @total_heroes %></span> Hero Shots
+        </span>
+        <span class="text-gray-400">
+          <span class="text-yellow-500 font-bold text-2xl"><%= @total_days %></span> Days
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Heroes Grid by Day -->
+  <div class="max-w-7xl mx-auto px-4 pb-16">
+    <% @heroes_by_day.each do |day, sittings| %>
+      <div class="mb-12">
+        <!-- Day Header -->
+        <div class="flex items-center mb-6">
+          <div class="flex-grow border-t-2 border-red-600"></div>
+          <div class="px-6">
+            <h2 class="text-2xl font-bold text-yellow-500">
+              <%= day.day_name %>, <%= day.date.strftime('%B %d') %>
+            </h2>
+            <p class="text-red-400 text-center text-sm"><%= sittings.count %> heroes</p>
+          </div>
+          <div class="flex-grow border-t-2 border-red-600"></div>
+        </div>
+        
+        <!-- Heroes Grid for this day -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+          <% sittings.each do |sitting| %>
+            <% photo = sitting.hero_photo %>
+            <% if photo.image.attached? %>
+              <div class="group relative aspect-square overflow-hidden rounded-lg border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105">
+                <%= link_to hero_path(photo), class: "block w-full h-full", data: { turbo: false } do %>
+                  <%
+                    # Use the existing thumb variant - it's already cached and fast!
+                    # The thumb variant is 300x300 WebP, perfect for our grid
+                    if photo.image.attached?
+                      variant = photo.image.variant(:thumb)
+                    end
+                  %>
+                  <%= image_tag variant, 
+                      class: "w-full h-full object-cover",
+                      loading: "lazy",
+                      alt: "Hero shot" %>
+                  
+                  <!-- Overlay on hover -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div class="absolute bottom-0 left-0 right-0 p-2">
+                      <p class="text-xs text-yellow-500 font-semibold truncate">
+                        <%= sitting.name || sitting.email&.split('@')&.first || 'Anonymous' %>
+                      </p>
+                      <p class="text-xs text-gray-400">
+                        Session #<%= sitting.photo_session.session_number %>
+                      </p>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+    
+    <% if @hero_sittings.empty? %>
+      <div class="text-center py-16">
+        <p class="text-2xl text-gray-500">No hero shots selected yet!</p>
+        <p class="text-gray-600 mt-2">Admins can select hero photos from the gallery.</p>
+      </div>
+    <% end %>
+  </div>
+  
+  <!-- Footer -->
+  <div class="bg-gray-900 border-t border-red-600 mt-16">
+    <div class="max-w-7xl mx-auto px-4 py-6 text-center">
+      <p class="text-gray-400 text-sm">
+        OKNOTOK Camp • Burning Man 2025 • 
+        <%= link_to "View Statistics", stats_path, class: "text-yellow-500 hover:text-yellow-400" %> •
+        <%= link_to "Full Gallery", gallery_index_path, class: "text-yellow-500 hover:text-yellow-400" %>
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Smooth image loading */
+  img {
+    animation: fadeIn 0.5s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>

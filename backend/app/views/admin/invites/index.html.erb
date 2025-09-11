@@ -1,0 +1,93 @@
+<div class="min-h-screen bg-black text-white p-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold mb-2 text-yellow-500">Admin Management</h1>
+      <p class="text-red-400">Manage OKNOTOK admin team members</p>
+    </div>
+    
+    <!-- Invite New Admin -->
+    <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-yellow-500">Invite New Admin</h2>
+          <p class="text-gray-400 mt-1">Grant admin privileges to help with hero selection</p>
+        </div>
+        <%= link_to "Invite Admin", new_admin_invite_path, 
+            class: "px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition" %>
+      </div>
+    </div>
+    
+    <!-- Current Admins -->
+    <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-8">
+      <h2 class="text-xl font-bold text-yellow-500 mb-4">Current Admins</h2>
+      
+      <% if @admins.any? %>
+        <div class="space-y-3">
+          <% @admins.each do |admin| %>
+            <div class="flex justify-between items-center py-3 border-b border-gray-700">
+              <div>
+                <div class="font-semibold text-white">
+                  <%= admin.email %>
+                  <% if admin.superadmin? %>
+                    <span class="ml-2 px-2 py-1 bg-yellow-600 text-black text-xs rounded">SUPERADMIN</span>
+                  <% end %>
+                </div>
+                <div class="text-sm text-gray-400">
+                  <% if admin.name.present? %>
+                    <%= admin.name %> •
+                  <% end %>
+                  Joined <%= admin.created_at.strftime("%B %d, %Y") %>
+                </div>
+              </div>
+              
+              <% unless admin.superadmin? || admin == current_user %>
+                <%= button_to "Revoke Admin", 
+                    admin_invite_path(admin), 
+                    method: :delete,
+                    data: { confirm: "Are you sure you want to revoke admin privileges for #{admin.email}?" },
+                    class: "px-4 py-1 bg-gray-700 text-red-400 rounded hover:bg-gray-600 transition text-sm" %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-gray-400">No admins yet</p>
+      <% end %>
+    </div>
+    
+    <!-- Pending Admin Invitations -->
+    <% if @pending_admin_invites.any? %>
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-6">
+        <h2 class="text-xl font-bold text-yellow-500 mb-4">Pending Admin Invitations</h2>
+        
+        <div class="space-y-3">
+          <% @pending_admin_invites.each do |invite| %>
+            <div class="flex justify-between items-center py-3 border-b border-gray-700">
+              <div>
+                <div class="font-semibold text-white"><%= invite.email %></div>
+                <div class="text-sm text-gray-400">
+                  Invited <%= time_ago_in_words(invite.invitation_sent_at) %> ago
+                  <% if invite.invitation_created_at && invite.invitation_sent_at %>
+                    • Expires in <%= distance_of_time_in_words(Time.current, invite.invitation_created_at + 30.days) %>
+                  <% end %>
+                </div>
+              </div>
+              
+              <%= button_to "Resend", 
+                  resend_admin_invite_path(invite), 
+                  method: :post,
+                  class: "px-4 py-1 bg-yellow-600 text-black rounded hover:bg-yellow-500 transition text-sm" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+    
+    <!-- Back Link -->
+    <div class="mt-8">
+      <%= link_to "← Back to Admin Dashboard", admin_dashboard_path, 
+          class: "text-yellow-500 hover:text-yellow-400 transition" %>
+    </div>
+  </div>
+</div>

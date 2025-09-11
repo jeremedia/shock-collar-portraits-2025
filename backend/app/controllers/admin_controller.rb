@@ -2,10 +2,8 @@ class AdminController < ApplicationController
   before_action :authenticate_admin!
   
   def index
-    # Dashboard with overview stats
-    @stats = calculate_stats
-    @recent_jobs = recent_jobs(10)
-    @failed_jobs = failed_jobs(5)
+    # Redirect to the proper admin dashboard
+    redirect_to admin_dashboard_path
   end
   
   def face_detection

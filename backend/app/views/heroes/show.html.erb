@@ -1,0 +1,84 @@
+<div class="min-h-screen bg-black text-white flex flex-col">
+  <!-- Header -->
+  <div class="bg-gray-900 border-b border-red-600">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <%= link_to heroes_path, class: "text-yellow-500 hover:text-yellow-400 flex items-center gap-2" do %>
+        <span>← Back to Heroes</span>
+      <% end %>
+      
+      <div class="flex gap-4">
+        <% if @prev_hero_id %>
+          <%= link_to hero_path(@prev_hero_id), class: "px-4 py-2 bg-gray-800 text-yellow-500 hover:bg-gray-700 rounded transition" do %>
+            ← Previous
+          <% end %>
+        <% end %>
+        <% if @next_hero_id %>
+          <%= link_to hero_path(@next_hero_id), class: "px-4 py-2 bg-gray-800 text-yellow-500 hover:bg-gray-700 rounded transition" do %>
+            Next →
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-grow flex items-center justify-center p-8">
+    <div class="max-w-5xl w-full">
+      <% if @photo.image.attached? %>
+        <div class="relative">
+          <!-- Full Image -->
+          <%= image_tag @photo.image.variant(resize_to_limit: [1600, 1200], format: :webp).processed,
+              class: "w-full h-auto rounded-lg border-4 border-red-600",
+              alt: "Hero portrait" %>
+          
+          <!-- Info Overlay -->
+          <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6 rounded-b-lg">
+            <h1 class="text-3xl font-bold text-yellow-500">
+              <%= @sitting&.name || @sitting&.email&.split('@')&.first || 'Anonymous Hero' %>
+            </h1>
+            <div class="mt-2 text-red-400">
+              <span>Session #<%= @photo.photo_session.session_number %></span>
+              <span class="mx-2">•</span>
+              <span><%= @photo.photo_session.session_day.day_name %>, <%= @photo.photo_session.session_day.date.strftime('%B %d') %></span>
+            </div>
+            <% if @sitting&.notes.present? %>
+              <p class="mt-2 text-gray-300"><%= @sitting.notes %></p>
+            <% end %>
+          </div>
+        </div>
+        
+        <!-- Metadata -->
+        <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-gray-900 border border-red-600 rounded p-3">
+            <div class="text-sm text-red-400">Burst ID</div>
+            <div class="text-yellow-500 font-semibold"><%= @photo.photo_session.burst_id %></div>
+          </div>
+          <div class="bg-gray-900 border border-red-600 rounded p-3">
+            <div class="text-sm text-red-400">Photo Position</div>
+            <div class="text-yellow-500 font-semibold">#<%= @photo.position %></div>
+          </div>
+          <div class="bg-gray-900 border border-red-600 rounded p-3">
+            <div class="text-sm text-red-400">Faces Detected</div>
+            <div class="text-yellow-500 font-semibold">
+              <% if @photo.face_data %>
+                <%= JSON.parse(@photo.face_data)['face_count'] rescue 0 %>
+              <% else %>
+                0
+              <% end %>
+            </div>
+          </div>
+          <div class="bg-gray-900 border border-red-600 rounded p-3">
+            <div class="text-sm text-red-400">Time</div>
+            <div class="text-yellow-500 font-semibold">
+              <%= @photo.photo_session.started_at.in_time_zone('America/Los_Angeles').strftime('%I:%M %p') %>
+            </div>
+          </div>
+        </div>
+      <% else %>
+        <div class="text-center">
+          <p class="text-2xl text-gray-500">Photo not available</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

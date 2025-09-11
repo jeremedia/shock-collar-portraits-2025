@@ -1,0 +1,109 @@
+<div class="min-h-screen bg-black text-white">
+  <!-- Admin Header -->
+  <div class="bg-gray-900 border-b-2 border-red-600">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="py-6">
+        <h1 class="text-4xl font-bold text-yellow-500">
+          <%= yield :page_title %>
+        </h1>
+        <% if content_for?(:page_subtitle) %>
+          <p class="text-red-400 mt-2"><%= yield :page_subtitle %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Admin Navigation -->
+  <div class="bg-gray-900 border-b border-red-600">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="flex flex-wrap gap-4 py-4">
+        <%= link_to admin_dashboard_path, 
+            class: "px-4 py-2 rounded transition #{current_page?(admin_dashboard_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
+          <span class="font-semibold">📊 Dashboard</span>
+        <% end %>
+        
+        <%= link_to admin_thumbnails_path,
+            class: "px-4 py-2 rounded transition #{current_page?(admin_thumbnails_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
+          <span class="font-semibold">🖼️ Thumbnails Editor</span>
+        <% end %>
+        
+        <%= link_to admin_face_detection_path,
+            class: "px-4 py-2 rounded transition #{current_page?(admin_face_detection_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
+          <span class="font-semibold">👤 Face Detection</span>
+        <% end %>
+        
+        <%= link_to stats_path,
+            class: "px-4 py-2 rounded transition #{current_page?(stats_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
+          <span class="font-semibold">📈 Statistics</span>
+        <% end %>
+        
+        <% if current_user&.superadmin? %>
+          <%= link_to admin_invites_path,
+              class: "px-4 py-2 rounded transition #{controller_name == 'invites' ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
+            <span class="font-semibold">👥 Manage Admins</span>
+          <% end %>
+        <% end %>
+        
+        <%= link_to admin_export_emails_path,
+            class: "px-4 py-2 bg-gray-800 text-yellow-500 hover:bg-gray-700 rounded transition" do %>
+          <span class="font-semibold">📧 Export Emails</span>
+        <% end %>
+        
+        <div class="ml-auto">
+          <%= link_to root_path,
+              class: "px-4 py-2 bg-yellow-600 text-black hover:bg-yellow-500 rounded transition font-semibold" do %>
+            ← Back to Gallery
+          <% end %>
+        </div>
+      </nav>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <%= yield %>
+  </div>
+</div>
+
+<style>
+  /* OKNOTOK Theme Styles */
+  .oknotok-card {
+    @apply bg-gray-900 border border-red-600 rounded-lg p-6;
+  }
+  
+  .oknotok-stat-card {
+    @apply bg-gray-900 border border-red-600 rounded-lg p-4;
+  }
+  
+  .oknotok-title {
+    @apply text-yellow-500 font-bold;
+  }
+  
+  .oknotok-subtitle {
+    @apply text-red-400;
+  }
+  
+  .oknotok-button-primary {
+    @apply px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition;
+  }
+  
+  .oknotok-button-secondary {
+    @apply px-6 py-2 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600 transition;
+  }
+  
+  .oknotok-link {
+    @apply text-yellow-500 hover:text-yellow-400 transition;
+  }
+  
+  .oknotok-table {
+    @apply w-full text-left;
+  }
+  
+  .oknotok-table th {
+    @apply text-yellow-500 font-semibold pb-2 border-b border-red-600;
+  }
+  
+  .oknotok-table td {
+    @apply py-2 border-b border-gray-700;
+  }
+</style>

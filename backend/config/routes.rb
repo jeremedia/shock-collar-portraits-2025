@@ -32,6 +32,11 @@ Rails.application.routes.draw do
     get 'dashboard', to: 'dashboard#index'
     get 'export_emails', to: 'dashboard#export_emails'
     get 'thumbnails', to: 'thumbnails#index'
+    resources :invites, only: [:index, :new, :create, :destroy] do
+      member do
+        post :resend
+      end
+    end
     resources :sessions, only: [:index]
     resources :sittings, only: [:index]
   end
@@ -53,6 +58,12 @@ Rails.application.routes.draw do
   
   # Static photo serving
   get '/photos/*path', to: 'photos#serve', format: false, as: :photo
+  
+  # Stats page
+  get 'stats', to: 'stats#index', as: :stats
+  
+  # Heroes page (public)
+  resources :heroes, only: [:index, :show]
   
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check
