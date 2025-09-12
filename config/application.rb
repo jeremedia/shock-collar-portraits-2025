@@ -39,9 +39,9 @@ module ShockCollarRails
     # Add services directory to autoload paths
     config.autoload_paths << Rails.root.join("app/services")
 
-    # Configure Active Storage to actually proxy files through Rails
-    # This allows service workers to cache images from same origin
-    config.active_storage.resolve_model_to_route = :rails_storage_proxy
+    # Disable Active Storage proxy for better performance
+    # Use direct URLs to storage service instead of proxying through Rails
+    # config.active_storage.resolve_model_to_route = :rails_storage_proxy
 
     # Don't generate system test files.
     config.generators.system_tests = nil

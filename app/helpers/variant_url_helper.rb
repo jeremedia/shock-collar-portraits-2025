@@ -1,6 +1,6 @@
 module VariantUrlHelper
-  # Smart variant URL that uses proxy for existing variants, redirect for non-existing
-  # This avoids synchronous processing while enabling caching when possible
+  # Smart variant URL that uses direct URLs for better performance
+  # This avoids proxying through Rails which can be slow
   def smart_variant_url(attachment, variant_name)
     return nil unless attachment.attached?
     
@@ -13,12 +13,12 @@ module VariantUrlHelper
     )
     
     if variant_record&.image&.blob
-      # Variant exists and has been uploaded - use proxy URL for caching
-      # This serves through Rails with cache headers, perfect for service worker
-      rails_storage_proxy_url(variant_record.image.blob, only_path: false)
+      # Variant exists and has been uploaded - use direct URL
+      # This serves directly from storage service (disk/S3) for best performance
+      rails_blob_url(variant_record.image.blob, only_path: false)
     else
       # Variant doesn't exist yet - use representation URL
-      # This will queue processing asynchronously and redirect to S3
+      # This will queue processing asynchronously and redirect to storage
       rails_representation_url(variant, only_path: false)
     end
   rescue => e

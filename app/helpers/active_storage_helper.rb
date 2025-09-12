@@ -1,21 +1,20 @@
 module ActiveStorageHelper
-  # Use proxy URLs for better caching with service workers
-  # Proxy URLs serve images through Rails instead of redirecting to S3
+  # Use direct URLs for better performance
+  # Direct URLs serve images directly from storage service without Rails proxy overhead
   def cached_variant_url(attachment, variant_name)
     return nil unless attachment.attached?
     
     variant = attachment.variant(variant_name)
     
-    # Use rails_storage_proxy_url for serving through Rails with proper cache headers
-    # This avoids the redirect to S3 and allows service workers to cache properly
-    rails_storage_proxy_url(
+    # Use direct blob URL to avoid proxying through Rails
+    # This improves performance by serving directly from disk/S3
+    rails_blob_url(
       variant.processed,
-      only_path: false,
-      host: request.base_url
+      only_path: false
     )
   rescue
-    # Fallback to redirect URL if proxy fails
-    rails_blob_url(variant)
+    # Fallback to representation URL if processing fails
+    rails_representation_url(attachment.variant(variant_name), only_path: false)
   end
   
   # Helper for thumbnail URLs with caching
