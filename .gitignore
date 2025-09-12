@@ -1,3 +1,5 @@
+# See https://help.github.com/articles/ignoring-files for more about ignoring files.
+
 # macOS
 .DS_Store
 .AppleDouble
@@ -34,49 +36,42 @@ Temporary Items
 .settings/
 *.sublime-workspace
 
-# Frontend (Vue/Node)
-frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
-frontend/*.local
-frontend/.env.local
-frontend/.env.*.local
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-frontend/pnpm-debug.log*
-frontend/lerna-debug.log*
-frontend/coverage/
-frontend/.nyc_output
-frontend/.npm
-frontend/.eslintcache
-frontend/.yarn-integrity
-frontend/.cache
-frontend/server/cache/
+# Rails
+/.bundle
+/.env*
+!.env.example
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/tmp/pids/*
+!/tmp/pids/
+!/tmp/pids/.keep
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/
+!/tmp/storage/.keep
+/public/assets
+/public/packs
+/public/packs-test
+/vendor/bundle
+/db/*.sqlite3
+/db/*.sqlite3-*
+.byebug_history
+/config/master.key
+/config/credentials/*.key
+/coverage/
+/node_modules
+/yarn-error.log
+/.yarn-integrity
 
-# Backend (Rails)
-backend/log/*
-backend/tmp/*
-backend/storage/*
-backend/!log/.keep
-backend/!tmp/.keep
-backend/!storage/.keep
-backend/.byebug_history
-backend/config/master.key
-backend/config/credentials/*.key
-backend/.env*
-backend/!.env.example
-backend/public/assets
-backend/public/packs
-backend/public/packs-test
-backend/vendor/bundle
-backend/db/*.sqlite3
-backend/db/*.sqlite3-*
-backend/.bundle
-backend/node_modules
-backend/yarn-error.log
-backend/.yarn-integrity
-backend/coverage/
+# Archived Vue frontend (for reference)
+/archive/vue-frontend/node_modules/
+/archive/vue-frontend/dist/
+/archive/vue-frontend/.env.local
+/archive/vue-frontend/npm-debug.log*
+/archive/vue-frontend/coverage/
 
 # Photo data (keep out of repo)
 sessions/
@@ -109,6 +104,7 @@ tmpfile*
 !composer.lock
 !tsconfig.json
 !jsconfig.json
+!manifest.json
 
 # Archive
 data-archive/*
