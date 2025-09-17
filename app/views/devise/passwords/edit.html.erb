@@ -1,59 +1,74 @@
-<div class="min-h-screen bg-black flex items-center justify-center px-4">
+<% content_for :title, "Change Password - OKNOTOK 2025" %>
+
+<div class="min-h-screen bg-black flex items-center justify-center px-4 py-12">
   <div class="max-w-md w-full">
     <!-- Logo/Header -->
     <div class="text-center mb-8">
-      <h1 class="text-4xl font-bold bg-gradient-to-r from-red-600 to-yellow-600 bg-clip-text text-transparent">
-        SHOCK COLLAR PORTRAITS
-      </h1>
-      <p class="text-red-500 mt-2">Burning Man 2025 • Art Therapy</p>
+      <h1 class="text-4xl font-bold text-yellow-500 mb-2">⚡ OKNOTOK 2025 ⚡</h1>
+      <h2 class="text-2xl text-red-400 mb-1">Shock Collar Portraits</h2>
+      <p class="text-gray-400 text-lg">Change Your Password</p>
     </div>
 
-    <!-- Change Password Form -->
-    <div class="bg-gray-900/50 backdrop-blur-sm border-2 border-red-700 rounded-lg p-8">
-      <h2 class="text-2xl font-bold text-yellow-500 mb-6 text-center">Change Your Password</h2>
-
-      <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put, class: "space-y-6" }) do |f| %>
+    <!-- Form Container -->
+    <div class="bg-gray-900 border-2 border-red-600 rounded-lg p-8">
+      <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put }) do |f| %>
         <%= render "devise/shared/error_messages", resource: resource %>
         <%= f.hidden_field :reset_password_token %>
 
         <!-- New Password Field -->
-        <div>
-          <%= f.label :password, "New password", class: "block text-sm font-medium text-gray-300 mb-2" %>
-          <% if @minimum_password_length %>
-            <p class="text-xs text-gray-500 mb-2">(<%= @minimum_password_length %> characters minimum)</p>
-          <% end %>
-          <%= f.password_field :password, 
-              autofocus: true, 
+        <div class="mb-6">
+          <%= f.label :password, "New Password", class: "block text-yellow-500 text-sm font-bold mb-2" %>
+          <%= f.password_field :password,
+              autofocus: true,
               autocomplete: "new-password",
-              required: true,
-              class: "w-full px-4 py-2 bg-black/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent",
-              placeholder: "••••••••" %>
+              class: "w-full px-3 py-2 bg-black border-2 border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500",
+              placeholder: "Enter new password" %>
+          <% if @minimum_password_length %>
+            <p class="mt-1 text-xs text-gray-500">Minimum <%= @minimum_password_length %> characters</p>
+          <% end %>
         </div>
 
         <!-- Password Confirmation Field -->
-        <div>
-          <%= f.label :password_confirmation, "Confirm new password", class: "block text-sm font-medium text-gray-300 mb-2" %>
-          <%= f.password_field :password_confirmation, 
+        <div class="mb-6">
+          <%= f.label :password_confirmation, "Confirm New Password", class: "block text-yellow-500 text-sm font-bold mb-2" %>
+          <%= f.password_field :password_confirmation,
               autocomplete: "new-password",
-              required: true,
-              class: "w-full px-4 py-2 bg-black/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent",
-              placeholder: "••••••••" %>
+              class: "w-full px-3 py-2 bg-black border-2 border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500",
+              placeholder: "Confirm new password" %>
         </div>
 
         <!-- Submit Button -->
-        <div>
-          <%= f.submit "Change My Password", 
-              class: "w-full px-6 py-3 bg-gradient-to-r from-red-600 to-yellow-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-black transition-colors cursor-pointer" %>
+        <div class="mb-6">
+          <%= f.submit "Change Password",
+              class: "w-full px-4 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors duration-200 cursor-pointer" %>
+        </div>
+
+        <!-- Back Links -->
+        <div class="text-center space-y-2">
+          <%= link_to "Sign in", new_session_path(resource_name),
+              class: "text-red-400 hover:text-red-300 text-sm transition-colors block" %>
+          <%= link_to "← Back to Gallery", root_path,
+              class: "text-gray-500 hover:text-gray-400 text-sm transition-colors block" %>
         </div>
       <% end %>
-
-      <!-- Links -->
-      <%= render "devise/shared/links" %>
     </div>
 
     <!-- Footer -->
-    <p class="text-center text-gray-500 text-xs mt-8">
-      © 2025 OKNOTOK • Private Gallery
-    </p>
+    <div class="text-center mt-6">
+      <p class="text-gray-600 text-xs">
+        OKNOTOK • 3:00 & Atwood • Black Rock City • Burning Man 2025
+      </p>
+    </div>
   </div>
 </div>
+
+<style>
+  /* Remove default browser styles for inputs */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px black inset !important;
+    -webkit-text-fill-color: white !important;
+  }
+</style>

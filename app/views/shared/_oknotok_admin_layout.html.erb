@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-black text-white">
+<div class="bg-black text-white">
   <!-- Admin Header -->
   <div class="bg-gray-900 border-b-2 border-red-600">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -6,9 +6,7 @@
         <h1 class="text-4xl font-bold text-yellow-500">
           <%= yield :page_title %>
         </h1>
-        <% if content_for?(:page_subtitle) %>
-          <p class="text-red-400 mt-2"><%= yield :page_subtitle %></p>
-        <% end %>
+
       </div>
     </div>
   </div>
@@ -22,19 +20,18 @@
           <span class="font-semibold">📊 Dashboard</span>
         <% end %>
         
-        <%= link_to admin_thumbnails_path,
-            class: "px-4 py-2 rounded transition #{current_page?(admin_thumbnails_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
-          <span class="font-semibold">🖼️ Thumbnails Editor</span>
-        <% end %>
+
         
         <%= link_to admin_face_detection_path,
             class: "px-4 py-2 rounded transition #{current_page?(admin_face_detection_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
           <span class="font-semibold">👤 Face Detection</span>
         <% end %>
         
-        <%= link_to stats_path,
-            class: "px-4 py-2 rounded transition #{current_page?(stats_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
-          <span class="font-semibold">📈 Statistics</span>
+
+
+        <%= link_to admin_help_path,
+            class: "px-4 py-2 rounded transition #{current_page?(admin_help_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
+          <span class="font-semibold">📘 Admin Help</span>
         <% end %>
         
         <% if current_user&.superadmin? %>
@@ -49,12 +46,7 @@
           <span class="font-semibold">📧 Export Emails</span>
         <% end %>
         
-        <div class="ml-auto">
-          <%= link_to root_path,
-              class: "px-4 py-2 bg-yellow-600 text-black hover:bg-yellow-500 rounded transition font-semibold" do %>
-            ← Back to Gallery
-          <% end %>
-        </div>
+
       </nav>
     </div>
   </div>

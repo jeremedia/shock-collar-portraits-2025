@@ -5,16 +5,17 @@ export default class extends Controller {
   static values = { day: String }
   
   connect() {
-    // Get the saved open day from localStorage
+    // Check if user has explicitly set accordion state
+    const hasAccordionState = localStorage.getItem('accordionStateSet') === 'true'
     const savedDay = localStorage.getItem('openDay')
-    
+
     // Find all day sections
     this.dayTargets.forEach(dayElement => {
       const dayName = dayElement.dataset.dayName
       const content = dayElement.querySelector('[data-day-accordion-target="content"]')
       const icon = dayElement.querySelector('[data-day-accordion-target="icon"]')
       const grid = dayElement.querySelector('[data-day-accordion-target="grid"]')
-      
+
       if (dayName === savedDay) {
         // Open the saved day
         this.openDay(dayElement, content, icon, grid)
@@ -23,14 +24,15 @@ export default class extends Controller {
         this.closeDay(content, icon)
       }
     })
-    
-    // If no saved day, open the first day with sessions
-    if (!savedDay && this.dayTargets.length > 0) {
+
+    // Only open first day if user has never interacted with accordion
+    if (!hasAccordionState && this.dayTargets.length > 0) {
       const firstDay = this.dayTargets[0]
       const content = firstDay.querySelector('[data-day-accordion-target="content"]')
       const icon = firstDay.querySelector('[data-day-accordion-target="icon"]')
       const grid = firstDay.querySelector('[data-day-accordion-target="grid"]')
       this.openDay(firstDay, content, icon, grid)
+      // Don't save this automatic opening
     }
   }
   
@@ -42,8 +44,8 @@ export default class extends Controller {
     const icon = dayElement.querySelector('[data-day-accordion-target="icon"]')
     const grid = dayElement.querySelector('[data-day-accordion-target="grid"]')
     
-    // Check if this day is currently open
-    const isOpen = content.style.display !== "none" && content.style.display !== ""
+    // Check if this day is currently open (using hidden class)
+    const isOpen = !content.classList.contains('hidden')
     
     // Close all days
     this.dayTargets.forEach(otherDay => {
@@ -52,6 +54,9 @@ export default class extends Controller {
       this.closeDay(otherContent, otherIcon)
     })
     
+    // Mark that user has interacted with accordion
+    localStorage.setItem('accordionStateSet', 'true')
+
     // If the clicked day was closed, open it
     if (!isOpen) {
       this.openDay(dayElement, content, icon, grid)
@@ -64,14 +69,13 @@ export default class extends Controller {
   
   openDay(dayElement, content, icon, grid) {
     // Show the content
-    content.style.display = "block"
     content.classList.remove('hidden')
-    
+
     // Rotate icon
     if (icon) {
       icon.style.transform = "rotate(0deg)"
     }
-    
+
     // Make grid visible (sessions are pre-rendered server-side)
     if (grid) {
       grid.classList.remove('hidden')
@@ -79,11 +83,11 @@ export default class extends Controller {
       grid.dataset.loaded = 'true'
     }
   }
-  
+
   closeDay(content, icon) {
     // Hide the content
-    content.style.display = "none"
-    
+    content.classList.add('hidden')
+
     // Rotate icon
     if (icon) {
       icon.style.transform = "rotate(-90deg)"

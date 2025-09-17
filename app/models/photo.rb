@@ -2,10 +2,11 @@ class Photo < ApplicationRecord
   belongs_to :photo_session
   belongs_to :sitting, optional: true
   has_one_attached :image do |attachable|
-    attachable.variant :thumb, resize_to_limit: [300, 300], format: :webp, saver: { quality: 80 }
-    attachable.variant :medium, resize_to_limit: [800, 800], format: :webp, saver: { quality: 85 }
-    attachable.variant :large, resize_to_limit: [1600, 1600], format: :webp, saver: { quality: 90 }
-    attachable.variant :gallery, resize_to_limit: [1200, 1200], format: :jpeg, saver: { quality: 85 }
+    attachable.variant :tiny_square_thumb, resize_to_fill: [40, 40],    format: :webp, saver: { quality: 70 }
+    attachable.variant :thumb,              resize_to_limit: [300, 300],  format: :webp, saver: { quality: 80 }
+    attachable.variant :medium,             resize_to_limit: [800, 800],  format: :webp, saver: { quality: 85 }
+    attachable.variant :large,              resize_to_limit: [1600, 1600], format: :webp, saver: { quality: 90 }
+    attachable.variant :gallery,            resize_to_limit: [1200, 1200], format: :jpeg, saver: { quality: 85 }
   end
 
   scope :not_rejected, -> { where(rejected: false) }
@@ -13,7 +14,151 @@ class Photo < ApplicationRecord
   scope :rejected, -> { where(rejected: true) }
   scope :heroes, -> { joins("INNER JOIN sittings ON sittings.hero_photo_id = photos.id") }
   scope :without_face_detection, -> { where(face_data: nil) }
-  
+  scope :without_gender_analysis, -> { where(gender_analyzed_at: nil) }
+  scope :with_gender_analysis, -> { where.not(gender_analyzed_at: nil) }
+
+
+  def self.generate_all_variants
+    find_each do |photo|
+      photo.generate_variants
+    end
+  end
+
+  # Generate all variants for this photo
+  # This method is called by VariantGenerationJob
+  # It processes the named variants and the dynamic face crop variant if faces exist
+  # Silences ActiveRecord logging to reduce noise during batch processing
+  def generate_variants
+    # silence active storage and active record logging for this operation
+    #p "Generating variants for Photo ##{id}"
+    ActiveRecord::Base.logger.silence do
+      VariantGenerationJob.perform_now(id, [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb])
+    end
+    #p "Variant generation complete for Photo ##{id}"
+  end
+  # Class method to report on variant processing status
+  def self.variant_processing_report
+    variant_names = [:tiny_square_thumb, :thumb, :medium, :large, :gallery]
+
+    total_photos = count
+    photos_with_attachments = joins(:image_attachment).count
+    photos_without_attachments = total_photos - photos_with_attachments
+
+    report = {
+      total_photos: total_photos,
+      photos_with_attachments: photos_with_attachments,
+      photos_without_attachments: photos_without_attachments,
+      variants: {},
+      photos_with_all_variants: 0,
+      processing_percentage: 0.0,
+      total_variant_records: ActiveStorage::VariantRecord.count
+    }
+
+    # Check each variant individually using ActiveStorage::VariantRecord
+    variant_names.each do |variant_name|
+      # Count variant records that match this variant's transformations
+      # In Rails 8, variants are tracked in active_storage_variant_records table
+      variant_count = 0
+
+      if photos_with_attachments > 10000
+        # For large datasets, use sampling
+        sample_size = 100
+        sample = joins(:image_attachment).limit(sample_size).to_a
+        sample_processed = sample.count do |photo|
+          begin
+            # Check if variant record exists for this photo and variant
+            variant = photo.image.variant(variant_name)
+            # In Rails 8, we check if the variant record exists
+            variant.send(:record).present?
+          rescue
+            false
+          end
+        end
+        variant_count = (sample_processed.to_f / sample_size * photos_with_attachments).round
+        report[:variants][variant_name] = {
+          count: variant_count,
+          percentage: photos_with_attachments > 0 ? (variant_count.to_f / photos_with_attachments * 100).round(1) : 0,
+          estimated: true
+        }
+      else
+        # For smaller datasets, check all
+        variant_count = joins(:image_attachment).select do |photo|
+          begin
+            variant = photo.image.variant(variant_name)
+            variant.send(:record).present?
+          rescue
+            false
+          end
+        end.count
+        report[:variants][variant_name] = {
+          count: variant_count,
+          percentage: photos_with_attachments > 0 ? (variant_count.to_f / photos_with_attachments * 100).round(1) : 0,
+          estimated: false
+        }
+      end
+    end
+
+    # Check photos with ALL variants processed
+    if photos_with_attachments > 10000
+      sample_size = 100
+      sample = joins(:image_attachment).limit(sample_size).to_a
+      all_variants_count = sample.count do |photo|
+        variant_names.all? do |v|
+          begin
+            variant = photo.image.variant(v)
+            variant.send(:record).present?
+          rescue
+            false
+          end
+        end
+      end
+      report[:photos_with_all_variants] = (all_variants_count.to_f / sample_size * photos_with_attachments).round
+      report[:all_variants_estimated] = true
+    else
+      report[:photos_with_all_variants] = joins(:image_attachment).select do |photo|
+        variant_names.all? do |v|
+          begin
+            variant = photo.image.variant(v)
+            variant.send(:record).present?
+          rescue
+            false
+          end
+        end
+      end.count
+      report[:all_variants_estimated] = false
+    end
+
+    report[:processing_percentage] = photos_with_attachments > 0 ?
+      (report[:photos_with_all_variants].to_f / photos_with_attachments * 100).round(1) : 0
+
+    report
+  end
+
+  # Pretty print the variant processing report
+  def self.print_variant_report
+    report = variant_processing_report
+
+    puts "\n" + "="*60
+    puts "PHOTO VARIANT PROCESSING REPORT"
+    puts "="*60
+    puts "Total Photos: #{report[:total_photos]}"
+    puts "  With attachments: #{report[:photos_with_attachments]}"
+    puts "  Without attachments: #{report[:photos_without_attachments]}"
+    puts "Total Variant Records in DB: #{report[:total_variant_records]}"
+    puts "\nVariant Processing Status:"
+
+    report[:variants].each do |variant_name, data|
+      estimated = data[:estimated] ? " (estimated)" : ""
+      puts "  #{variant_name.to_s.ljust(20)} #{data[:count].to_s.rjust(5)} / #{report[:photos_with_attachments]} (#{data[:percentage]}%)#{estimated}"
+    end
+
+    estimated = report[:all_variants_estimated] ? " (estimated)" : ""
+    puts "\nPhotos with ALL variants: #{report[:photos_with_all_variants]} / #{report[:photos_with_attachments]} (#{report[:processing_percentage]}%)#{estimated}"
+    puts "="*60 + "\n"
+
+    nil # Return nil to avoid printing the report hash
+  end
+
   # Automatically enqueue processing for new photos
   after_create :enqueue_image_attachment
   after_create :enqueue_face_detection
@@ -58,7 +203,7 @@ class Photo < ApplicationRecord
   # Enqueue variant generation job for this photo
   def enqueue_variant_generation
     # Queue variant generation after attachment (will be skipped if no attachment)
-    VariantGenerationJob.perform_later(id, [:thumb, :large, :gallery])
+    VariantGenerationJob.perform_later(id, [:thumb, :large, :gallery, :tiny_square_thumb, :medium])
   end
   
   # Enqueue EXIF extraction job for this photo
@@ -85,19 +230,9 @@ class Photo < ApplicationRecord
     face_data['faces'].max_by { |face| face['width'] * face['height'] }
   end
   
-  # Dynamic face crop variant
+  # Dynamic face crop variant (libvips)
   def face_crop_variant(size)
-    crop_params = ::FaceDetectionService.face_crop_params(self)
-    
-    if crop_params
-      {
-        crop: "#{crop_params[:width]}x#{crop_params[:height]}+#{crop_params[:left]}+#{crop_params[:top]}",
-        resize_to_fill: [size, size]
-      }
-    else
-      # Fallback to center crop if no face detected
-      { resize_to_fill: [size, size] }
-    end
+    { resize_to_fill: [size, size], format: :webp, saver: { quality: 85 } }
   end
   
   # Get face crop URL
@@ -107,8 +242,19 @@ class Photo < ApplicationRecord
     crop_params = ::FaceDetectionService.face_crop_params(self)
     return nil unless crop_params
     
-    # Generate dynamic variant for face crop
-    # Using extract_area for vips processor
+    # Generate dynamic variant for face crop using libvips extract_area
+    begin
+      blob_w = image.blob.metadata['width']
+      blob_h = image.blob.metadata['height']
+      Rails.logger.info(
+        "Face crop for Photo ##{id}: left=#{crop_params[:left]} top=#{crop_params[:top]} " \
+        "width=#{crop_params[:width]} height=#{crop_params[:height]} " \
+        "blob_dims=#{blob_w}x#{blob_h} size=#{size}"
+      )
+    rescue => e
+      Rails.logger.warn("Failed to log face crop params for Photo ##{id}: #{e.message}")
+    end
+
     variant_params = {
       extract_area: [crop_params[:left], crop_params[:top], crop_params[:width], crop_params[:height]],
       resize_to_fill: [size, size],
@@ -190,5 +336,18 @@ class Photo < ApplicationRecord
     # Canon R5 shoots approximately 0.5fps in burst mode (2 seconds per photo)
     # Position 0 = burst start time, Position 1 = +2 seconds, etc.
     photo_session.started_at + (position * 2).seconds
+  end
+
+  # Gender analysis - delegates to photo session
+  def detected_gender
+    photo_session&.detected_gender
+  end
+
+  def gender_confidence
+    photo_session&.gender_confidence
+  end
+
+  def gender_data
+    photo_session&.gender_data
   end
 end

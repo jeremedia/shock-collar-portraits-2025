@@ -1,82 +1,144 @@
 class GalleryController < ApplicationController
   helper VariantUrlHelper
   skip_before_action :verify_authenticity_token, only: [:update_hero, :reject_photo, :save_email, :hide_session]
+  # Preloader disabled - all variants are pre-generated
+  # before_action :check_preloader_shown, only: [:index]
+  
   def index
-    # Don't load all photos - just get the sessions with their hero photos
-    # CRITICAL: Sessions are sorted by started_at which represents the actual photo taken time
-    # For split sessions, this ensures they appear chronologically correct (not at end of day)
-    # started_at uses either EXIF DateTimeOriginal (converted to UTC) or calculated burst time
-    @sessions_by_day = PhotoSession.visible
-                                   .includes(:session_day, 
-                                           sittings: { hero_photo: { image_attachment: :blob } })
-                                   .order('session_days.date ASC, photo_sessions.started_at ASC')
-                                   .group_by { |s| s.session_day.day_name }
-    
-    # Pre-load face detection info separately (more efficient than loading all photos)
-    session_ids = @sessions_by_day.values.flatten.map(&:id)
-    @face_counts = Photo.where(photo_session_id: session_ids)
-                        .where.not(face_data: nil)
-                        .group(:photo_session_id)
-                        .count
-    
-    @stats = {
-      total_sessions: PhotoSession.visible.count,
-      total_photos: Photo.joins(:photo_session).where(photo_sessions: { hidden: false }).count,
-      by_day: SessionDay.joins(:photo_sessions).where(photo_sessions: { hidden: false }).group('session_days.day_name').count
-    }
+    force_refresh = params[:refresh] == '1'
+    @gallery_version = GalleryCache.version
+
+    # Apply hero filter if requested by admin (from session)
+    @hide_heroes = current_user&.admin? && session[:hide_heroes] == true
+
+    payload = GalleryCache.index_payload(
+      version: @gallery_version,
+      hide_heroes: @hide_heroes,
+      force: force_refresh
+    )
+
+    session_ids = payload[:session_ids]
+    sessions = if session_ids.any?
+                 PhotoSession.includes(:session_day, hero_photo: { image_attachment: :blob })
+                             .where(id: session_ids)
+               else
+                 []
+               end
+    sessions_by_id = sessions.index_by(&:id)
+
+    @sessions_by_day = payload[:session_ids_by_day].transform_values do |ids|
+      ids.filter_map { |session_id| sessions_by_id[session_id] }
+    end
+
+    middle_photo_ids = payload[:middle_photo_ids].values.compact
+    middle_photos = if middle_photo_ids.any?
+                      Photo.includes(image_attachment: :blob).where(id: middle_photo_ids)
+                    else
+                      []
+                    end
+    photos_by_id = middle_photos.index_by(&:id)
+    @middle_photos = payload[:middle_photo_ids].each_with_object({}) do |(session_id, photo_id), memo|
+      photo = photos_by_id[photo_id]
+      memo[session_id] = photo if photo
+    end
+
+    @face_counts = payload[:face_counts]
+    @stats = payload[:stats]
+
+    fresh_when(
+      etag: [@gallery_version, (@hide_heroes ? 'hide' : 'all')],
+      last_modified: GalleryCache.last_modified,
+      public: false
+    )
   end
   
   def show
-    @session = PhotoSession.includes(:photos, :sittings).find_by!(burst_id: params[:id])
-    
+    # Support both old burst_id URLs and new session ID URLs
+    # Get the session ID from either :id or :session_id parameter
+    session_param = params[:id] || params[:session_id]
+
+    if session_param&.start_with?('burst_')
+      @session = PhotoSession.includes(:photos, :sittings).find_by!(burst_id: session_param)
+    else
+      @session = PhotoSession.includes(:photos, :sittings).find(session_param)
+    end
+
     # Handle rejected photo filtering
     @show_rejected = params[:show_rejected] == 'true'
-    
+
     if @show_rejected
       @photos = @session.photos.order(:position)
     else
       @photos = @session.photos.accepted.order(:position)
     end
-    
+
     # Get rejected photo count for toggle button
     @rejected_count = @session.photos.rejected.count
-    
-    @sitting = @session.sittings.first
-    @hero_photo = @sitting&.hero_photo || @photos[@photos.length / 2]
-    
-    # Calculate the initial photo index (hero or first)
-    if @hero_photo && @photos.include?(@hero_photo)
+
+    # Get hero photo directly from PhotoSession (not from unreliable Sitting model)
+    @hero_photo = @session.hero_photo
+
+    # Calculate the initial photo index
+    # Priority order:
+    # 1. Explicit navigation flow (arrow keys between sessions)
+    # 2. Direct photo links (from URLs)
+    # 3. Session entry from index (hero/middle photo)
+    if params[:start] == 'last'
+      # Start at last photo when navigating backward from next session
+      @initial_index = @photos.length - 1
+    elsif params[:start] == 'first'
+      # Start at first photo when navigating forward from previous session
+      @initial_index = 0
+    elsif params[:photo_position]
+      # Direct link to specific photo by position
+      @initial_index = params[:photo_position].to_i - 1 # Convert 1-based to 0-based
+    elsif params[:image]
+      # Legacy image parameter support
+      @initial_index = params[:image].to_i
+    elsif @hero_photo && @photos.include?(@hero_photo)
+      # Start at hero photo if one is selected (when coming from index)
       @initial_index = @photos.index(@hero_photo)
     else
-      @initial_index = 0
+      # Default to middle photo if no hero selected (when coming from index)
+      @initial_index = @photos.length / 2
     end
     
-    # Find adjacent sessions for navigation (only visible sessions)
-    all_sessions = PhotoSession.visible
-                               .includes(:session_day)
-                               .order('session_days.date ASC, photo_sessions.started_at ASC')
-                               .pluck(:burst_id)
-    current_index = all_sessions.index(@session.burst_id)
-    
-    @prev_session = current_index && current_index > 0 ? all_sessions[current_index - 1] : nil
-    @next_session = current_index && current_index < all_sessions.length - 1 ? all_sessions[current_index + 1] : nil
+    # Check if we should hide sessions with heroes (from session)
+    @hide_heroes = current_user&.admin? && session[:hide_heroes] == true
+
+    # Find adjacent sessions for navigation (filter by hero status if needed)
+    sessions_scope = PhotoSession.visible
+                                 .includes(:session_day)
+                                 .order('session_days.date ASC, photo_sessions.started_at ASC')
+
+    # Apply hero filter if requested
+    if @hide_heroes
+      sessions_scope = sessions_scope.where(hero_photo_id: nil)
+    end
+
+    all_sessions = sessions_scope.pluck(:id)
+    current_index = all_sessions.find_index(@session.id)
+
+    @prev_session_id = current_index && current_index > 0 ? all_sessions[current_index - 1] : nil
+    @next_session_id = current_index && current_index < all_sessions.length - 1 ? all_sessions[current_index + 1] : nil
   end
   
   def update_hero
-    @session = PhotoSession.find_by!(burst_id: params[:id])
-    @photo = @session.photos.find(params[:photo_id])
-    
-    # Create sitting if it doesn't exist, or update existing ones
-    if @session.sittings.exists?
-      @session.sittings.update_all(hero_photo_id: @photo.id)
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
     else
-      # Create a sitting record with placeholder email to store hero selection
-      @session.sittings.create!(
-        email: "placeholder@placeholder.com", 
-        hero_photo_id: @photo.id
-      )
+      @session = PhotoSession.find(params[:id])
     end
-    
+    @photo = @session.photos.find(params[:photo_id])
+
+    # Update hero photo directly on PhotoSession (not on unreliable Sitting model)
+    @session.update!(hero_photo_id: @photo.id)
+
+    # Touch the session to invalidate cache when hero photo changes
+    # This ensures the gallery index page shows the new hero photo
+    @session.touch
+
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_to gallery_path(@session.burst_id) }
@@ -84,7 +146,12 @@ class GalleryController < ApplicationController
   end
   
   def save_email
-    @session = PhotoSession.find_by!(burst_id: params[:id])
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
     @sitting = @session.sittings.first_or_create!
     
     @sitting.update!(
@@ -99,7 +166,12 @@ class GalleryController < ApplicationController
   end
   
   def reject_photo
-    @session = PhotoSession.find_by!(burst_id: params[:id])
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
     @photo = @session.photos.find(params[:photo_id])
     
     @photo.update!(rejected: !@photo.rejected)
@@ -111,7 +183,12 @@ class GalleryController < ApplicationController
   end
   
   def split_session
-    @session = PhotoSession.find_by!(burst_id: params[:id])
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
     @photo = @session.photos.find(params[:photo_id])
     
     new_session = @session.split_at_photo(@photo.id)
@@ -219,7 +296,12 @@ class GalleryController < ApplicationController
   end
 
   def download_photo
-    @session = PhotoSession.find_by!(burst_id: params[:id])
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
     @photo = @session.photos.find(params[:photo_id])
     
     # Get the original file path
@@ -253,7 +335,12 @@ class GalleryController < ApplicationController
   end
 
   def download_all
-    @session = PhotoSession.find_by!(burst_id: params[:id])
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
     
     photos = @session.photos.accepted.order(:position)
     
@@ -331,7 +418,12 @@ class GalleryController < ApplicationController
   end
 
   def hide_session
-    @session = PhotoSession.find_by!(burst_id: params[:id])
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
     
     @session.update!(hidden: true)
     
@@ -347,7 +439,12 @@ class GalleryController < ApplicationController
   end
 
   def download_test
-    @session = PhotoSession.find_by!(burst_id: params[:id])
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?('burst_')
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
     
     # Create a simple test file to download
     require 'tempfile'
@@ -372,5 +469,28 @@ class GalleryController < ApplicationController
                            .order(:started_at)
     
     render partial: 'day_sessions', locals: { sessions: @sessions }
+  end
+
+  def toggle_hide_heroes
+    if current_user&.admin?
+      # Explicitly handle nil case and ensure boolean value
+      current_state = session[:hide_heroes] == true
+      session[:hide_heroes] = !current_state
+      Rails.logger.info "Toggled hide_heroes from #{current_state} to #{session[:hide_heroes]}"
+    end
+    redirect_back(fallback_location: root_path)
+  end
+
+  private
+
+  def check_preloader_shown
+    # Skip check for admin users or if explicitly bypassed
+    return if current_user&.admin?
+    return if params[:skip_preloader] == 'true'
+    
+    # Check if preloader has been shown
+    unless cookies[:preloader_shown].present?
+      redirect_to preloader_path
+    end
   end
 end

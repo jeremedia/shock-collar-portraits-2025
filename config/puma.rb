@@ -24,11 +24,30 @@
 # Any libraries that use a connection pool or another resource pool should
 # be configured to provide at least as many connections as the number of
 # threads. This includes Active Record's `pool` parameter in `database.yml`.
-threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
+require 'etc'
+
+env = ENV.fetch('RACK_ENV', ENV['RAILS_ENV'] || 'development')
+
+# Stability-first defaults on macOS dev; can be overridden via env
+threads_count = ENV.fetch("RAILS_MAX_THREADS") { env == 'development' ? 3 : 8 }
 threads threads_count, threads_count
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 port ENV.fetch("PORT", 3000)
+
+# Use multiple workers and preload for better CPU utilization
+default_workers = if env == 'development'
+  2
+else
+  [2, (Etc.respond_to?(:nprocessors) ? Etc.nprocessors - 1 : 2)].max
+end
+#workers ENV.fetch("WEB_CONCURRENCY") { default_workers }
+workers default_workers
+# Avoid preloading in development to keep native libraries (e.g., libvips) fork-safe.
+# You can force preload by setting PUMA_PRELOAD=1.
+if env != 'development' || ENV['PUMA_PRELOAD'] == '1'
+  preload_app!
+end
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
@@ -39,3 +58,13 @@ plugin :solid_queue if ENV["SOLID_QUEUE_IN_PUMA"]
 # Specify the PID file. Defaults to tmp/pids/server.pid in development.
 # In other environments, only set the PID file if requested.
 pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
+
+on_worker_boot do
+# Resolves segmentation fault with libvips processing when creating variants.
+# If you have a segmentation fault, you will need to run `bundle pristine` to
+# resolve it.
+#
+#   https://github.com/libvips/ruby-vips/issues/417
+#
+require 'vips' if RUBY_PLATFORM.include?('darwin')
+end

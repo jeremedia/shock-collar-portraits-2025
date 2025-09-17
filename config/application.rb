@@ -43,6 +43,9 @@ module ShockCollarRails
     # Use direct URLs to storage service instead of proxying through Rails
     # config.active_storage.resolve_model_to_route = :rails_storage_proxy
 
+    # Use libvips for image processing across environments
+    config.active_storage.variant_processor = :vips
+
     # Don't generate system test files.
     config.generators.system_tests = nil
   end

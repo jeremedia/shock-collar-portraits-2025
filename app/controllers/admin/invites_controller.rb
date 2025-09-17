@@ -4,7 +4,9 @@ class Admin::InvitesController < ApplicationController
   
   def index
     @admins = User.where(admin: true).order(:email)
-    @pending_admin_invites = User.invitation_not_accepted.where(admin: true).order(:invitation_sent_at)
+    @pending_admin_invites = User.invitation_not_accepted.where(admin: true).order(invitation_sent_at: :desc)
+    @pending_user_invites = User.invitation_not_accepted.where(admin: false).order(invitation_sent_at: :desc)
+    @accepted_users = User.invitation_accepted.where(admin: false).order(:email)
   end
   
   def new
@@ -13,40 +15,53 @@ class Admin::InvitesController < ApplicationController
   
   def create
     email = params[:email]&.strip&.downcase
-    
+    is_admin = params[:admin] == "1"
+
     if email.blank?
       flash[:alert] = "Email address is required"
       redirect_to new_admin_invite_path
       return
     end
-    
+
     # Check if user already exists
     existing_user = User.find_by(email: email)
-    
+
     if existing_user
-      if existing_user.admin?
-        flash[:alert] = "#{email} is already an admin"
+      if is_admin
+        if existing_user.admin?
+          flash[:alert] = "#{email} is already an admin"
+        else
+          # Upgrade existing user to admin
+          existing_user.update!(admin: true)
+          flash[:notice] = "#{email} has been upgraded to admin status"
+        end
       else
-        # Upgrade existing user to admin
-        existing_user.update!(admin: true)
-        flash[:notice] = "#{email} has been upgraded to admin status"
+        if existing_user.admin?
+          flash[:notice] = "#{email} already has an account (with admin access)"
+        else
+          flash[:notice] = "#{email} already has an account"
+        end
       end
       redirect_to admin_invites_path
       return
     end
-    
-    # Send invitation with admin flag
+
+    # Send invitation
     user = User.invite!(
-      { 
+      {
         email: email,
-        admin: true,
+        admin: is_admin,
         name: params[:name]
       },
       current_user
     )
-    
+
     if user.persisted?
-      flash[:notice] = "Admin invitation sent to #{email}"
+      if is_admin
+        flash[:notice] = "Admin invitation sent to #{email}"
+      else
+        flash[:notice] = "Invitation sent to #{email}"
+      end
       redirect_to admin_invites_path
     else
       flash[:alert] = "Failed to send invitation: #{user.errors.full_messages.join(', ')}"
@@ -75,10 +90,10 @@ class Admin::InvitesController < ApplicationController
     if user.invitation_accepted?
       flash[:alert] = "User has already accepted their invitation"
     else
-      user.invite!(nil, current_user)
+      user.invite!(current_user)
       flash[:notice] = "Invitation resent to #{user.email}"
     end
-    
+
     redirect_to admin_invites_path
   end
   

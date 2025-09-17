@@ -20,6 +20,31 @@ namespace :variants do
     # Queue all photos for variant generation
     BatchProcessingService.queue_variant_generation(photos, variants: [:thumb, :large])
   end
+
+  desc "Generate ALL variants for all photos (tiny, thumb, medium, large, gallery, face_thumb)"
+  task generate_all_variants: :environment do
+    puts "=== Generating ALL Variants for All Photos ==="
+    puts "Variants: [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb]"
+
+    photos = Photo.joins(:image_attachment)
+    total = photos.count
+
+    puts "Found #{total} photos with attachments"
+    puts "This will enqueue background jobs for all named variants plus face crops where faces exist."
+
+    # Confirm before proceeding when run interactively
+    if STDIN.tty?
+      print "Continue? (y/n): "
+      response = STDIN.gets.chomp
+      unless response.downcase == 'y'
+        puts "Cancelled"
+        exit
+      end
+    end
+
+    variants = [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb]
+    BatchProcessingService.queue_variant_generation(photos, variants: variants)
+  end
   
   desc "Generate variants for a specific day"
   task :generate_day, [:day] => :environment do |t, args|
@@ -187,5 +212,75 @@ namespace :variants do
       end
       puts "  ... and #{errors.count - 10} more" if errors.count > 10
     end
+  end
+
+  desc "Report how many photos have ALL variants created (includes face_thumb only when faces exist)"
+  task status_full: :environment do
+    require 'json'
+
+    variants = [:tiny_square_thumb, :thumb, :medium, :large, :gallery]
+    total = Photo.joins(:image_attachment).count
+    complete = 0
+    with_faces = 0
+    complete_with_faces = 0
+
+    per_variant_processed = Hash.new(0)
+    per_variant_missing = Hash.new(0)
+
+    started_at = Time.now
+    processed = 0
+
+    Photo.joins(:image_attachment).includes(image_attachment: :blob).find_in_batches(batch_size: 200) do |batch|
+      batch.each do |p|
+        ok = true
+
+        variants.each do |v|
+          begin
+            var = p.image.variant(v)
+            if var.send(:processed?)
+              per_variant_processed[v] += 1
+            else
+              per_variant_missing[v] += 1
+              ok = false
+            end
+          rescue
+            per_variant_missing[v] += 1
+            ok = false
+          end
+        end
+
+        if p.has_faces?
+          with_faces += 1
+          begin
+            face_url = p.face_crop_url(size: 300)
+            ok &&= !face_url.nil?
+            complete_with_faces += 1 if ok
+          rescue
+            ok = false
+          end
+        end
+
+        complete += 1 if ok
+        processed += 1
+
+        # Light progress output
+        if processed % 500 == 0
+          percent = (processed.to_f / total * 100).round(1)
+          puts "Processed #{processed}/#{total} (#{percent}%)..."
+        end
+      end
+    end
+
+    result = {
+      total_photos_with_attachments: total,
+      photos_complete_all_variants: complete,
+      photos_with_faces: with_faces,
+      photos_complete_including_face: complete_with_faces,
+      per_variant_processed: per_variant_processed.transform_keys(&:to_s),
+      per_variant_missing: per_variant_missing.transform_keys(&:to_s),
+      elapsed_seconds: (Time.now - started_at).round(1)
+    }
+
+    puts JSON.pretty_generate(result)
   end
 end

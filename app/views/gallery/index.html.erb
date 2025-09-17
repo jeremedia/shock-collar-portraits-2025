@@ -1,40 +1,32 @@
-<div class="min-h-screen bg-black text-white pb-20" data-controller="thumbnail-size day-accordion">
+<% content_for :title, "OKNOTOK Shock Collar Portraits - Gallery" %>
+<div class="bg-black text-white pb-20" data-controller="thumbnail-size day-accordion">
   <!-- Header -->
-  <header class="sticky top-0 z-40 bg-gradient-to-b from-black to-black/80 backdrop-blur-sm border-b-2 border-red-700">
+  <header class="sticky top-0 z-40 bg-gray-900 border-b-2 border-red-600">
     <div class="container mx-auto px-4">
       <div class="py-6">
-        <h1 class="text-4xl font-bold text-center bg-gradient-to-r from-red-600 to-yellow-600 bg-clip-text text-transparent">
-          OKNOTOK SHOCK COLLAR PORTRAITS
+        <h1 class="text-4xl font-bold text-center text-yellow-500">
+          2025 OKNOTOK SHOCK COLLAR PORTRAITS
         </h1>
-        <p class="text-center text-red-500 mt-2">Burning Man 2025 • Art Therapy</p>
-        
-        <!-- Stats -->
-        <div class="flex justify-center gap-8 mt-4 text-sm">
-          <span class="text-yellow-500"><%= @stats[:total_sessions] %> Sittings</span>
-          <span class="text-yellow-500"><%= @stats[:total_photos] %> Photos</span>
-          <% @stats[:by_day].each do |day, count| %>
-            <span class="text-gray-400"><%= day.capitalize %>: <%= count %></span>
-          <% end %>
-          <% if current_user&.admin? %>
-            <span class="text-gray-400">|</span>
-            <%= link_to "All Thumbnails", admin_thumbnails_path, class: "text-blue-400 hover:text-blue-300" %>
-          <% end %>
-        </div>
+        <p class="text-center text-red-400 mt-2">
+          3:00 & Atwood • August 26th through August 29th • <%= @stats[:total_sessions] %> Sittings • <%= @stats[:total_photos] %> Photos
+        </p>
       </div>
     </div>
   </header>
 
   <!-- Gallery -->
   <main class="container mx-auto px-4 py-8">
-    <% %w[sunday monday tuesday wednesday thursday friday].each do |day| %>
+    <% all_sessions = @sessions_by_day.values.flatten %>
+    <% cache ["gallery_all_days_v2", all_sessions.map(&:id).sort.join("-"), all_sessions.map(&:updated_at).max] do %>
+    <% %w[monday tuesday wednesday thursday friday].each do |day| %>
       <% sessions = @sessions_by_day[day] || [] %>
       <% next if sessions.empty? %>
       
-      <div class="mb-12" data-day-accordion-target="day" data-day-name="<%= day %>">
+      <div class="mb-2" data-day-accordion-target="day" data-day-name="<%= day %>">
         <!-- Day Header -->
-        <button 
+        <button
           data-action="click->day-accordion#toggle"
-          class="w-full text-left mb-6 group"
+          class="w-full text-left mb-3 group cursor-pointer"
         >
           <div class="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-red-900/30 to-transparent rounded-lg hover:from-red-900/50 transition-colors">
             <h2 class="text-2xl font-bold text-yellow-500">
@@ -48,14 +40,17 @@
         </button>
         
         <!-- Sittings Grid Container -->
-        <div data-day-accordion-target="content" class="">
+        <div data-day-accordion-target="content" class="hidden">
           <div data-day-accordion-target="grid" data-thumbnail-size-target="grid" class="grid grid-cols-4 gap-4 transition-all duration-300">
-            <% sessions.each do |session| %>
-              <%= render 'session_card', session: session %>
+            <% cache ["gallery_day_sessions_v2", day, sessions.map(&:id).sort.join("-"), sessions.map(&:updated_at).max] do %>
+              <% sessions.each do |session| %>
+                <%= render 'session_card', session: session %>
+              <% end %>
             <% end %>
           </div>
         </div>
       </div>
+    <% end %>
     <% end %>
   </main>
 
@@ -85,7 +80,7 @@
         
         <!-- Face Mode Checkbox -->
         <div class="flex items-center gap-2">
-          <input type="checkbox" 
+          <input type="checkbox"
                  id="face-mode-toggle"
                  data-thumbnail-size-target="faceMode"
                  data-action="change->thumbnail-size#toggleFaceMode"
@@ -95,7 +90,65 @@
           </label>
           <span data-thumbnail-size-target="faceStatus" class="text-gray-400 text-xs ml-1"></span>
         </div>
+
+        <% if current_user&.admin? %>
+          <!-- Divider -->
+          <div class="w-px h-8 bg-red-700/50"></div>
+
+          <!-- Hide Heroes Checkbox (Admin Only) -->
+          <%= form_with url: toggle_hide_heroes_gallery_index_path, method: :post, local: false, data: { turbo_frame: "_top" }, class: "flex items-center gap-2" do |f| %>
+            <%= check_box_tag :hide_heroes, 'true', @hide_heroes,
+                id: "hide-heroes-toggle",
+                onchange: "this.form.requestSubmit()",
+                class: "w-4 h-4 rounded border-red-700 bg-black text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0" %>
+            <label for="hide-heroes-toggle" class="text-yellow-500 text-sm font-semibold cursor-pointer select-none">
+              Hide Heroes
+            </label>
+          <% end %>
+        <% end %>
       </div>
     </div>
   </footer>
+
+  <!-- Persistent Storage Manager (Admin Only) - Hidden for now -->
+  <%# if user_signed_in? && current_user.admin? %>
+  <%#
+    <div data-controller="image-preloader"
+         class="fixed bottom-20 right-4 bg-gray-900 border border-red-700 rounded-lg shadow-2xl max-w-sm z-40">
+
+      <!-- Toggle Button -->
+      <button data-action="click->image-preloader#togglePanel"
+              class="absolute -top-10 right-0 bg-gray-900 border border-red-700 rounded-t-lg px-3 py-1 text-yellow-500 text-xs hover:bg-gray-800 transition-colors">
+        Storage Manager
+      </button>
+
+      <!-- Panel Content -->
+      <div data-image-preloader-target="container" class="p-4">
+        <h3 class="text-yellow-500 font-bold mb-3 text-sm flex items-center">
+          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+            <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/>
+          </svg>
+          Offline Storage
+        </h3>
+
+        <!-- Status Display -->
+        <div data-image-preloader-target="status" class="mb-3">
+          <div class="text-gray-400 text-xs">Loading...</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div data-image-preloader-target="button" class="mb-3"></div>
+
+        <!-- Progress Display -->
+        <div data-image-preloader-target="progress"></div>
+
+        <!-- Additional Details -->
+        <div data-image-preloader-target="details" class="mt-3 text-xs text-gray-500">
+          <p>Enable permanent storage to ensure images remain cached indefinitely for offline access.</p>
+        </div>
+      </div>
+    </div>
+  %>
+  <%# end %>
 </div>

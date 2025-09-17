@@ -1,7 +1,7 @@
 <%
   session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
   day_name = @session.session_day.day_name if @session.session_day
-  
+
   # Get first photo's timestamp in PST
   first_photo = @photos.first
   if first_photo&.photo_taken_at
@@ -9,16 +9,27 @@
     photo_time_pst = first_photo.photo_taken_at.in_time_zone('America/Los_Angeles')
     time_display = photo_time_pst.strftime('%l:%M %p PST').strip
   end
+
+  # Dynamic page title for browser history
+  photo_position = @initial_index + 1
+  title_parts = []
+  title_parts << day_name.capitalize if day_name
+  title_parts << "Session #{session_number}"
+  title_parts << "Photo #{photo_position}/#{@photos.length}"
+  page_title = title_parts.join(" - ")
 %>
 
+<% content_for :title, page_title %>
+
 <!-- Lightroom-style Photo Viewer: Full viewport, no vertical scrolling -->
-<div class="fixed inset-0 z-50 bg-black text-white flex flex-col overflow-hidden" data-controller="image-viewer" 
+<div class="fixed inset-0 z-50 bg-black text-white flex flex-col overflow-hidden" data-controller="image-viewer"
      data-image-viewer-total-value="<%= @photos.length %>"
-     data-image-viewer-session-id-value="<%= @session.burst_id %>"
+     data-image-viewer-session-id-value="<%= @session.id %>"
      data-image-viewer-show-rejected-value="<%= @show_rejected %>"
      data-image-viewer-initial-index-value="<%= @initial_index %>"
-     data-image-viewer-prev-session-value="<%= @prev_session ? gallery_path(@prev_session) : '' %>"
-     data-image-viewer-next-session-value="<%= @next_session ? gallery_path(@next_session) : '' %>">
+     data-image-viewer-prev-session-value="<%= @prev_session_id ? session_path(@prev_session_id) : '' %>"
+     data-image-viewer-next-session-value="<%= @next_session_id ? session_path(@next_session_id) : '' %>"
+     data-image-viewer-burst-id-value="<%= @session.burst_id %>">
   
   <!-- Fixed Header -->
   <header class="flex-shrink-0 bg-black/90 backdrop-blur-sm border-b border-red-700/50">
@@ -38,19 +49,32 @@
         <div class="flex items-center gap-3">
           <!-- Session Navigation -->
           <div class="flex gap-1">
-            <% if @prev_session %>
-              <%= link_to "← Prev", gallery_path(@prev_session), 
+            <% if @prev_session_id %>
+              <%= link_to "← Prev", session_path(@prev_session_id),
                   class: "px-3 py-1 text-sm bg-red-900/30 text-white rounded hover:bg-red-800/50 transition-colors whitespace-nowrap" %>
             <% end %>
-            <% if @next_session %>
-              <%= link_to "Next →", gallery_path(@next_session), 
+            <% if @next_session_id %>
+              <%= link_to "Next →", session_path(@next_session_id),
                   class: "px-3 py-1 text-sm bg-red-900/30 text-white rounded hover:bg-red-800/50 transition-colors whitespace-nowrap" %>
             <% end %>
           </div>
-          
+
+          <!-- Hide Heroes Checkbox (Admin Only) -->
+          <% if current_user.admin? %>
+            <%= form_with url: toggle_hide_heroes_gallery_index_path, method: :post, local: false, data: { turbo_frame: "_top" }, class: "flex items-center gap-2" do |f| %>
+              <%= check_box_tag :hide_heroes, 'true', @hide_heroes,
+                  id: "viewer-hide-heroes-toggle",
+                  onchange: "this.form.requestSubmit()",
+                  class: "w-4 h-4 rounded border-red-700 bg-black text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0" %>
+              <label for="viewer-hide-heroes-toggle" class="text-yellow-500 text-sm font-semibold cursor-pointer select-none whitespace-nowrap">
+                Hide Heroes
+              </label>
+            <% end %>
+          <% end %>
+
           <!-- Hide Session Button (Admin Only) -->
           <% if current_user.admin? %>
-            <%= form_with url: hide_session_gallery_path(@session.burst_id), 
+            <%= form_with url: hide_session_gallery_path(@session.id), 
                           method: :patch,
                           data: { 
                             turbo_frame: "_top"
@@ -74,34 +98,22 @@
             <% end %>
           <% end %>
           
-          <!-- Image Counter -->
-          <div class="text-sm text-gray-400" data-image-viewer-target="counter"><%= @initial_index + 1 %> / <%= @photos.length %></div>
-          
-          <!-- Email Status -->
-          <% if @sitting&.email.present? %>
-            <div class="text-xs text-green-500 flex items-center gap-1">
-              <span>✓</span>
-              <button data-action="click->image-viewer#showEmailForm" 
-                      class="hover:text-green-400 underline"><%= @sitting.email %></button>
-            </div>
-          <% else %>
-            <button data-action="click->image-viewer#showEmailForm" 
-                    class="text-xs px-2 py-1 bg-yellow-600 text-black font-medium rounded hover:bg-yellow-500 transition-colors whitespace-nowrap">
-              📧 Add Email
-            </button>
-          <% end %>
         </div>
       </div>
     </div>
   </header>
   
   <!-- Flexible Photo Viewport -->
-  <main class="flex-1 min-h-0 relative bg-black overflow-hidden">
-    <!-- Images -->
-    <% @photos.each_with_index do |photo, index| %>
-      <div data-image-viewer-target="image" 
+  <main class="flex-1 min-h-0 relative bg-black overflow-hidden flex" data-image-viewer-target="mainContainer">
+    <!-- Photo Container -->
+    <div class="flex-1 relative" data-image-viewer-target="photoContainer">
+      <!-- Images -->
+      <% @photos.each_with_index do |photo, index| %>
+      <div data-image-viewer-target="image"
            data-index="<%= index %>"
            data-face-data="<%= photo.face_data.to_json if photo.face_data.present? %>"
+           data-original-path="<%= photo.original_path %>"
+           data-exif-data="<%= photo.exif_data.to_json if photo.exif_data.present? %>"
            <% if photo.image.attached? %>
              data-large-url="<%= rails_blob_url(photo.image.variant(:large)) %>"
            <% else %>
@@ -133,20 +145,46 @@
           <div class="absolute inset-0 pointer-events-none hidden" data-image-viewer-target="faceOverlay"></div>
         </div>
       </div>
-    <% end %>
-    
-    <!-- Left Navigation -->
-    <button data-action="click->image-viewer#previousSession" 
-            class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full flex items-center justify-center text-white hover:text-yellow-500 text-xl transition-colors z-10">
-      ←
-    </button>
-    
-    <!-- Right Navigation -->
-    <button data-action="click->image-viewer#nextSession" 
-            class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full flex items-center justify-center text-white hover:text-yellow-500 text-xl transition-colors z-10">
-      →
-    </button>
-    
+      <% end %>
+
+      <!-- Left Navigation -->
+      <button data-action="click->image-viewer#previous"
+              class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full flex items-center justify-center text-white hover:text-yellow-500 text-xl transition-colors z-10">
+        ←
+      </button>
+
+      <!-- Right Navigation -->
+      <button data-action="click->image-viewer#next"
+              class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full flex items-center justify-center text-white hover:text-yellow-500 text-xl transition-colors z-10">
+        →
+      </button>
+    </div>
+
+    <!-- EXIF Panel -->
+    <div data-image-viewer-target="exifPanel"
+         class="hidden w-80 bg-gray-900/95 backdrop-blur-sm border-l border-red-700/50 overflow-y-auto">
+      <!-- Panel Header -->
+      <div class="bg-gradient-to-r from-red-900/30 to-transparent border-b border-red-700/50 px-4 py-3">
+        <div class="flex justify-between items-center">
+          <h3 class="text-yellow-500 font-bold text-lg flex items-center gap-2">
+            <span class="text-red-400">📊</span>
+            EXIF Data
+          </h3>
+          <button data-action="click->image-viewer#toggleExifPanel"
+                  class="w-8 h-8 bg-black/30 hover:bg-red-700/50 border border-red-700/30 hover:border-red-500 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel Content -->
+      <div class="p-4">
+        <div data-image-viewer-target="exifContent" class="space-y-1">
+          <!-- EXIF data will be populated here -->
+          <div class="text-gray-500 text-center py-8">Press X to show EXIF data</div>
+        </div>
+      </div>
+    </div>
   </main>
   
   <!-- Fixed Footer with Thumbnails -->
@@ -166,7 +204,7 @@
         <!-- Action Buttons (Admin Only) -->
         <div class="flex justify-center gap-3">
         <% if current_user.admin? %>
-        <%= form_with url: update_hero_gallery_path(@session.burst_id), 
+        <%= form_with url: update_hero_gallery_path(@session.id), 
                       data: { 
                         turbo_frame: "_top",
                         action: "turbo:submit-end->image-viewer#heroSelected"
@@ -174,17 +212,17 @@
                       local: true do |f| %>
           <%= hidden_field_tag :photo_id, @photos.first&.id, data: { image_viewer_target: "heroInput" } %>
           <%= hidden_field_tag :hero_photo_id, @hero_photo&.id, data: { image_viewer_target: "heroPhotoId" } %>
-          <%= f.submit "☆ Select as Hero", 
-                       data: { 
+          <%= f.submit "☆ Select as Hero",
+                       data: {
                          image_viewer_target: "heroButton",
                          hero_text: "★ Selected as Hero",
                          select_text: "☆ Select as Hero",
                          action: "click->image-viewer#heroSelected"
                        },
-                       class: "px-3 py-1 bg-yellow-600/90 text-black font-semibold text-sm rounded-full hover:bg-yellow-500 transition-colors cursor-pointer shadow-lg whitespace-nowrap" %>
+                       class: "px-3 py-1 bg-gray-700/70 text-gray-300 font-semibold text-sm rounded-full hover:bg-gray-600/70 transition-colors cursor-pointer shadow-lg whitespace-nowrap" %>
         <% end %>
         
-        <%= form_with url: reject_photo_gallery_path(@session.burst_id), 
+        <%= form_with url: reject_photo_gallery_path(@session.id), 
                       method: :patch,
                       data: { 
                         turbo_frame: "_top",
@@ -193,40 +231,40 @@
                       local: true do |f| %>
           <%= hidden_field_tag :photo_id, @photos.first&.id, data: { image_viewer_target: "rejectInput" } %>
           <%= hidden_field_tag :show_rejected, @show_rejected %>
-          <%= f.submit "🗑️ Reject", 
-                       data: { 
+          <%= f.submit "🗑️ Reject",
+                       data: {
                          image_viewer_target: "rejectButton",
                          rejected_text: "✅ Rejected",
                          reject_text: "🗑️ Reject"
                        },
-                       class: "px-3 py-1 bg-gray-600/90 text-white font-semibold text-sm rounded-full hover:bg-gray-500 transition-colors cursor-pointer shadow-lg whitespace-nowrap" %>
+                       class: "px-3 py-1 bg-gray-700/70 text-gray-300 font-semibold text-sm rounded-full hover:bg-gray-600/70 transition-colors cursor-pointer shadow-lg whitespace-nowrap" %>
         <% end %>
         
         <button data-action="click->image-viewer#confirmSplit"
                 data-image-viewer-target="splitButton"
-                class="px-3 py-1 bg-orange-600/90 text-white font-semibold text-sm rounded-full hover:bg-orange-500 transition-colors cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                class="px-3 py-1 bg-gray-700/70 text-gray-300 font-semibold text-sm rounded-full hover:bg-gray-600/70 transition-colors cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
           ✂️ Split Session Here
         </button>
         <% end %>
         
         <!-- Download Buttons -->
-        <%= link_to download_all_gallery_path(@session.burst_id), 
-                    class: "px-3 py-1 bg-green-600/90 text-white font-semibold text-sm rounded-full hover:bg-green-500 transition-colors cursor-pointer shadow-lg whitespace-nowrap",
+        <%= link_to download_all_gallery_path(@session.id),
+                    class: "px-3 py-1 bg-gray-700/70 text-gray-300 font-semibold text-sm rounded-full hover:bg-gray-600/70 transition-colors cursor-pointer shadow-lg whitespace-nowrap",
                     title: "Download all photos in this session as a ZIP file" do %>
           📦 Download All
         <% end %>
         
-        <a href="#" 
+        <a href="#"
            data-action="click->image-viewer#downloadCurrentPhoto"
            data-image-viewer-target="downloadButton"
-           class="px-3 py-1 bg-blue-600/90 text-white font-semibold text-sm rounded-full hover:bg-blue-500 transition-colors cursor-pointer shadow-lg whitespace-nowrap"
+           class="px-3 py-1 bg-gray-700/70 text-gray-300 font-semibold text-sm rounded-full hover:bg-gray-600/70 transition-colors cursor-pointer shadow-lg whitespace-nowrap"
            title="Download the currently visible photo">
           💾 Download Photo
         </a>
         </div>
-        
-        <!-- Spacer for layout balance -->
-        <div class="w-48"></div>
+
+        <!-- Image Counter (right aligned) -->
+        <div class="text-sm text-gray-400" data-image-viewer-target="counter"><%= @initial_index + 1 %> / <%= @photos.length %></div>
       </div>
       
       <!-- Horizontal Thumbnail Strip -->
@@ -267,7 +305,7 @@
   <div data-image-viewer-target="emailForm" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-96 max-w-sm mx-4">
       <h3 class="text-lg font-semibold text-white mb-4">Contact Information</h3>
-      <%= form_with url: save_email_gallery_path(@session.burst_id), 
+      <%= form_with url: save_email_gallery_path(@session.id), 
                     data: { turbo_frame: "_top" } do |f| %>
         <div class="space-y-4">
           <%= f.text_field :name, 

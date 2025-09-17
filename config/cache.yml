@@ -1,0 +1,18 @@
+default: &default
+  store_options:
+    # Cap age of oldest cache entry to fulfill retention policies
+    max_age: <%= 7.days.to_i %>  # URLs expire in 5 minutes but keep cached for a week
+    max_size: <%= 1.gigabyte %>  # Increase cache size for development
+    namespace: <%= Rails.env %>
+    expiry_batch_size: 1000  # Clean up 1000 entries at a time
+
+development:
+  <<: *default
+  database: cache
+
+test:
+  <<: *default
+
+production:
+  database: cache
+  <<: *default

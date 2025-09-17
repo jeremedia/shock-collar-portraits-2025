@@ -1,63 +1,252 @@
-<div class="min-h-screen bg-black text-white">
+<% content_for :title, "OKNOTOK Heroes - Best Portraits" %>
+<div class="bg-black text-white pb-20" data-controller="thumbnail-size hero-filter">
   <!-- Header -->
-  <div class="bg-gray-900 border-b-2 border-red-600 mb-8">
-    <div class="max-w-7xl mx-auto px-4 py-8">
-      <h1 class="text-5xl font-bold text-yellow-500 mb-2">⚡ OKNOTOK Heroes ⚡</h1>
-      <p class="text-red-400 text-xl">Shock Collar Portrait Champions • Burning Man 2025</p>
-      <div class="mt-4 flex gap-6 text-sm">
+  <div class="bg-gray-900 border-b-2 border-red-600 mb-0">
+    <div class="max-w-7xl mx-auto px-4 py-4 text-center">
+      <h1 class="text-4xl font-bold text-yellow-500 leading-none mb-1">Shock&nbsp;Collar Portrait&nbsp;Heroes</h1>
+      <p class="text-red-400 text-2xl leading-none">OKNOTOK 2025</p>
+      <div class="mt-4 flex justify-center text-sm">
         <span class="text-gray-400">
-          <span class="text-yellow-500 font-bold text-2xl"><%= @total_heroes %></span> Hero Shots
+          <span class="text-yellow-500 font-bold text-2xl"><%= @total_days %> Days,&nbsp;</span>
         </span>
         <span class="text-gray-400">
-          <span class="text-yellow-500 font-bold text-2xl"><%= @total_days %></span> Days
+          <span class="text-yellow-500 font-bold text-2xl"><%= @total_sessions %> Sessions,&nbsp;</span>
+        </span>
+        <span class="text-gray-400">
+          <span class="text-yellow-500 font-bold text-2xl"><%= @total_heroes %> Heroes</span>
+        </span>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-red-600/50 mb-6">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <!-- Main Filter Controls -->
+      <div class="mb-3">
+        <!-- Mobile: Full-width button group -->
+        <div class="flex sm:hidden">
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="all"
+                  data-filter-value="all"
+                  data-action="click->hero-filter#clearAllFilters"
+                  class="flex-1 px-4 py-2 text-sm font-medium border-2 border-r-0 rounded-l-full transition-all duration-200 bg-yellow-500 text-black border-yellow-500">
+            ✨ Show All
+          </button>
+          <button data-hero-filter-target="expandButton"
+                  data-action="click->hero-filter#toggleFilterPanel"
+                  class="flex-1 px-4 py-2 text-sm font-medium border-2 rounded-r-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700">
+            <span data-hero-filter-target="expandText">🔽 Filters</span>
+          </button>
+        </div>
+
+        <!-- Desktop: Original inline buttons -->
+        <div class="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="all"
+                  data-filter-value="all"
+                  data-action="click->hero-filter#clearAllFilters"
+                  class="px-4 py-2 text-sm font-medium border-2 rounded-full transition-all duration-200 bg-yellow-500 text-black border-yellow-500">
+            ✨ Show All
+          </button>
+
+          <button data-hero-filter-target="expandButton"
+                  data-action="click->hero-filter#toggleFilterPanel"
+                  class="px-4 py-2 text-sm font-medium border-2 rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            <span data-hero-filter-target="expandText">🔽 Show Filters</span>
+          </button>
+
+          <!-- Active Filters Display (Desktop) -->
+          <div data-hero-filter-target="activeFiltersDisplay" class="flex flex-wrap gap-2 items-center">
+            <!-- Active filter chips will be dynamically added here -->
+          </div>
+        </div>
+
+        <!-- Active Filters Display (Mobile - below button group) -->
+        <div data-hero-filter-target="activeFiltersDisplay" class="sm:hidden flex flex-wrap gap-2 items-center mt-2">
+          <!-- Active filter chips will be dynamically added here -->
+        </div>
+      </div>
+
+      <!-- Expandable Filter Panel -->
+      <div data-hero-filter-target="filterPanel" class="hidden space-y-3 pb-3 border-t border-gray-800 pt-3">
+        <!-- Gender Filters -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-yellow-500 text-xs font-semibold w-20">Gender:</span>
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="gender"
+                  data-filter-value="female"
+                  data-action="click->hero-filter#toggleFilter"
+                  class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            👩 Female
+          </button>
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="gender"
+                  data-filter-value="male"
+                  data-action="click->hero-filter#toggleFilter"
+                  class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            👨 Male
+          </button>
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="gender"
+                  data-filter-value="non-binary"
+                  data-action="click->hero-filter#toggleFilter"
+                  class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            🌈 Non-Binary
+          </button>
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="gender"
+                  data-filter-value="not-set"
+                  data-action="click->hero-filter#toggleFilter"
+                  class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            ❓ Not Set
+          </button>
+        </div>
+
+        <!-- Quality Filters -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-yellow-500 text-xs font-semibold w-20">Quality:</span>
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="quality"
+                  data-filter-value="awesome"
+                  data-action="click->hero-filter#toggleFilter"
+                  class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            🌟 Awesome
+          </button>
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="quality"
+                  data-filter-value="ok"
+                  data-action="click->hero-filter#toggleFilter"
+                  class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            👍 OK
+          </button>
+          <button data-hero-filter-target="filterButton"
+                  data-filter-type="quality"
+                  data-filter-value="not-ok"
+                  data-action="click->hero-filter#toggleFilter"
+                  class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+            👎 Not OK
+          </button>
+        </div>
+
+        <!-- Expression Tags -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-yellow-500 text-xs font-semibold w-20">Expression:</span>
+          <% ["smiling", "serious", "laughing", "surprised", "shocked", "confused", "orgasm", "pain", "stoic", "jazz hands"].each do |tag| %>
+            <button data-hero-filter-target="filterButton"
+                    data-filter-type="expression"
+                    data-filter-value="<%= tag %>"
+                    data-action="click->hero-filter#toggleFilter"
+                    class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+              <%= tag.split.map(&:capitalize).join(' ') %>
+            </button>
+          <% end %>
+        </div>
+
+        <!-- Appearance Tags -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-yellow-500 text-xs font-semibold w-20">Appearance:</span>
+          <% ["blonde", "brunette", "redhead", "bald", "extensions", "beard", "mustache", "tattoos", "piercings", "topless", "eyes closed", "mouth open"].each do |tag| %>
+            <button data-hero-filter-target="filterButton"
+                    data-filter-type="appearance"
+                    data-filter-value="<%= tag %>"
+                    data-action="click->hero-filter#toggleFilter"
+                    class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+              <%= tag.split.map(&:capitalize).join(' ') %>
+            </button>
+          <% end %>
+        </div>
+
+        <!-- Accessory Tags -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-yellow-500 text-xs font-semibold w-20">Accessories:</span>
+          <% ["hat", "sunglasses", "goggles", "glasses", "mask", "costume", "jewelry", "body paint"].each do |tag| %>
+            <button data-hero-filter-target="filterButton"
+                    data-filter-type="accessory"
+                    data-filter-value="<%= tag %>"
+                    data-action="click->hero-filter#toggleFilter"
+                    class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
+              <%= tag.split.map(&:capitalize).join(' ') %>
+            </button>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Filter Stats -->
+      <div class="text-sm text-gray-400">
+        <span data-hero-filter-target="stats">Showing all <%= @total_heroes %> heroes</span>
+        <span data-hero-filter-target="filterLogicHint" class="hidden ml-3 text-xs text-yellow-500/70">
+          (Filters: AND between categories, OR within)
         </span>
       </div>
     </div>
   </div>
 
+  <!-- No Results Message (hidden by default) -->
+  <div data-hero-filter-target="noResults" class="hidden max-w-7xl mx-auto px-4 py-16 text-center">
+    <p class="text-2xl text-gray-500">No heroes match your filters</p>
+    <p class="text-gray-600 mt-2">Try adjusting your filter selection</p>
+  </div>
+
   <!-- Heroes Grid by Day -->
-  <div class="max-w-7xl mx-auto px-4 pb-16">
-    <% @heroes_by_day.each do |day, sittings| %>
-      <div class="mb-12">
+  <div class="max-w-7xl mx-auto px-0 sm:px-4 pb-16">
+    <% @heroes_by_day.each do |day, sessions| %>
+      <div class="mb-8 sm:mb-12" data-day-section data-hero-filter-target="daySection">
         <!-- Day Header -->
-        <div class="flex items-center mb-6">
+        <div class="flex items-center mb-3 sm:mb-6 px-2 sm:px-0">
           <div class="flex-grow border-t-2 border-red-600"></div>
-          <div class="px-6">
-            <h2 class="text-2xl font-bold text-yellow-500">
+          <div class="px-3 sm:px-6">
+            <h2 class="text-xl sm:text-2xl font-bold text-yellow-500">
               <%= day.day_name %>, <%= day.date.strftime('%B %d') %>
             </h2>
-            <p class="text-red-400 text-center text-sm"><%= sittings.count %> heroes</p>
+            <p class="text-red-400 text-center text-sm" data-day-count><%= sessions.count %> heroes</p>
           </div>
           <div class="flex-grow border-t-2 border-red-600"></div>
         </div>
         
         <!-- Heroes Grid for this day -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-          <% sittings.each do |sitting| %>
-            <% photo = sitting.hero_photo %>
-            <% if photo.image.attached? %>
-              <div class="group relative aspect-square overflow-hidden rounded-lg border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105">
-                <%= link_to hero_path(photo), class: "block w-full h-full", data: { turbo: false } do %>
+        <div data-thumbnail-size-target="grid" class="grid grid-cols-3 sm:grid-cols-4 gap-0 sm:gap-4 transition-all duration-300">
+          <% sessions.each do |session| %>
+            <% # Get the hero photo directly from PhotoSession %>
+            <% hero_photo = session.hero_photo %>
+            <% if hero_photo&.image&.attached? %>
+              <% # Get gender, quality and tag data from the session %>
+              <% gender = session.detected_gender&.downcase || "not-set" %>
+              <% gender = "not-set" if gender.blank? %>
+              <% quality = session.quality || "ok" %>
+              <% all_tags = session.all_tags_list.join('|') %>
+              <div class="group relative aspect-square overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105"
+                   data-hero-filter-target="heroCard"
+                   data-gender="<%= gender %>"
+                   data-quality="<%= quality %>"
+                   data-tags="<%= all_tags %>"
+                   data-appearance-tags="<%= session.appearance_tag_list.join('|') %>"
+                   data-expression-tags="<%= session.expression_tag_list.join('|') %>"
+                   data-accessory-tags="<%= session.accessory_tag_list.join('|') %>">
+                <%= link_to hero_path(hero_photo), class: "block w-full h-full", data: { turbo: false } do %>
                   <%
-                    # Use the existing thumb variant - it's already cached and fast!
-                    # The thumb variant is 300x300 WebP, perfect for our grid
-                    if photo.image.attached?
-                      variant = photo.image.variant(:thumb)
+                    # Use face crop if available, otherwise fall back to regular thumb
+                    image_url = if hero_photo.face_data.present?
+                      face_url = hero_photo.face_crop_url(size: 300)
+                      face_url.present? ? face_url : hero_photo.image.variant(:thumb).url
+                    else
+                      hero_photo.image.variant(:thumb).url
                     end
                   %>
-                  <%= image_tag variant, 
+                  <%= image_tag image_url,
                       class: "w-full h-full object-cover",
                       loading: "lazy",
                       alt: "Hero shot" %>
-                  
+
                   <!-- Overlay on hover -->
                   <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div class="absolute bottom-0 left-0 right-0 p-2">
-                      <p class="text-xs text-yellow-500 font-semibold truncate">
-                        <%= sitting.name || sitting.email&.split('@')&.first || 'Anonymous' %>
+                      <p class="text-xs text-yellow-500 font-semibold">
+                        Session #<%= sprintf('%03d', session.session_number) %>
                       </p>
                       <p class="text-xs text-gray-400">
-                        Session #<%= sitting.photo_session.session_number %>
+                        <%= session.started_at.in_time_zone('America/Los_Angeles').strftime("%-l:%M %p") %>
                       </p>
                     </div>
                   </div>
@@ -69,7 +258,7 @@
       </div>
     <% end %>
     
-    <% if @hero_sittings.empty? %>
+    <% if @hero_sessions.empty? %>
       <div class="text-center py-16">
         <p class="text-2xl text-gray-500">No hero shots selected yet!</p>
         <p class="text-gray-600 mt-2">Admins can select hero photos from the gallery.</p>
@@ -77,16 +266,29 @@
     <% end %>
   </div>
   
-  <!-- Footer -->
-  <div class="bg-gray-900 border-t border-red-600 mt-16">
-    <div class="max-w-7xl mx-auto px-4 py-6 text-center">
-      <p class="text-gray-400 text-sm">
-        OKNOTOK Camp • Burning Man 2025 • 
-        <%= link_to "View Statistics", stats_path, class: "text-yellow-500 hover:text-yellow-400" %> •
-        <%= link_to "Full Gallery", gallery_index_path, class: "text-yellow-500 hover:text-yellow-400" %>
-      </p>
+  <!-- Sticky Footer with Size Slider -->
+  <footer class="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-black/80 backdrop-blur-sm border-t-2 border-red-700">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex items-center justify-center gap-6">
+        <!-- Size Slider -->
+        <div class="flex items-center gap-3">
+          <label class="text-yellow-500 text-sm font-semibold">Size:</label>
+          <span class="text-gray-400 text-xs">Large</span>
+          <input type="range"
+                 data-thumbnail-size-target="slider"
+                 data-action="input->thumbnail-size#updateSize"
+                 min="2"
+                 max="8"
+                 value="4"
+                 step="1"
+                 class="w-48 h-2 bg-red-900 rounded-lg appearance-none cursor-pointer slider"
+                 style="background: linear-gradient(to right, #dc2626 0%, #dc2626 33%, #374151 33%, #374151 100%);">
+          <span class="text-gray-400 text-xs">Small</span>
+          <span data-thumbnail-size-target="count" class="text-yellow-500 text-sm ml-2">(4 per row)</span>
+        </div>
+      </div>
     </div>
-  </div>
+  </footer>
 </div>
 
 <style>
@@ -94,9 +296,50 @@
   img {
     animation: fadeIn 0.5s ease-in;
   }
-  
+
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+
+  /* Filter button animations */
+  [data-hero-filter-target="filterButton"] {
+    transform: scale(1);
+    transition: all 0.2s ease;
+  }
+
+  [data-hero-filter-target="filterButton"]:hover {
+    transform: scale(1.05);
+  }
+
+  [data-hero-filter-target="filterButton"]:active {
+    transform: scale(0.95);
+  }
+
+  /* Hero card hide/show animations */
+  [data-hero-filter-target="heroCard"] {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  [data-hero-filter-target="heroCard"].hidden {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  /* Sticky filter bar shadow */
+  .sticky {
+    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1), 0 2px 4px -1px rgba(220, 38, 38, 0.06);
+  }
+
+  /* Filter bar background animation */
+  @keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+
+  .filter-bar-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(234, 179, 8, 0.05), transparent);
+    background-size: 1000px 100%;
+    animation: shimmer 8s infinite linear;
   }
 </style>

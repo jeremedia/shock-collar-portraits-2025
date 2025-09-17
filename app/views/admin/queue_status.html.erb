@@ -1,5 +1,5 @@
 <%
-  content_for :title, "Queue Status"
+  content_for :title, "Admin - Queue Status"
   queue_colors = {
     'attachments' => 'bg-blue-500',
     'face_detection' => 'bg-green-500', 
@@ -7,7 +7,7 @@
   }
 %>
 
-<div class="min-h-screen bg-black text-white p-6" data-controller="queue-status" 
+<div class="bg-black text-white p-6" data-controller="queue-status" 
      data-queue-status-url-value="<%= admin_queue_status_path(format: :json) %>">
   
   <!-- Header -->

@@ -1,0 +1,76 @@
+<% content_for :title, "Send Invitation - OKNOTOK 2025" %>
+
+<div class="min-h-screen bg-black flex items-center justify-center px-4 py-12" data-controller="face-grid-background" data-face-grid-background-opacity-value="30" data-face-grid-background-interval-value="5000">
+  <div class="max-w-md w-full">
+    <!-- Logo/Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-yellow-500 mb-2">⚡ OKNOTOK 2025 ⚡</h1>
+      <h2 class="text-2xl text-red-400 mb-1">Shock Collar Portraits</h2>
+      <p class="text-gray-400 text-lg">Send Invitation</p>
+    </div>
+
+    <!-- Form Container -->
+    <div class="bg-gray-900 border-2 border-red-600 rounded-lg p-8">
+      <%= form_for(resource, as: resource_name, url: invitation_path(resource_name), html: { method: :post }) do |f| %>
+        <%= render "devise/shared/error_messages", resource: resource %>
+
+        <!-- Email Field -->
+        <% resource.class.invite_key_fields.each do |field| %>
+          <div class="mb-6">
+            <%= f.label field, class: "block text-yellow-500 text-sm font-bold mb-2" %>
+            <%= f.text_field field,
+                autofocus: true,
+                class: "w-full px-3 py-2 bg-black border-2 border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500",
+                placeholder: "Enter email address" %>
+          </div>
+        <% end %>
+
+        <% if current_user&.superadmin? %>
+          <div class="mb-6">
+            <div class="flex items-start gap-3 bg-gray-800 border border-yellow-600 rounded-lg p-4">
+              <div class="pt-1">
+                <%= f.check_box :admin, class: "h-5 w-5 text-yellow-500 bg-black border border-gray-600 rounded focus:ring-yellow-500" %>
+              </div>
+              <div>
+                <label class="block text-yellow-500 font-semibold" for="user_admin">Grant Admin Access</label>
+                <p class="text-sm text-gray-300 mt-1">
+                  Admins can choose hero images, reject photos, split sessions, and manage gallery tags.
+                </p>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Submit Button -->
+        <div class="mb-6">
+          <%= f.submit "Send Invitation",
+              class: "w-full px-4 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors duration-200 cursor-pointer" %>
+        </div>
+
+        <!-- Back Link -->
+        <div class="text-center">
+          <%= link_to "← Back to Admin", admin_path,
+              class: "text-red-400 hover:text-red-300 text-sm transition-colors" %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center mt-6">
+      <p class="text-gray-600 text-xs">
+        OKNOTOK 2025
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Remove default browser styles for inputs */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px black inset !important;
+    -webkit-text-fill-color: white !important;
+  }
+</style>

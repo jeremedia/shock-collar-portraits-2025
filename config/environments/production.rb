@@ -47,7 +47,7 @@ Rails.application.configure do
   config.active_support.report_deprecations = false
 
   # Replace the default in-process memory cache store with a durable alternative.
-  # config.cache_store = :mem_cache_store
+  config.cache_store = :solid_cache_store
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
@@ -62,13 +62,17 @@ Rails.application.configure do
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV.fetch("RAILS_HOST", "scp-25.oknotok.com") }
 
+  smtp_username = Rails.application.credentials.dig(:smtp, :username) || ENV['GMAIL_USERNAME'] || 'mrok@oknotok.com'
+  smtp_password = Rails.application.credentials.dig(:smtp, :app_password) || ENV['GMAIL_APP_PASSWORD']
+  from_address  = Rails.application.credentials.dig(:smtp, :from) || smtp_username
+
   # Google Apps SMTP configuration for oknotok.com
   config.action_mailer.smtp_settings = {
     address:              'smtp.gmail.com',
     port:                 587,
     domain:               'oknotok.com',
-    user_name:            ENV.fetch("GMAIL_USERNAME", "j@oknotok.com"),
-    password:             ENV.fetch("GMAIL_APP_PASSWORD", ""),  # App-specific password
+    user_name:            smtp_username,
+    password:             smtp_password,
     authentication:       'plain',
     enable_starttls_auto: true,
     open_timeout:         5,
@@ -77,7 +81,7 @@ Rails.application.configure do
   
   # Set the from address for Devise emails
   config.action_mailer.default_options = {
-    from: 'OKNOTOK Shock Collar Portraits <j@oknotok.com>'
+    from: "OKNOTOK Shock Collar Portraits <#{from_address}>"
   }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to

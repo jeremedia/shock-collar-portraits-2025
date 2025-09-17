@@ -1,57 +1,68 @@
-<div class="min-h-screen bg-black text-white p-8">
+<% cache ["stats_page_v14", @stats_version] do %>
+<%
+  # Prepare data for JavaScript
+  stats_data = {
+    dailyDetails: @daily_details,
+    dailySessionTimelines: @daily_session_timelines,
+    canonSessions: @canon_sessions,
+    iphoneSessions: @iphone_sessions,
+    photoDistribution: @photo_distribution
+  }
+%>
+
+<% content_for :title, "OKNOTOK Statistics Dashboard" %>
+
+
+<div class="bg-black text-white p-8" data-controller="stats">
   <div class="max-w-7xl mx-auto">
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-4xl font-bold mb-2 text-yellow-500">OKNOTOK Shock Collar Portraits</h1>
-      <p class="text-red-400">Burning Man 2025 Statistics Dashboard</p>
+      <p class="text-2xl text-red-400">2025 Statistics</p>
     </div>
 
     <!-- Key Metrics -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-3xl font-bold text-yellow-500"><%= @total_sessions %></div>
+        <div class="text-3xl font-bold text-yellow-500 whitespace-nowrap"><%= @total_sessions %></div>
         <div class="text-red-400">Total Sessions</div>
       </div>
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-3xl font-bold text-yellow-500"><%= number_with_delimiter(@total_photos) %></div>
+        <div class="text-3xl font-bold text-yellow-500 whitespace-nowrap"><%= number_with_delimiter(@total_photos) %></div>
         <div class="text-red-400">Total Photos</div>
       </div>
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-3xl font-bold text-yellow-500"><%= @total_faces_detected %></div>
+        <div class="text-3xl font-bold text-yellow-500 whitespace-nowrap"><%= (@total_faces_detected || 0) %></div>
         <div class="text-red-400">Faces Detected</div>
       </div>
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-3xl font-bold text-yellow-500"><%= @total_sittings %></div>
+        <div class="text-3xl font-bold text-yellow-500 whitespace-nowrap"><%= @total_sittings %></div>
         <div class="text-red-400">Sittings Recorded</div>
       </div>
     </div>
 
     <!-- Secondary Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-2xl font-bold text-yellow-500"><%= @avg_photos_per_session.round(1) %></div>
+        <div class="text-2xl font-bold text-yellow-500 whitespace-nowrap"><%= number_with_precision(@avg_photos_per_session, precision: 1, strip_insignificant_zeros: true) %></div>
         <div class="text-red-400 text-sm">Avg Photos/Session</div>
       </div>
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-2xl font-bold text-yellow-500"><%= @hero_rate %>%</div>
-        <div class="text-red-400 text-sm">Hero Rate</div>
-      </div>
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-2xl font-bold text-yellow-500"><%= @rejection_rate %>%</div>
+        <div class="text-2xl font-bold text-yellow-500 whitespace-nowrap"><%= number_with_precision(@rejection_rate, precision: 1, strip_insignificant_zeros: true) %>%</div>
         <div class="text-red-400 text-sm">Rejection Rate</div>
       </div>
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-2xl font-bold text-yellow-500"><%= @avg_duration %> min</div>
+        <div class="text-2xl font-bold text-yellow-500 whitespace-nowrap"><%= number_with_precision(@avg_duration, precision: 1, strip_insignificant_zeros: true) %> min</div>
         <div class="text-red-400 text-sm">Avg Duration</div>
       </div>
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <div class="text-2xl font-bold text-yellow-500"><%= @total_storage_gb %> GB</div>
+        <div class="text-2xl font-bold text-yellow-500 whitespace-nowrap"><%= number_with_precision(@total_storage_gb, precision: 1, strip_insignificant_zeros: true) %> GB</div>
         <div class="text-red-400 text-sm">Est. Storage</div>
       </div>
     </div>
 
     <!-- Daily Activity Overview -->
-    <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-8">
+    <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-8">
       <h2 class="text-xl font-bold mb-4 text-yellow-500">Daily Activity (Monday - Friday)</h2>
       <div style="position: relative; height: 300px;">
         <canvas id="dailyActivityChart"></canvas>
@@ -63,42 +74,83 @@
       <h2 class="text-2xl font-bold mb-4 text-yellow-500">Daily Session Timelines (3-5pm PDT Window)</h2>
       
       <!-- Monday -->
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-4">
-        <h3 class="text-lg font-bold mb-3 text-yellow-500">Monday, August 25</h3>
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-4">
+        <div class="flex items-baseline justify-between mb-3">
+          <h3 class="text-lg font-bold text-yellow-500">Monday, August 25</h3>
+          <div class="text-sm text-gray-400">
+            <% monday = @daily_session_timelines['2025-08-25'] || {} %>
+            Sessions: <%= monday[:total_sessions] || 0 %> • Photos: <%= monday[:total_photos] || 0 %>
+          </div>
+        </div>
         <div style="position: relative; height: 200px;">
           <canvas id="mondayChart"></canvas>
         </div>
       </div>
 
       <!-- Tuesday -->
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-4">
-        <h3 class="text-lg font-bold mb-3 text-yellow-500">Tuesday, August 26</h3>
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-4">
+        <div class="flex items-baseline justify-between mb-3">
+          <h3 class="text-lg font-bold text-yellow-500">Tuesday, August 26</h3>
+          <div class="text-sm text-gray-400">
+            <% tuesday = @daily_session_timelines['2025-08-26'] || {} %>
+            Sessions: <%= tuesday[:total_sessions] || 0 %> • Photos: <%= tuesday[:total_photos] || 0 %>
+          </div>
+        </div>
         <div style="position: relative; height: 200px;">
           <canvas id="tuesdayChart"></canvas>
         </div>
       </div>
 
       <!-- Wednesday -->
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-4">
-        <h3 class="text-lg font-bold mb-3 text-yellow-500">Wednesday, August 27</h3>
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-4">
+        <div class="flex items-baseline justify-between mb-3">
+          <h3 class="text-lg font-bold text-yellow-500">Wednesday, August 27</h3>
+          <div class="text-sm text-gray-400">
+            <% wednesday = @daily_session_timelines['2025-08-27'] || {} %>
+            Sessions: <%= wednesday[:total_sessions] || 0 %> • Photos: <%= wednesday[:total_photos] || 0 %>
+          </div>
+        </div>
         <div style="position: relative; height: 200px;">
           <canvas id="wednesdayChart"></canvas>
         </div>
       </div>
 
       <!-- Thursday -->
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-4">
-        <h3 class="text-lg font-bold mb-3 text-yellow-500">Thursday, August 28</h3>
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-4">
+        <div class="flex items-baseline justify-between mb-3">
+          <h3 class="text-lg font-bold text-yellow-500">Thursday, August 28</h3>
+          <div class="text-sm text-gray-400">
+            <% thursday = @daily_session_timelines['2025-08-28'] || {} %>
+            Sessions: <%= thursday[:total_sessions] || 0 %> • Photos: <%= thursday[:total_photos] || 0 %>
+          </div>
+        </div>
         <div style="position: relative; height: 200px;">
           <canvas id="thursdayChart"></canvas>
         </div>
       </div>
 
       <!-- Friday -->
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-4">
-        <h3 class="text-lg font-bold mb-3 text-yellow-500">Friday, August 29</h3>
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-4">
+        <div class="flex items-baseline justify-between mb-3">
+          <h3 class="text-lg font-bold text-yellow-500">Friday, August 29</h3>
+          <div class="text-sm text-gray-400">
+            <% friday = @daily_session_timelines['2025-08-29'] || {} %>
+            Sessions: <%= friday[:total_sessions] || 0 %> • Photos: <%= friday[:total_photos] || 0 %>
+          </div>
+        </div>
         <div style="position: relative; height: 200px;">
           <canvas id="fridayChart"></canvas>
+        </div>
+      </div>
+
+      <!-- All Days Combined -->
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-4">
+        <h3 class="text-lg font-bold mb-3 text-yellow-500">All Days Combined (Smoothed Averages)</h3>
+        <div style="position: relative; height: 480px;">
+          <canvas id="combinedTimelineChart"></canvas>
+        </div>
+        <div class="mt-2 text-xs text-gray-500">
+          10-minute buckets of sessions per day between 3:00–5:00.
         </div>
       </div>
     </div>
@@ -106,7 +158,7 @@
     <!-- Charts Row 2 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
       <!-- Camera Types -->
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6">
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
         <h2 class="text-xl font-bold mb-4 text-yellow-500">Camera Types</h2>
         <div style="position: relative; height: 250px;">
           <canvas id="cameraChart"></canvas>
@@ -114,7 +166,7 @@
       </div>
 
       <!-- Photo Distribution -->
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6">
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
         <h2 class="text-xl font-bold mb-4 text-yellow-500">Photos Per Session Distribution</h2>
         <div style="position: relative; height: 250px;">
           <canvas id="distributionChart"></canvas>
@@ -123,46 +175,25 @@
     </div>
 
     <!-- Top Sessions Table -->
-    <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-8">
+    <div class="bg-gray-900 border border-red-600 rounded-lg p-4 mb-8">
       <h2 class="text-xl font-bold mb-4 text-yellow-500">Top Sessions by Photo Count</h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <% @top_sessions.each_with_index do |session, index| %>
-          <div class="flex justify-between items-center py-2 border-b border-gray-800">
+          <a href="/session/<%= session[:id] %>/photo/1" class="flex justify-between items-center py-2 border-b border-gray-800 hover:bg-gray-800 transition-colors">
             <div class="flex items-center">
               <span class="text-gray-500 mr-3">#<%= index + 1 %></span>
               <div>
-                <div class="font-semibold"><%= session[:burst_id] %></div>
+                <div class="font-semibold text-white hover:text-yellow-400">Session <%= session[:id] %></div>
                 <div class="text-sm text-gray-400"><%= session[:started_at].strftime("%B %d, %I:%M %p") %></div>
               </div>
             </div>
             <span class="text-xl font-bold text-yellow-500"><%= session[:count] %></span>
-          </div>
+          </a>
         <% end %>
       </div>
     </div>
 
-    <!-- Fun Stats -->
-    <div class="bg-gradient-to-r from-red-900 to-yellow-900 border border-red-600 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-bold mb-4 text-yellow-500">⚡ Shock Stats ⚡</h2>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <div class="text-3xl font-bold"><%= (@total_photos * 0.5).round %></div>
-          <div class="text-sm opacity-80">Est. Shocks Delivered</div>
-        </div>
-        <div>
-          <div class="text-3xl font-bold"><%= @canon_sessions %></div>
-          <div class="text-sm opacity-80">Canon R5 Sessions</div>
-        </div>
-        <div>
-          <div class="text-3xl font-bold"><%= @iphone_sessions %></div>
-          <div class="text-sm opacity-80">iPhone Sessions</div>
-        </div>
-        <div>
-          <div class="text-3xl font-bold"><%= @total_heroes %></div>
-          <div class="text-sm opacity-80">Hero Shots</div>
-        </div>
-      </div>
-    </div>
+
   </div>
 </div>
 
@@ -173,304 +204,16 @@
   }
 </style>
 
-<!-- Load Chart.js from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Admin-only cache version footer -->
+<% if current_user&.admin? %>
+  <div class="text-xs text-gray-500 text-center my-4">
+    Stats cache version: <span class="font-mono"><%= @stats_version %></span>
+  </div>
+<% end %>
 
+<!-- Stats Data for JavaScript (cached JSON) -->
 <script>
-  // Wait for DOM and Chart.js to be ready
-  document.addEventListener('DOMContentLoaded', () => {
-    // Chart defaults - OKNOTOK theme
-    Chart.defaults.color = '#FACC15'; // Gold for text
-    Chart.defaults.borderColor = '#DC2626'; // Red for borders
-  
-  // Daily Activity Chart (Monday Aug 25 - Friday Aug 29, 2025)
-  const dailyDetails = <%= @daily_details.to_json.html_safe %>;
-  const dailyDates = Object.keys(dailyDetails).sort().slice(0, 5); // Only Mon-Fri
-  
-  const dayNames = dailyDates.map(d => {
-    // Parse as UTC to avoid timezone shift
-    const [year, month, day] = d.split('-').map(n => parseInt(n));
-    const date = new Date(Date.UTC(year, month - 1, day));
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
-  });
-  
-  const sessionCounts = dailyDates.map(d => dailyDetails[d].count);
-  const photoCounts = dailyDates.map(d => dailyDetails[d].photos);
-  const avgPhotosPerSession = dailyDates.map(d => dailyDetails[d].avg_photos);
-  
-  new Chart(document.getElementById('dailyActivityChart'), {
-    type: 'bar',
-    data: {
-      labels: dayNames,
-      datasets: [
-        {
-          label: 'Sessions',
-          data: sessionCounts,
-          backgroundColor: 'rgba(220, 38, 38, 0.8)',
-          borderColor: 'rgba(220, 38, 38, 1)',
-          borderWidth: 1,
-          yAxisID: 'y',
-          order: 2
-        },
-        {
-          label: 'Total Photos',
-          data: photoCounts,
-          backgroundColor: 'rgba(250, 204, 21, 0.8)',
-          borderColor: 'rgba(250, 204, 21, 1)',
-          borderWidth: 1,
-          yAxisID: 'y1',
-          order: 1
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: { 
-          display: true,
-          position: 'top'
-        },
-        tooltip: {
-          callbacks: {
-            afterTitle: function(context) {
-              const dayIndex = context[0].dataIndex;
-              return `Average: ${avgPhotosPerSession[dayIndex]} photos/session`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: 'Day of Week'
-          }
-        },
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          title: {
-            display: true,
-            text: 'Number of Sessions'
-          },
-          beginAtZero: true
-        },
-        y1: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          title: {
-            display: true,
-            text: 'Total Photos'
-          },
-          beginAtZero: true,
-          grid: {
-            drawOnChartArea: false,
-          },
-        }
-      }
-    }
-  });
-  
-  // Daily Session Timeline Charts
-  const dailyTimelines = <%= @daily_session_timelines.to_json.html_safe %>;
-  
-  // Function to create a daily timeline chart
-  function createDailyTimelineChart(canvasId, dateKey) {
-    const dayData = dailyTimelines[dateKey];
-    if (!dayData || !dayData.sessions || dayData.sessions.length === 0) return;
-    
-    const sessions = dayData.sessions;
-    const average = dayData.average;
-    
-    // Create bar data for each session
-    const barData = sessions.map(session => ({
-      x: session.time, // Use time string directly
-      y: session.photo_count
-    }));
-    
-    // Create chart with bar type
-    new Chart(document.getElementById(canvasId), {
-      type: 'bar',
-      data: {
-        labels: sessions.map(s => s.time), // Time labels for x-axis
-        datasets: [
-          {
-            label: 'Photos per Session',
-            data: sessions.map(s => s.photo_count),
-            backgroundColor: 'rgba(220, 38, 38, 0.8)',
-            borderColor: 'rgba(220, 38, 38, 1)',
-            borderWidth: 1,
-            barThickness: 15,
-            order: 2
-          },
-          {
-            label: `Average (${average} photos)`,
-            data: sessions.map(() => average), // Same average for all points
-            type: 'line',
-            borderColor: 'rgba(250, 204, 21, 1)',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 0,
-            borderDash: [5, 5],
-            order: 1
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top'
-          },
-          tooltip: {
-            callbacks: {
-              title: function(context) {
-                const index = context[0].dataIndex;
-                const session = sessions[index];
-                return `Session at ${session.time} PDT`;
-              },
-              label: function(context) {
-                if (context.dataset.type === 'line') {
-                  return `Average: ${average} photos`;
-                }
-                const index = context.dataIndex;
-                const session = sessions[index];
-                return [`${session.photo_count} photos`, `Burst: ${session.burst_id}`];
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Time (PDT)'
-            },
-            ticks: {
-              maxRotation: 45,
-              minRotation: 45
-            }
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Number of Photos'
-            }
-          }
-        }
-      }
-    });
-  }
-  
-  // Create charts for each day
-  createDailyTimelineChart('mondayChart', '2025-08-25');
-  createDailyTimelineChart('tuesdayChart', '2025-08-26');
-  createDailyTimelineChart('wednesdayChart', '2025-08-27');
-  createDailyTimelineChart('thursdayChart', '2025-08-28');
-  createDailyTimelineChart('fridayChart', '2025-08-29');
-  
-  // Camera Types Pie Chart
-  const canonPct = <%= @total_sessions > 0 ? (@canon_sessions.to_f / @total_sessions * 100).round(1) : 0 %>;
-  const iphonePct = <%= @total_sessions > 0 ? (@iphone_sessions.to_f / @total_sessions * 100).round(1) : 0 %>;
-  
-  new Chart(document.getElementById('cameraChart'), {
-    type: 'doughnut',
-    data: {
-      labels: [`Canon R5 (${canonPct}%)`, `iPhone (${iphonePct}%)`],
-      datasets: [{
-        data: [<%= @canon_sessions %>, <%= @iphone_sessions %>],
-        backgroundColor: [
-          'rgba(220, 38, 38, 0.8)',
-          'rgba(250, 204, 21, 0.8)'
-        ],
-        borderWidth: 2,
-        borderColor: '#1F2937'
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            padding: 15
-          }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const label = context.label.split(' (')[0];
-              return `${label}: ${context.parsed} sessions`;
-            }
-          }
-        }
-      }
-    }
-  });
-  
-  // Photo Distribution Chart
-  const distribution = <%= @photo_distribution.to_json.html_safe %>;
-  const distLabels = ['1-10', '11-20', '21-30', '31-40', '41-50', '50+'];
-  const distValues = distLabels.map(label => distribution[label] || 0);
-  
-  new Chart(document.getElementById('distributionChart'), {
-    type: 'bar',
-    data: {
-      labels: distLabels,
-      datasets: [{
-        label: 'Number of Sessions',
-        data: distValues,
-        backgroundColor: 'rgba(220, 38, 38, 0.8)',
-        borderColor: 'rgba(220, 38, 38, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const count = context.raw;
-              const percentage = ((count / <%= @total_sessions %>) * 100).toFixed(1);
-              return `${count} sessions (${percentage}% of total)`;
-            }
-          }
-        }
-      },
-      scales: {
-        y: { 
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Number of Sessions'
-          }
-        },
-        x: {
-          title: {
-            display: true,
-            text: 'Photos per Session'
-          }
-        }
-      }
-    }
-  });
-  
-  }); // End DOMContentLoaded
-</script>
+  window.statsData = <%= @stats_json.html_safe %>;
+  // console.log('statsData version', '<%= @stats_version %>')
+  </script>
+<% end %>

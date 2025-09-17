@@ -1,5 +1,38 @@
 @import "tailwindcss";
 
+/* Custom Font: Flapjack */
+@font-face {
+  font-family: 'Flapjack';
+  src: url('/assets/TAYFlapjack.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Configure Tailwind v4 with OKNOTOK theme */
+@theme {
+  /* Custom Fonts */
+  --font-sans: 'Flapjack', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --default-font-family: 'Flapjack', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-flapjack: 'Flapjack', ui-sans-serif, system-ui, sans-serif;
+  
+  /* OKNOTOK Brand Colors */
+  --color-oknotok-red: oklch(50.5% .213 27.518); /* Shock collar red */
+  --color-oknotok-yellow: oklch(79.5% .184 86.047); /* Warning yellow */
+  --color-oknotok-black: #000000; /* Pure black background */
+  --color-oknotok-dark-gray: oklch(21% .034 264.665); /* Dark UI elements */
+  
+  /* Custom Breakpoints for Gallery Grid */
+  --breakpoint-3xl: 1920px;
+  
+  /* Custom Animation Curves */
+  --ease-oknotok: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Custom Shadows for Cards */
+  --shadow-oknotok: 0 4px 12px rgba(220, 38, 38, 0.15);
+  --shadow-oknotok-hover: 0 8px 24px rgba(220, 38, 38, 0.25);
+}
+
 /* Custom styles for photo viewer */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */

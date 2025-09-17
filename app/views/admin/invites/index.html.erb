@@ -1,27 +1,51 @@
-<div class="min-h-screen bg-black text-white p-8">
-  <div class="max-w-4xl mx-auto">
+<div class="bg-black text-white p-8">
+  <div class="max-w-5xl mx-auto">
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-4xl font-bold mb-2 text-yellow-500">Admin Management</h1>
-      <p class="text-red-400">Manage OKNOTOK admin team members</p>
+      <h1 class="text-4xl font-bold mb-2 text-yellow-500">User & Admin Management</h1>
+      <p class="text-red-400">Manage gallery access and admin privileges</p>
     </div>
-    
-    <!-- Invite New Admin -->
+
+    <!-- Invite New User -->
     <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-8">
       <div class="flex justify-between items-center">
         <div>
-          <h2 class="text-xl font-bold text-yellow-500">Invite New Admin</h2>
-          <p class="text-gray-400 mt-1">Grant admin privileges to help with hero selection</p>
+          <h2 class="text-xl font-bold text-yellow-500">Send Invitation</h2>
+          <p class="text-gray-400 mt-1">Invite someone to view the gallery (with optional admin privileges)</p>
         </div>
-        <%= link_to "Invite Admin", new_admin_invite_path, 
+        <%= link_to "Send New Invitation", new_admin_invite_path,
             class: "px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition" %>
       </div>
     </div>
-    
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-yellow-500"><%= @admins.count %></div>
+        <div class="text-sm text-gray-400">Active Admins</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-green-400"><%= @accepted_users.count %></div>
+        <div class="text-sm text-gray-400">Gallery Users</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-orange-400">
+          <%= @pending_admin_invites.count + @pending_user_invites.count %>
+        </div>
+        <div class="text-sm text-gray-400">Pending Invites</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-blue-400">
+          <%= @admins.count + @accepted_users.count + @pending_admin_invites.count + @pending_user_invites.count %>
+        </div>
+        <div class="text-sm text-gray-400">Total Invited</div>
+      </div>
+    </div>
+
     <!-- Current Admins -->
     <div class="bg-gray-900 border border-red-600 rounded-lg p-6 mb-8">
-      <h2 class="text-xl font-bold text-yellow-500 mb-4">Current Admins</h2>
-      
+      <h2 class="text-xl font-bold text-yellow-500 mb-4">👑 Current Admins</h2>
+
       <% if @admins.any? %>
         <div class="space-y-3">
           <% @admins.each do |admin| %>
@@ -31,6 +55,8 @@
                   <%= admin.email %>
                   <% if admin.superadmin? %>
                     <span class="ml-2 px-2 py-1 bg-yellow-600 text-black text-xs rounded">SUPERADMIN</span>
+                  <% else %>
+                    <span class="ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded">ADMIN</span>
                   <% end %>
                 </div>
                 <div class="text-sm text-gray-400">
@@ -40,10 +66,10 @@
                   Joined <%= admin.created_at.strftime("%B %d, %Y") %>
                 </div>
               </div>
-              
+
               <% unless admin.superadmin? || admin == current_user %>
-                <%= button_to "Revoke Admin", 
-                    admin_invite_path(admin), 
+                <%= button_to "Revoke Admin",
+                    admin_invite_path(admin),
                     method: :delete,
                     data: { confirm: "Are you sure you want to revoke admin privileges for #{admin.email}?" },
                     class: "px-4 py-1 bg-gray-700 text-red-400 rounded hover:bg-gray-600 transition text-sm" %>
@@ -55,27 +81,94 @@
         <p class="text-gray-400">No admins yet</p>
       <% end %>
     </div>
-    
-    <!-- Pending Admin Invitations -->
-    <% if @pending_admin_invites.any? %>
-      <div class="bg-gray-900 border border-red-600 rounded-lg p-6">
-        <h2 class="text-xl font-bold text-yellow-500 mb-4">Pending Admin Invitations</h2>
-        
+
+    <!-- Gallery Users (Non-Admins) -->
+    <% if @accepted_users.any? %>
+      <div class="bg-gray-900 border border-green-600 rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-bold text-green-400 mb-4">👤 Gallery Users (Non-Admin)</h2>
+
         <div class="space-y-3">
+          <% @accepted_users.each do |user| %>
+            <div class="flex justify-between items-center py-3 border-b border-gray-700">
+              <div>
+                <div class="font-semibold text-white">
+                  <%= user.email %>
+                  <span class="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded">USER</span>
+                </div>
+                <div class="text-sm text-gray-400">
+                  <% if user.name.present? %>
+                    <%= user.name %> •
+                  <% end %>
+                  Joined <%= user.created_at.strftime("%B %d, %Y") %>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <%= button_to "Make Admin",
+                    admin_invite_path(user),
+                    method: :patch,
+                    params: { make_admin: true },
+                    class: "px-4 py-1 bg-yellow-600 text-black rounded hover:bg-yellow-500 transition text-sm" %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Pending Invitations -->
+    <% if @pending_admin_invites.any? || @pending_user_invites.any? %>
+      <div class="bg-gray-900 border border-orange-600 rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-bold text-orange-400 mb-4">⏳ Pending Invitations</h2>
+
+        <div class="space-y-3">
+          <!-- Pending Admin Invites -->
           <% @pending_admin_invites.each do |invite| %>
             <div class="flex justify-between items-center py-3 border-b border-gray-700">
               <div>
-                <div class="font-semibold text-white"><%= invite.email %></div>
+                <div class="font-semibold text-white">
+                  <%= invite.email %>
+                  <span class="ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded">ADMIN INVITE</span>
+                </div>
                 <div class="text-sm text-gray-400">
+                  <% if invite.name.present? %>
+                    <%= invite.name %> •
+                  <% end %>
                   Invited <%= time_ago_in_words(invite.invitation_sent_at) %> ago
                   <% if invite.invitation_created_at && invite.invitation_sent_at %>
                     • Expires in <%= distance_of_time_in_words(Time.current, invite.invitation_created_at + 30.days) %>
                   <% end %>
                 </div>
               </div>
-              
-              <%= button_to "Resend", 
-                  resend_admin_invite_path(invite), 
+
+              <%= button_to "Resend",
+                  resend_admin_invite_path(invite),
+                  method: :post,
+                  class: "px-4 py-1 bg-yellow-600 text-black rounded hover:bg-yellow-500 transition text-sm" %>
+            </div>
+          <% end %>
+
+          <!-- Pending User Invites -->
+          <% @pending_user_invites.each do |invite| %>
+            <div class="flex justify-between items-center py-3 border-b border-gray-700">
+              <div>
+                <div class="font-semibold text-white">
+                  <%= invite.email %>
+                  <span class="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded">USER INVITE</span>
+                </div>
+                <div class="text-sm text-gray-400">
+                  <% if invite.name.present? %>
+                    <%= invite.name %> •
+                  <% end %>
+                  Invited <%= time_ago_in_words(invite.invitation_sent_at) %> ago
+                  <% if invite.invitation_created_at && invite.invitation_sent_at %>
+                    • Expires in <%= distance_of_time_in_words(Time.current, invite.invitation_created_at + 30.days) %>
+                  <% end %>
+                </div>
+              </div>
+
+              <%= button_to "Resend",
+                  resend_admin_invite_path(invite),
                   method: :post,
                   class: "px-4 py-1 bg-yellow-600 text-black rounded hover:bg-yellow-500 transition text-sm" %>
             </div>
@@ -83,10 +176,35 @@
         </div>
       </div>
     <% end %>
-    
+
+    <!-- Summary Info -->
+    <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-8">
+      <h3 class="text-lg font-semibold text-yellow-500 mb-3">📊 Access Summary</h3>
+      <div class="grid md:grid-cols-2 gap-4 text-sm">
+        <div>
+          <p class="text-gray-400">
+            <span class="text-white font-semibold">Admins can:</span><br>
+            • Select hero photos<br>
+            • Apply tags for filtering<br>
+            • Access admin dashboard<br>
+            • Send invitations
+          </p>
+        </div>
+        <div>
+          <p class="text-gray-400">
+            <span class="text-white font-semibold">Regular users can:</span><br>
+            • View all gallery photos<br>
+            • Browse hero selections<br>
+            • Download photos<br>
+            • View session details
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Back Link -->
     <div class="mt-8">
-      <%= link_to "← Back to Admin Dashboard", admin_dashboard_path, 
+      <%= link_to "← Back to Admin Dashboard", admin_dashboard_path,
           class: "text-yellow-500 hover:text-yellow-400 transition" %>
     </div>
   </div>

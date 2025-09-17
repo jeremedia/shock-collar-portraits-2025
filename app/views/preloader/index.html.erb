@@ -1,0 +1,168 @@
+<% content_for :title, "Optimize Gallery - OKNOTOK Shock Collar Portraits" %>
+
+<style>
+    .photo-card {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    .progress-ring {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .photo-card.loaded .progress-ring {
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .photo-card:hover .progress-ring {
+      opacity: 1;
+    }
+    
+    .variant-dot {
+      transition: all 0.2s;
+    }
+    
+    .variant-dot.loaded {
+      background-color: rgb(34 197 94);
+      transform: scale(1.2);
+    }
+  </style>
+
+<div data-controller="preloader-screen" 
+       data-preloader-screen-photos-value="<%= @preloader_data[:photos].to_json %>"
+       data-preloader-screen-sessions-value="<%= @preloader_data[:sessions].to_json %>"
+       data-preloader-screen-total-photos-value="<%= @preloader_data[:total_photos] %>"
+       data-preloader-screen-total-variants-value="<%= @preloader_data[:total_variants] %>"
+       data-preloader-screen-estimated-size-value="<%= @preloader_data[:estimated_size] %>"
+       class="bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    
+    <div class="container mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-white mb-4">
+          Optimize Your Gallery Experience
+        </h1>
+        <p class="text-xl text-gray-400 mb-2">
+          Cache all photo variants for instant loading and offline viewing
+        </p>
+        <div class="text-sm text-gray-500">
+          <span class="text-yellow-500 font-bold"><%= @preloader_data[:total_photos] %></span> photos • 
+          <span class="text-yellow-500 font-bold"><%= @preloader_data[:total_variants] %></span> variants • 
+          Estimated size: <span class="text-yellow-500 font-bold"><%= number_to_human_size(@preloader_data[:estimated_size]) %></span>
+        </div>
+      </div>
+      
+      <!-- Main Progress -->
+      <div class="max-w-4xl mx-auto mb-8">
+        <div class="bg-gray-800/50 rounded-lg p-6">
+          <div class="flex justify-between items-baseline gap-3 text-sm text-gray-400 mb-3 min-w-0">
+            <div class="min-w-0 flex-1">
+              <span data-preloader-screen-target="currentPhoto" class="block truncate whitespace-nowrap">Ready to start</span>
+            </div>
+            <div class="min-w-0 flex-1 text-right">
+              <span data-preloader-screen-target="overallStatus" class="block truncate whitespace-nowrap">0 / <%= @preloader_data[:total_variants] %> variants (0%)</span>
+            </div>
+          </div>
+          <div class="w-full bg-gray-900 rounded-full h-4 overflow-hidden mb-4">
+            <div data-preloader-screen-target="overallProgressBar" 
+                 class="bg-gradient-to-r from-red-600 to-yellow-500 h-full rounded-full transition-all duration-500"
+                 style="width: 0%"></div>
+          </div>
+          
+          <!-- Phase indicators -->
+          <div class="flex justify-between text-xs text-gray-500 mt-4">
+            <div data-preloader-screen-target="phaseIndicator" data-phase="tiny_square_thumb" class="flex items-center gap-1">
+              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+              <span>Tiny</span>
+            </div>
+            <div data-preloader-screen-target="phaseIndicator" data-phase="thumb" class="flex items-center gap-1">
+              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+              <span>Thumbnails</span>
+            </div>
+            <div data-preloader-screen-target="phaseIndicator" data-phase="face_thumb" class="flex items-center gap-1">
+              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+              <span>Faces</span>
+            </div>
+            <div data-preloader-screen-target="phaseIndicator" data-phase="medium" class="flex items-center gap-1">
+              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+              <span>Medium</span>
+            </div>
+            <div data-preloader-screen-target="phaseIndicator" data-phase="large" class="flex items-center gap-1">
+              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+              <span>Large</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Photo Grid Preview -->
+      <div class="max-w-6xl mx-auto mb-8">
+        <div class="bg-gray-800/30 rounded-lg p-4">
+          <div class="text-sm text-gray-500 mb-3">Most Recently Cached 100 Photos</div>
+          <div class="max-h-96 overflow-y-auto">
+            <div data-preloader-screen-target="photoGrid" 
+                 class="grid grid-cols-10 md:grid-cols-15 lg:grid-cols-20 gap-1">
+              <!-- Photo cards will be inserted here by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="flex gap-4 justify-center mb-8">
+        <button data-preloader-screen-target="startButton"
+                data-action="click->preloader-screen#startDownload"
+                class="bg-red-600 hover:bg-red-700 text-white font-bold px-10 py-4 rounded-lg transition-all transform hover:scale-105 text-lg">
+          Start Caching
+        </button>
+        <button data-preloader-screen-target="skipButton"
+                data-action="click->preloader-screen#skipPreloader"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold px-10 py-4 rounded-lg transition-all transform hover:scale-105 text-lg">
+          Skip for Now
+        </button>
+        <% if Rails.env.development? %>
+          <button data-action="click->preloader-screen#downloadOneUncached"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-4 rounded-lg transition-all transform hover:scale-105 text-sm">
+            Test Cache 1 Photo
+          </button>
+        <% end %>
+      </div>
+      
+      <!-- Information -->
+      <div class="max-w-3xl mx-auto text-center text-sm text-gray-500 space-y-2">
+        <p>📱 This process downloads and caches all image variants for offline viewing</p>
+        <p>⚡ Future visits will load instantly without network requests</p>
+        <p>💾 Images are stored permanently in your browser's storage</p>
+        <p class="text-xs mt-4">You can close this tab and the download will continue in the background</p>
+      </div>
+      
+      <!-- Debug info for development -->
+      <% if Rails.env.development? %>
+        <div class="mt-8 p-4 bg-gray-900 rounded text-xs text-gray-600">
+          <details>
+            <summary class="cursor-pointer">Debug Info</summary>
+            <pre class="mt-2 overflow-x-auto"><%= JSON.pretty_generate(@preloader_data.except(:photos)) %></pre>
+          </details>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden forms for complete/skip actions -->
+  <%= form_with url: preloader_complete_path, method: :post, local: false, 
+                data: { "preloader-screen-target": "completeForm" } do |f| %>
+  <% end %>
+  
+  <%= form_with url: preloader_skip_path, method: :post, local: false,
+                data: { "preloader-screen-target": "skipForm" } do |f| %>
+  <% end %>

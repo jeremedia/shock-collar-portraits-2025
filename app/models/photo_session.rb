@@ -1,15 +1,25 @@
 class PhotoSession < ApplicationRecord
+  # Enable tagging
+  acts_as_taggable_on :tags
+  acts_as_taggable_on :appearance_tags
+  acts_as_taggable_on :expression_tags
+  acts_as_taggable_on :accessory_tags
+
   belongs_to :session_day
-  has_many :sittings, dependent: :destroy
+  belongs_to :hero_photo, class_name: 'Photo', optional: true
+  has_many :sittings, dependent: :destroy  # WARNING: Sittings are unreliable - incomplete data from failed burn attempt
   has_many :photos, dependent: :destroy
 
   scope :with_sittings, -> { joins(:sittings).distinct }
   scope :without_sittings, -> { left_joins(:sittings).where(sittings: { id: nil }) }
   scope :visible, -> { where(hidden: false) }
   scope :hidden_sessions, -> { where(hidden: true) }
+  scope :without_gender_analysis, -> { where(gender_analyzed_at: nil) }
+  scope :with_gender_analysis, -> { where.not(gender_analyzed_at: nil) }
 
   validates :session_number, presence: true
   validates :burst_id, presence: true, uniqueness: true
+  validates :quality, inclusion: { in: %w[ok not-ok awesome], allow_nil: false }
   
   # Merge another session's photos into this session
   # Photos are automatically reordered chronologically by their actual taken time
@@ -151,5 +161,132 @@ class PhotoSession < ApplicationRecord
       
       new_session
     end
+  end
+
+  # Gender analysis methods
+  def analyze_gender!
+     if gender_analysis.present? && gender_analyzed_at.present? # Skip if already analyzed
+       p "Gender already analyzed for PhotoSession ##{id}"
+       return JSON.parse gender_analysis
+     end
+
+    # Pick the best photo for analysis
+    photo_to_analyze = pick_photo_for_analysis
+    return unless photo_to_analyze
+
+    Rails.logger.info "Analyzing gender for PhotoSession ##{id} using Photo ##{photo_to_analyze.id}"
+
+    result = GemmaVisionService.analyze_gender(photo_to_analyze)
+    if result
+      update!(
+        gender_analysis: result.to_json,
+        gender_analyzed_at: Time.current
+      )
+      Rails.logger.info "Gender analysis completed for PhotoSession ##{id}: #{result[:gender]} (confidence: #{result[:confidence]})"
+      result
+    else
+      # Mark as attempted even if failed
+      update!(gender_analyzed_at: Time.current)
+      Rails.logger.warn "Gender analysis failed for PhotoSession ##{id}"
+      nil
+    end
+  rescue => e
+    Rails.logger.error "Gender analysis failed for PhotoSession #{id}: #{e.message}"
+    nil
+  end
+
+  def pick_photo_for_analysis
+    # Priority order:
+    # 1. Hero photo if exists
+    # 2. Middle photo of session
+    # 3. Any photo with face data
+
+    # Check for hero photo first
+    if hero_photo && hero_photo.has_faces? && hero_photo.image.attached?
+      return hero_photo
+    end
+
+    # Check sittings for hero photos
+    sitting_hero = sittings.joins(:hero_photo).first&.hero_photo
+    if sitting_hero && sitting_hero.has_faces? && sitting_hero.image.attached?
+      return sitting_hero
+    end
+
+    # Get middle photo
+    photos_with_faces = photos.joins(:image_attachment)
+                              .where.not(face_data: nil)
+                              .order(:position)
+
+    if photos_with_faces.any?
+      # Pick the middle one
+      middle_index = photos_with_faces.count / 2
+      return photos_with_faces.offset(middle_index).first
+    end
+
+    nil
+  end
+
+  def gender_data
+    return nil unless gender_analysis.present?
+    JSON.parse(gender_analysis)
+  rescue JSON::ParserError
+    nil
+  end
+
+  def detected_gender
+    gender_data&.dig('gender')
+  end
+
+  def gender_confidence
+    gender_data&.dig('confidence')&.to_f
+  end
+
+  def needs_gender_analysis?
+    gender_analyzed_at.nil? && photos.joins(:image_attachment).where.not(face_data: nil).any?
+  end
+
+  # Tag helper methods
+  def all_tags_list
+    (tag_list + appearance_tag_list + expression_tag_list + accessory_tag_list).uniq.sort
+  end
+
+  def add_tags_from_string(tag_string, context = :tags)
+    return if tag_string.blank?
+
+    tags = tag_string.split(',').map(&:strip).reject(&:blank?)
+
+    case context
+    when :appearance
+      self.appearance_tag_list.add(tags)
+    when :expression
+      self.expression_tag_list.add(tags)
+    when :accessory
+      self.accessory_tag_list.add(tags)
+    else
+      self.tag_list.add(tags)
+    end
+
+    save
+  end
+
+  # Predefined tag suggestions
+  def self.common_appearance_tags
+    %w[glasses sunglasses goggles beard mustache facial-hair long-hair short-hair bald colored-hair
+       mohawk braids ponytail pigtails dreadlocks]
+  end
+
+  def self.common_expression_tags
+    %w[smiling laughing serious shocked surprised crying eyes-closed tongue-out winking screaming
+       peaceful intense contemplative]
+  end
+
+  def self.common_accessory_tags
+    %w[hat helmet headband ears mask face-paint glitter costume uniform topless jewelry
+       necklace collar bandana scarf]
+  end
+
+  def self.common_general_tags
+    %w[couple group-shot with-pet holding-prop peace-sign middle-finger thumbs-up
+       dancing posing candid]
   end
 end

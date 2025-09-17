@@ -1,0 +1,149 @@
+<% content_for :title, "Admin - EXIF Field Configuration" %>
+<div class="bg-black text-white min-h-screen">
+  <!-- Header -->
+  <header class="bg-gray-900 border-b-2 border-red-600">
+    <div class="container mx-auto px-4 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-yellow-500">EXIF Field Configuration</h1>
+          <p class="text-red-400 mt-2">Configure which EXIF fields are displayed in the photo viewer</p>
+        </div>
+        <div class="flex gap-3">
+          <%= link_to "← Admin Dashboard", admin_dashboard_path,
+              class: "px-4 py-2 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600 transition-colors" %>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <!-- Sample Photo Info -->
+    <div class="mb-8 p-4 bg-gray-900 border border-red-700/50 rounded-lg">
+      <h3 class="text-yellow-500 font-bold mb-2">📷 Sample Photo (ID: <%= @sample_photo.id %>)</h3>
+      <p class="text-gray-400 text-sm">
+        Configuration based on: <%= @sample_photo.filename %>
+        <br>Available categories: <%= @available_fields.keys.join(', ') %>
+        <br>Total fields: <%= @available_fields.values.map(&:size).sum %>
+      </p>
+    </div>
+
+    <!-- Configuration Form -->
+    <%= form_with url: admin_exif_config_index_path, method: :patch, local: true,
+        class: "space-y-6" do |form| %>
+
+      <% @available_fields.each do |category, fields| %>
+        <div class="bg-gray-900 border border-red-700/50 rounded-lg p-6">
+          <!-- Category Header -->
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-yellow-500 uppercase tracking-wide">
+              <%= category %>
+            </h3>
+            <div class="flex gap-2">
+              <button type="button"
+                      class="text-sm px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-white"
+                      onclick="toggleCategory('<%= category %>', true)">
+                Select All
+              </button>
+              <button type="button"
+                      class="text-sm px-3 py-1 bg-red-700 hover:bg-red-600 rounded text-white"
+                      onclick="toggleCategory('<%= category %>', false)">
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          <!-- Fields Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <% fields.each do |field| %>
+              <% is_checked = @current_config.dig(category)&.include?(field) %>
+              <label class="flex items-center gap-3 p-3 bg-black/30 rounded cursor-pointer hover:bg-black/50 transition-colors">
+                <%= check_box_tag "#{category}_#{field}", "1", is_checked,
+                    class: "w-4 h-4 rounded border-red-700 bg-black text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0",
+                    data: { category: category } %>
+                <div class="flex-1">
+                  <div class="text-white font-medium text-sm">
+                    <%= field.humanize %>
+                  </div>
+                  <% if @sample_photo.exif_data.dig(category, field) %>
+                    <div class="text-gray-400 text-xs font-mono truncate">
+                      <%= @sample_photo.exif_data.dig(category, field).to_s[0..50] %>
+                      <%= "..." if @sample_photo.exif_data.dig(category, field).to_s.length > 50 %>
+                    </div>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <!-- Category Summary -->
+          <div class="mt-4 text-sm text-gray-500">
+            <span class="category-count" data-category="<%= category %>">
+              <%= @current_config.dig(category)&.size || 0 %>
+            </span>
+            of <%= fields.size %> fields selected
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Action Buttons -->
+      <div class="flex justify-between items-center pt-6">
+        <div class="flex gap-3">
+          <%= form.submit "💾 Save Configuration",
+              class: "px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors cursor-pointer" %>
+          <%= link_to "🔄 Reset to Defaults", reset_admin_exif_config_index_path,
+              method: :post,
+              confirm: "Are you sure you want to reset to default configuration?",
+              class: "px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors" %>
+        </div>
+
+        <div class="text-right">
+          <div class="text-yellow-500 font-bold text-lg" id="total-selected">
+            <%= @current_config.values.map(&:size).sum %>
+          </div>
+          <div class="text-gray-400 text-sm">Total Fields Selected</div>
+        </div>
+      </div>
+    <% end %>
+  </main>
+</div>
+
+<script>
+  // Toggle all checkboxes in a category
+  function toggleCategory(category, selectAll) {
+    const checkboxes = document.querySelectorAll(`input[data-category="${category}"]`);
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = selectAll;
+    });
+    updateCounts();
+  }
+
+  // Update category and total counts
+  function updateCounts() {
+    const categories = <%= @available_fields.keys.to_json.html_safe %>;
+    let totalSelected = 0;
+
+    categories.forEach(category => {
+      const checkboxes = document.querySelectorAll(`input[data-category="${category}"]:checked`);
+      const count = checkboxes.length;
+      totalSelected += count;
+
+      const countElement = document.querySelector(`.category-count[data-category="${category}"]`);
+      if (countElement) {
+        countElement.textContent = count;
+      }
+    });
+
+    const totalElement = document.getElementById('total-selected');
+    if (totalElement) {
+      totalElement.textContent = totalSelected;
+    }
+  }
+
+  // Update counts when checkboxes change
+  document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][data-category]');
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updateCounts);
+    });
+  });
+</script>

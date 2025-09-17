@@ -4,20 +4,34 @@ default: &default
       batch_size: 500
   workers:
     - queues: "default"
-      threads: 5
-      processes: <%= ENV.fetch("JOB_CONCURRENCY", 4) %>
-      polling_interval: 0.1
+      threads: 1
+      processes: 1
+      polling_interval: 0.05
     - queues: "face_detection"
-      threads: 3
-      processes: <%= ENV.fetch("FACE_DETECTION_CONCURRENCY", 2) %>
-      polling_interval: 0.1
+      threads: 1
+      processes: 1
+      polling_interval: 0.05
     - queues: "attachments"
-      threads: 5
-      processes: <%= ENV.fetch("ATTACHMENT_CONCURRENCY", 3) %>
-      polling_interval: 0.1
+      threads: 1
+      processes: 1
+      polling_interval: 0.05
 
 development:
   <<: *default
+  # Override worker concurrency for stability on macOS dev; tune with env vars
+  workers:
+    - queues: "default"
+      threads: 1
+      processes: 1
+      polling_interval: 0.05
+    - queues: "face_detection"
+      threads: 1
+      processes: 1
+      polling_interval: 0.05
+    - queues: "attachments"
+      threads: 1
+      processes: 1
+      polling_interval: 0.05
 
 test:
   <<: *default

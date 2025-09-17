@@ -1,3 +1,4 @@
+<% content_for :title, "Admin Dashboard" %>
 <% content_for :page_title, "Admin Dashboard" %>
 <% content_for :page_subtitle, "OKNOTOK Shock Collar Portraits - Burning Man 2025" %>
 
@@ -30,16 +31,75 @@
     </div>
   </div>
 
+  <!-- Visitor Stats -->
+  <div class="oknotok-card mb-8">
+    <h2 class="text-2xl font-bold text-yellow-500 mb-6">👁️ Visitor Analytics</h2>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div class="text-center">
+        <div class="text-2xl font-bold text-green-400"><%= number_with_delimiter(@visitor_stats[:total_visits]) %></div>
+        <div class="text-sm text-gray-400">Total Visits</div>
+      </div>
+
+      <div class="text-center">
+        <div class="text-2xl font-bold text-blue-400"><%= number_with_delimiter(@visitor_stats[:total_unique_visitors]) %></div>
+        <div class="text-sm text-gray-400">Unique Visitors</div>
+      </div>
+
+      <div class="text-center">
+        <div class="text-2xl font-bold text-yellow-400"><%= @visitor_stats[:visits_today] %></div>
+        <div class="text-sm text-gray-400">Today</div>
+      </div>
+
+      <div class="text-center">
+        <div class="text-2xl font-bold text-purple-400"><%= @visitor_stats[:visits_this_week] %></div>
+        <div class="text-sm text-gray-400">This Week</div>
+      </div>
+
+      <div class="text-center">
+        <div class="text-2xl font-bold text-red-400"><%= @visitor_stats[:logged_in_visitors] %></div>
+        <div class="text-sm text-gray-400">Logged In Users</div>
+      </div>
+
+      <div class="text-center">
+        <% conversion_rate = @visitor_stats[:total_unique_visitors] > 0 ?
+           ((@visitor_stats[:logged_in_visitors].to_f / @visitor_stats[:total_unique_visitors]) * 100).round(1) : 0 %>
+        <div class="text-2xl font-bold text-orange-400"><%= conversion_rate %>%</div>
+        <div class="text-sm text-gray-400">Login Rate</div>
+      </div>
+    </div>
+
+    <!-- Recent Visits -->
+    <% if @visitor_stats[:recent_visits].any? %>
+      <div class="mt-6">
+        <h3 class="text-lg font-semibold text-yellow-500 mb-3">Recent Visits</h3>
+        <div class="space-y-2">
+          <% @visitor_stats[:recent_visits].first(5).each do |visit| %>
+            <div class="flex justify-between items-center p-2 bg-gray-800 rounded">
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-400"><%= visit.started_at.strftime("%H:%M") %></span>
+                <% if visit.user %>
+                  <span class="text-yellow-500">👤 <%= visit.user.email.split('@').first %></span>
+                <% else %>
+                  <span class="text-gray-500">🔒 Anonymous</span>
+                <% end %>
+              </div>
+              <div class="text-xs text-gray-500">
+                <%= visit.device_type || 'Unknown' %> • <%= visit.browser || 'Unknown' %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
   <!-- Quick Actions -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
     <!-- Photo Management -->
     <div class="oknotok-card">
       <h3 class="text-xl font-bold text-yellow-500 mb-4">📸 Photo Management</h3>
       <div class="space-y-3">
-        <%= link_to admin_thumbnails_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
-          <div class="font-semibold text-white">Thumbnails Editor</div>
-          <div class="text-sm text-gray-400">Select heroes, reject photos, split sessions</div>
-        <% end %>
         <%= link_to gallery_index_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
           <div class="font-semibold text-white">Gallery View</div>
           <div class="text-sm text-gray-400">Browse all photos by session</div>
@@ -48,12 +108,16 @@
     </div>
 
     <!-- Processing Tools -->
-    <div class="oknotok-card">
+    <div class="oknotok-card mb-6">
       <h3 class="text-xl font-bold text-yellow-500 mb-4">⚙️ Processing Tools</h3>
       <div class="space-y-3">
         <%= link_to admin_face_detection_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
           <div class="font-semibold text-white">Face Detection</div>
           <div class="text-sm text-gray-400">Process photos for face rectangles</div>
+        <% end %>
+        <%= link_to admin_exif_config_index_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
+          <div class="font-semibold text-white">EXIF Configuration</div>
+          <div class="text-sm text-gray-400">Configure which photo metadata to display</div>
         <% end %>
         <%= link_to admin_queue_status_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
           <div class="font-semibold text-white">Job Queue Status</div>
@@ -62,10 +126,10 @@
       </div>
     </div>
 
-    <!-- Data & Reports -->
-    <div class="oknotok-card">
-      <h3 class="text-xl font-bold text-yellow-500 mb-4">📊 Data & Reports</h3>
-      <div class="space-y-3">
+  <!-- Data & Reports -->
+  <div class="oknotok-card mb-6">
+    <h3 class="text-xl font-bold text-yellow-500 mb-4">📊 Data & Reports</h3>
+    <div class="space-y-3">
         <%= link_to stats_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
           <div class="font-semibold text-white">Statistics Dashboard</div>
           <div class="text-sm text-gray-400">Charts and analytics</div>
@@ -74,6 +138,25 @@
           <div class="font-semibold text-white">Export Emails CSV</div>
           <div class="text-sm text-gray-400"><%= @stats[:total_sittings] %> unique emails collected</div>
         <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Stats Cache Tools -->
+  <div class="oknotok-card  mb-6">
+    <h3 class="text-xl font-bold text-yellow-500 mb-4">🧊 Stats Cache</h3>
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm text-gray-400">Version</div>
+        <div class="font-mono text-white"><%= @stats_version %></div>
+        <div class="text-sm text-gray-400 mt-2">Last Updated</div>
+        <div class="text-white"><%= @stats_last_updated&.strftime('%Y-%m-%d %H:%M:%S') || '-' %></div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <%= button_to "Warm Stats Cache", admin_warm_stats_cache_path, method: :post,
+              class: "oknotok-button-primary" %>
+        <%= link_to "View Stats (force refresh)", stats_path(refresh: 1),
+              class: "oknotok-button-secondary text-center" %>
       </div>
     </div>
   </div>

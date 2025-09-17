@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton", "imageWrapper", "faceOverlay", "faceRectangleToggle", "downloadButton"]
+  static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton", "imageWrapper", "faceOverlay", "faceRectangleToggle", "downloadButton", "exifPanel", "exifContent", "mainContainer", "photoContainer"]
   static values = { total: Number, sessionId: String, showRejected: Boolean, initialIndex: Number, prevSession: String, nextSession: String }
   
   connect() {
@@ -9,7 +9,7 @@ export default class extends Controller {
     const urlParams = new URLSearchParams(window.location.search)
     const startParam = urlParams.get('start')
     const imageParam = urlParams.get('image')
-    
+
     if (startParam === 'last') {
       this.currentIndex = this.totalValue - 1
     } else if (imageParam) {
@@ -24,19 +24,28 @@ export default class extends Controller {
       // Use the initial index (hero photo or first photo)
       this.currentIndex = this.hasInitialIndexValue ? this.initialIndexValue : 0
     }
-    
+
     // Load face rectangle preference
     if (this.hasFaceRectangleToggleTarget) {
       const showRectangles = localStorage.getItem('showFaceRectangles') === 'true'
       this.faceRectangleToggleTarget.checked = showRectangles
     }
-    
+
+    // Initialize EXIF panel state from localStorage
+    this.exifPanelOpen = localStorage.getItem('exifPanelOpen') === 'true'
+    if (this.exifPanelOpen) {
+      this.showExifPanel()
+    }
+
+    // Load EXIF field configuration
+    this.loadExifConfiguration()
+
     this.setupImageLoading()
     this.updateDisplay()
-    
+
     // Add keyboard navigation
     document.addEventListener("keydown", this.handleKeyPress.bind(this))
-    
+
     // Preload session thumbnails in service worker cache
     this.preloadSessionThumbnails()
   }
@@ -101,9 +110,22 @@ export default class extends Controller {
       case "ArrowRight":
         this.next()
         break
+      case "ArrowDown":
+        event.preventDefault()
+        this.nextSession()
+        break
+      case "ArrowUp":
+        event.preventDefault()
+        window.location.href = "/"
+        break
       case " ":
         event.preventDefault()
         this.heroButtonTarget.click()
+        break
+      case "x":
+      case "X":
+        event.preventDefault()
+        this.toggleExifPanel()
         break
       case "Escape":
         window.location.href = "/"
@@ -150,8 +172,9 @@ export default class extends Controller {
   
   nextSession() {
     if (this.nextSessionValue) {
-      // Add parameter to start at first photo (default)
+      // Add parameter to start at first photo for continuous navigation
       const url = new URL(this.nextSessionValue, window.location.origin)
+      url.searchParams.set('start', 'first')
       if (this.showRejectedValue) {
         url.searchParams.set('show_rejected', 'true')
       }
@@ -162,7 +185,10 @@ export default class extends Controller {
   updateDisplay() {
     // Update URL with current image position
     this.updateURL()
-    
+
+    // Update page title with current photo position
+    this.updatePageTitle()
+
     // Load image for current index if not already loaded
     this.loadImageForIndex(this.currentIndex)
     
@@ -234,15 +260,15 @@ export default class extends Controller {
     if (this.hasHeroButtonTarget) {
       const isCurrentHero = currentPhotoId === heroPhotoId
       const button = this.heroButtonTarget
-      
+
       if (isCurrentHero) {
         button.value = button.dataset.heroText || "★ Selected as Hero"
-        button.classList.add("bg-green-600", "text-white")
-        button.classList.remove("bg-yellow-600/90", "text-black")
+        button.classList.add("bg-red-600", "text-white")
+        button.classList.remove("bg-gray-700/70", "text-gray-300", "hover:bg-gray-600/70")
       } else {
         button.value = button.dataset.selectText || "☆ Select as Hero"
-        button.classList.add("bg-yellow-600/90", "text-black")
-        button.classList.remove("bg-green-600", "text-white")
+        button.classList.add("bg-gray-700/70", "text-gray-300")
+        button.classList.remove("bg-red-600", "text-white")
       }
     }
     
@@ -290,6 +316,11 @@ export default class extends Controller {
     
     // Update face rectangles for current image
     this.updateFaceRectangles()
+
+    // Update EXIF data if panel is open
+    if (this.exifPanelOpen && this.hasExifContentTarget) {
+      this.loadExifData()
+    }
   }
   
   toggleFaceRectangles(event) {
@@ -537,16 +568,66 @@ export default class extends Controller {
     })
   }
   
+  // Update page title with current photo information
+  updatePageTitle() {
+    // Get session info from data attributes or page
+    const sessionId = this.sessionIdValue
+    const photoPosition = this.currentIndex + 1
+    const totalPhotos = this.totalValue
+
+    // Extract session number from burst_id if available
+    const burstIdElement = document.querySelector('[data-image-viewer-burst-id-value]')
+    const burstId = burstIdElement?.getAttribute('data-image-viewer-burst-id-value') || ''
+    const sessionMatch = burstId.match(/burst_(\d+)/)
+    const sessionNumber = sessionMatch ? sessionMatch[1] : sessionId
+
+    // Try to get day name from the page
+    const dayNameElement = document.querySelector('h2')
+    const dayMatch = dayNameElement?.textContent.match(/^(\w+),/)
+    const dayName = dayMatch ? dayMatch[1] : null
+
+    // Build title parts
+    const titleParts = []
+    if (dayName) titleParts.push(dayName)
+    titleParts.push(`Session ${sessionNumber}`)
+    titleParts.push(`Photo ${photoPosition}/${totalPhotos}`)
+
+    // Update page title
+    document.title = titleParts.join(' - ')
+  }
+
   // Update URL with current image position
   updateURL() {
-    const url = new URL(window.location)
-    url.searchParams.set('image', this.currentIndex + 1) // Use 1-based index for user-friendly URLs
-    
-    // Preserve existing parameters like show_rejected
+    const currentPath = window.location.pathname
+    const sessionId = this.sessionIdValue
+    const photoPosition = this.currentIndex + 1 // Use 1-based index for user-friendly URLs
+
+    let newPath
+    // Check if we're already on the new URL format
+    if (currentPath.includes('/session/')) {
+      // Update existing session URL
+      newPath = `/session/${sessionId}/photo/${photoPosition}`
+    } else {
+      // Keep old format for backward compatibility
+      const url = new URL(window.location)
+      url.searchParams.set('image', photoPosition)
+
+      // Preserve existing parameters like show_rejected
+      if (this.showRejectedValue) {
+        url.searchParams.set('show_rejected', 'true')
+      }
+
+      // Update URL without causing page reload
+      window.history.replaceState({}, '', url)
+      return
+    }
+
+    // Build URL with query params if needed
+    const url = new URL(newPath, window.location.origin)
     if (this.showRejectedValue) {
       url.searchParams.set('show_rejected', 'true')
     }
-    
+
     // Update URL without causing page reload
     window.history.replaceState({}, '', url)
   }
@@ -715,20 +796,331 @@ export default class extends Controller {
   preloadImage(index) {
     const container = this.imageTargets[index]
     if (!container) return
-    
+
     // Check if already loaded
     const existingImg = container.querySelector('img')
     if (existingImg && existingImg.src && !existingImg.src.includes('data:')) {
       return
     }
-    
+
     const largeUrl = container.dataset.largeUrl
     const fallbackUrl = container.dataset.fallbackUrl
-    
+
     if (!largeUrl && !fallbackUrl) return
-    
+
     // Create a hidden image to trigger download
     const preloadImg = new Image()
     preloadImg.src = largeUrl || fallbackUrl
+  }
+
+  // Toggle EXIF panel visibility
+  toggleExifPanel() {
+    if (this.exifPanelOpen) {
+      this.hideExifPanel()
+    } else {
+      this.showExifPanel()
+    }
+  }
+
+  // Show EXIF panel
+  showExifPanel() {
+    if (this.hasExifPanelTarget) {
+      this.exifPanelTarget.classList.remove("hidden")
+      this.exifPanelOpen = true
+      localStorage.setItem('exifPanelOpen', 'true')
+      this.loadExifData()
+    }
+  }
+
+  // Hide EXIF panel
+  hideExifPanel() {
+    if (this.hasExifPanelTarget) {
+      this.exifPanelTarget.classList.add("hidden")
+      this.exifPanelOpen = false
+      localStorage.setItem('exifPanelOpen', 'false')
+    }
+  }
+
+  // Load and display EXIF data for current photo
+  loadExifData() {
+    if (!this.hasExifContentTarget) return
+
+    const currentImage = this.imageTargets[this.currentIndex]
+    if (!currentImage) return
+
+    const photoId = currentImage.dataset.photoId
+    const originalPath = currentImage.dataset.originalPath
+    const exifData = currentImage.dataset.exifData
+
+    // Start with loading message
+    this.exifContentTarget.innerHTML = '<div class="text-gray-500">Loading EXIF data...</div>'
+
+    // Display basic info immediately
+    let html = ''
+
+    // Original filename
+    if (originalPath) {
+      const filename = originalPath.split('/').pop()
+      html += this.createExifRow('Original File', filename)
+    }
+
+    // Photo ID for reference
+    html += this.createExifRow('Photo ID', photoId)
+
+    // Check if we have comprehensive EXIF data already
+    if (exifData && exifData !== 'null') {
+      try {
+        const data = JSON.parse(exifData)
+
+        // Check if we have organized category data (Camera, Exposure, Image, etc.)
+        const hasCategories = ['Camera', 'Exposure', 'Image', 'Other'].some(category => data[category])
+
+        if (hasCategories) {
+          // Display the full organized data
+          this.displayFullExifData(data)
+          return // Don't make API call
+        } else {
+          // Just basic data like DateTimeOriginal - show it and then load full data
+          if (data.DateTimeOriginal) {
+            html += this.createExifRow('Taken', data.DateTimeOriginal)
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse EXIF data:', e)
+      }
+    }
+
+    // Show basic data while loading full data
+    if (html) {
+      this.exifContentTarget.innerHTML = html
+    } else {
+      this.exifContentTarget.innerHTML = '<div class="text-gray-500">Loading EXIF data...</div>'
+    }
+
+    // Load full EXIF data via API if not already comprehensive
+    this.loadFullExifData(photoId)
+  }
+
+  // Create a formatted EXIF row
+  createExifRow(label, value) {
+    return `
+      <div class="flex justify-between py-2 border-b border-gray-800/30 last:border-0">
+        <span class="text-red-400 font-medium text-sm">${label}:</span>
+        <span class="text-yellow-500 text-right ml-4 break-all text-sm font-mono">${value}</span>
+      </div>
+    `
+  }
+
+  // Load full EXIF data via API
+  loadFullExifData(photoId) {
+    // Check if we already have comprehensive EXIF data
+    const currentImage = this.imageTargets[this.currentIndex]
+    const existingExifData = currentImage.dataset.exifData
+
+    // Skip if we already have comprehensive data (organized categories like Camera, Exposure, etc.)
+    if (existingExifData && existingExifData !== 'null') {
+      try {
+        const data = JSON.parse(existingExifData)
+        // Check if we have organized category data (Camera, Exposure, Image, etc.)
+        const hasCategories = ['Camera', 'Exposure', 'Image', 'Other'].some(category => data[category])
+        if (hasCategories) {
+          return // Already have full organized data
+        }
+      } catch (e) {
+        // Continue with API call if parsing fails
+      }
+    }
+
+    // Add loading indicator
+    this.showExifLoading()
+
+    // Get CSRF token
+    const token = document.querySelector('meta[name="csrf-token"]').content
+
+    // Make API request for full EXIF extraction
+    fetch(`/api/photos/${photoId}/extract_exif`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token,
+        'Accept': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        // Update the data attribute with the new comprehensive EXIF data
+        const currentImage = this.imageTargets[this.currentIndex]
+        const existingData = currentImage.dataset.exifData ? JSON.parse(currentImage.dataset.exifData) : {}
+        const mergedData = { ...existingData, ...data.exif_data }
+        currentImage.dataset.exifData = JSON.stringify(mergedData)
+
+        this.displayFullExifData(data.exif_data)
+      } else {
+        this.showExifError(data.message || 'Failed to extract EXIF data')
+      }
+    })
+    .catch(error => {
+      console.error('Failed to load EXIF data:', error)
+      this.showExifError('Network error while loading EXIF data')
+    })
+  }
+
+  // Show loading indicator in EXIF panel
+  showExifLoading() {
+    if (!this.hasExifContentTarget) return
+
+    const existingContent = this.exifContentTarget.innerHTML
+    this.exifContentTarget.innerHTML = `
+      ${existingContent}
+      <div class="mt-4 flex items-center gap-3 text-yellow-500">
+        <div class="animate-spin rounded-full h-4 w-4 border-2 border-yellow-500 border-t-transparent"></div>
+        <span class="text-sm">Extracting full EXIF data...</span>
+      </div>
+    `
+  }
+
+  // Load EXIF field configuration from API
+  loadExifConfiguration() {
+    this.exifVisibleFields = null // Initialize
+
+    fetch('/api/photos/exif_config')
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          this.exifVisibleFields = data.visible_fields
+          console.log('Loaded EXIF field configuration:', this.exifVisibleFields)
+        }
+      })
+      .catch(error => {
+        console.warn('Failed to load EXIF configuration:', error)
+        // Fall back to showing all fields if config can't be loaded
+        this.exifVisibleFields = null
+      })
+  }
+
+  // Display comprehensive EXIF data (filtered by configuration)
+  displayFullExifData(exifData) {
+    if (!this.hasExifContentTarget) return
+
+    // Get current basic data
+    const currentImage = this.imageTargets[this.currentIndex]
+    const photoId = currentImage.dataset.photoId
+    const originalPath = currentImage.dataset.originalPath
+
+    // Start fresh with all data
+    let html = ''
+
+    // Original filename (always show first)
+    if (originalPath) {
+      const filename = originalPath.split('/').pop()
+      html += this.createExifRow('Original File', filename)
+    }
+
+    // Photo ID
+    html += this.createExifRow('Photo ID', photoId)
+
+    // Organize and display filtered EXIF data by category
+    if (exifData && typeof exifData === 'object') {
+      Object.keys(exifData).forEach(category => {
+        const categoryData = exifData[category]
+        const visibleFields = this.getVisibleFieldsForCategory(category, categoryData)
+
+        if (categoryData && Object.keys(categoryData).length > 0 && visibleFields.length > 0) {
+          // Filter category data to only show visible fields
+          const filteredData = {}
+          visibleFields.forEach(field => {
+            if (categoryData[field] !== undefined) {
+              filteredData[field] = categoryData[field]
+            }
+          })
+
+          // Only show category if it has visible fields with data
+          if (Object.keys(filteredData).length > 0) {
+            // Add category header
+            html += `
+              <div class="mt-4 mb-2">
+                <h4 class="text-red-400 font-bold text-xs uppercase tracking-wide border-b border-red-700/30 pb-1">
+                  ${category}
+                </h4>
+              </div>
+            `
+
+            // Add filtered category items
+            Object.keys(filteredData).forEach(key => {
+              const value = filteredData[key]
+              if (value !== null && value !== '' && value !== 'undef') {
+                html += this.createExifRow(this.humanizeExifKey(key), value)
+              }
+            })
+          }
+        }
+      })
+    }
+
+    this.exifContentTarget.innerHTML = html || '<div class="text-gray-500">No EXIF data available</div>'
+  }
+
+  // Get visible fields for a specific category
+  getVisibleFieldsForCategory(category, availableFields = {}) {
+    // If configuration not loaded yet, return all available fields as fallback
+    if (!this.exifVisibleFields) {
+      return Object.keys(availableFields)
+    }
+
+    return this.exifVisibleFields[category] || []
+  }
+
+  // Show error in EXIF panel
+  showExifError(message) {
+    if (!this.hasExifContentTarget) return
+
+    // Keep existing basic data and add error message
+    const currentImage = this.imageTargets[this.currentIndex]
+    const photoId = currentImage.dataset.photoId
+    const originalPath = currentImage.dataset.originalPath
+
+    let html = ''
+
+    if (originalPath) {
+      const filename = originalPath.split('/').pop()
+      html += this.createExifRow('Original File', filename)
+    }
+
+    html += this.createExifRow('Photo ID', photoId)
+
+    html += `
+      <div class="mt-4 p-3 bg-red-900/20 border border-red-700/50 rounded text-red-400 text-sm">
+        <strong>EXIF extraction failed:</strong><br>
+        ${message}
+      </div>
+    `
+
+    this.exifContentTarget.innerHTML = html
+  }
+
+  // Convert technical EXIF keys to human readable labels
+  humanizeExifKey(key) {
+    const mappings = {
+      'Make': 'Camera Make',
+      'Model': 'Camera Model',
+      'LensModel': 'Lens',
+      'ExposureTime': 'Shutter Speed',
+      'FNumber': 'Aperture',
+      'ISO': 'ISO',
+      'FocalLength': 'Focal Length',
+      'DateTime': 'Date Modified',
+      'DateTimeOriginal': 'Taken',
+      'ImageWidth': 'Width',
+      'ImageHeight': 'Height',
+      'Orientation': 'Orientation',
+      'WhiteBalance': 'White Balance',
+      'Flash': 'Flash',
+      'ExposureProgram': 'Exposure Mode',
+      'MeteringMode': 'Metering',
+      'ColorSpace': 'Color Space'
+    }
+
+    return mappings[key] || key.replace(/([A-Z])/g, ' $1').trim()
   }
 }

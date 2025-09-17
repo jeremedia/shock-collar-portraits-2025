@@ -1,42 +1,57 @@
 <%
-  # Get hero photo efficiently (already loaded via includes)
-  hero_photo = session.sittings.first&.hero_photo
-  
-  # If no sitting hero, we need to fetch a middle photo (only when needed)
-  unless hero_photo
-    hero_photo = session.photos.find_by(position: session.photo_count / 2) || session.photos.first
-  end
-  
+  # Get hero photo directly from PhotoSession (not from unreliable Sitting model)
+  hero_photo = session.hero_photo
+  has_hero_selection = session.hero_photo_id.present?
+
+  # Use pre-loaded middle photo if no hero selected
+  display_photo = hero_photo || @middle_photos[session.id]
+
   # Use pre-loaded face count from controller
   has_faces = @face_counts && @face_counts[session.id].to_i > 0
-  
+
   # Only look for face photo if we have faces
-  face_photo = has_faces ? hero_photo : nil
-  
-  # Session number
-  session_number = sprintf('%03d', session.session_number || session.burst_id.scan(/\d+/).first.to_i)
+  face_photo = has_faces ? display_photo : nil
+
+  # Use actual session ID
+  session_id = session.id
 %>
 
-<%= link_to gallery_path(session.burst_id), 
+<%= link_to session_path(session.id),
             class: "session-card block bg-black border-2 border-red-700 rounded-lg overflow-hidden hover:border-yellow-500 transition-all duration-300 transform hover:scale-105",
-            data: { 
+            data: {
               session_id: session.id,
               burst_id: session.burst_id,
-              has_faces: has_faces 
+              has_faces: has_faces
             } do %>
   
-  <div class="thumbnail-container relative aspect-[3/4] bg-gradient-to-b from-red-900/20 to-black overflow-hidden">
+  <div class="thumbnail-container relative aspect-[3/4] bg-gradient-to-b from-red-900/20 to-black overflow-hidden"
+       data-controller="lazy-images">
+
+    <!-- Crown emoji for hero selections -->
+    <% if has_hero_selection %>
+      <div class="absolute top-2 right-2 z-10 text-2xl" title="Hero Photo Selected">
+        👑
+      </div>
+    <% end %>
+
     <!-- Regular thumbnail (shown by default) -->
     <div class="regular-thumbnail w-full h-full">
-      <% if hero_photo&.image&.attached? %>
-        <%= image_tag rails_blob_url(hero_photo.image.variant(:thumb)), 
-                      alt: "Sitting #{session_number}",
-                      class: "w-full h-full object-cover" %>
-      <% elsif hero_photo %>
-        <%= image_tag photo_path(path: hero_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
-                      alt: "Sitting #{session_number}",
-                      loading: "lazy",
-                      class: "w-full h-full object-cover" %>
+      <% if display_photo&.image&.attached? %>
+        <% cache ["session_thumb_url", display_photo.id, display_photo.updated_at] do %>
+          <img data-lazy-images-target="image"
+               data-src="<%= display_photo.image.variant(:thumb).url %>"
+               src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
+               alt="Sitting <%= session_id %>"
+               style="opacity: 0.3;"
+               class="w-full h-full object-cover" />
+        <% end %>
+      <% elsif display_photo %>
+        <img data-lazy-images-target="image"
+             data-src="<%= photo_path(path: display_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')) %>"
+             alt="Sitting <%= session_number %>"
+             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
+             style="opacity: 0.3;"
+             class="w-full h-full object-cover" />
       <% else %>
         <div class="flex items-center justify-center h-full text-gray-600">
           No Image
@@ -47,30 +62,40 @@
     <!-- Face crop thumbnail (shown in face mode) -->
     <div class="face-thumbnail w-full h-full hidden">
       <% if has_faces && face_photo&.image&.attached? %>
-        <% face_url = face_photo.face_crop_url(size: 300) %>
-        <% if face_url.present? %>
-          <%= image_tag face_url, 
-                        alt: "Sitting #{session_number}",
-                        loading: "lazy",
-                        class: "w-full h-full object-cover" %>
-        <% else %>
-          <!-- Fallback to regular thumbnail if face crop fails -->
-          <%= image_tag rails_blob_url(face_photo.image.variant(:thumb)), 
-                        alt: "Sitting #{session_number}",
-                        loading: "lazy",
-                        class: "w-full h-full object-cover" %>
+        <% cache ["session_face_url", face_photo.id, face_photo.updated_at] do %>
+          <% face_url = face_photo.face_crop_url(size: 300) %>
+          <% if face_url.present? %>
+            <img data-lazy-images-target="image"
+                 data-src="<%= face_url %>"
+                 alt="Sitting <%= session_id %>"
+                 style="opacity: 0;"
+                 class="w-full h-full object-cover bg-gray-800" />
+          <% else %>
+            <!-- Fallback to regular thumbnail if face crop fails -->
+            <img data-lazy-images-target="image"
+                 data-src="<%= face_photo.image.variant(:thumb).url %>"
+                 alt="Sitting <%= session_id %>"
+                 style="opacity: 0;"
+                 class="w-full h-full object-cover bg-gray-800" />
+          <% end %>
         <% end %>
-      <% elsif hero_photo&.image&.attached? %>
+      <% elsif display_photo&.image&.attached? %>
         <!-- No face data, show regular thumbnail -->
-        <%= image_tag rails_blob_url(hero_photo.image.variant(:thumb)), 
-                      alt: "Sitting #{session_number}",
-                      loading: "lazy",
-                      class: "w-full h-full object-cover" %>
-      <% elsif hero_photo %>
-        <%= image_tag photo_path(path: hero_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')), 
-                      alt: "Sitting #{session_number}",
-                      loading: "lazy",
-                      class: "w-full h-full object-cover" %>
+        <% cache ["session_thumb_url_face_fallback", display_photo.id, display_photo.updated_at] do %>
+          <img data-lazy-images-target="image"
+               data-src="<%= display_photo.image.variant(:thumb).url %>"
+               alt="Sitting <%= session_id %>"
+               src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
+               style="opacity: 0.3;"
+               class="w-full h-full object-cover" />
+        <% end %>
+      <% elsif display_photo %>
+        <img data-lazy-images-target="image"
+             data-src="<%= photo_path(path: display_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')) %>"
+             alt="Sitting <%= session_number %>"
+             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
+             style="opacity: 0.3;"
+             class="w-full h-full object-cover" />
       <% else %>
         <div class="flex items-center justify-center h-full text-gray-600">
           No Image
@@ -80,28 +105,29 @@
   </div>
   
   <div class="session-info p-4 bg-gradient-to-b from-red-900/10 to-black/50">
-    <h4 class="text-lg font-bold text-yellow-500 uppercase mb-2">
-      Sitting <%= session_number %>
+    <h4 class="text-lg font-bold text-yellow-500 uppercase mb-1">
+      Sitting <%= session_id %> - <%= session.started_at.in_time_zone('America/Los_Angeles').strftime("%-l:%M %p") %>
     </h4>
-    <p class="text-white text-sm mb-1">
-      <%= session.started_at.in_time_zone('America/Los_Angeles').strftime("%-l:%M %p") %>
-    </p>
-    <p class="text-red-500 text-sm font-semibold">
+    <p class="text-white text-sm">
       <%= session.photo_count %> photos
+    </p>
+
+    <!-- Hidden additional info for potential future use -->
+    <div class="hidden">
       <% if session.ended_at && session.started_at %>
         <span class="text-gray-400">• <%= ((session.ended_at - session.started_at) / 60).round %>m</span>
       <% end %>
-    </p>
-    
-    <% if current_user&.admin? %>
-      <div class="mt-2 flex gap-1">
-        <% if session.sittings.any? %>
-          <span class="text-xs bg-green-800 px-1 rounded">✓ sitting</span>
-        <% end %>
-        <% if has_faces %>
-          <span class="text-xs bg-blue-800 px-1 rounded">👤 faces</span>
-        <% end %>
-      </div>
-    <% end %>
+
+      <% if current_user&.admin? %>
+        <div class="mt-2 flex gap-1">
+          <% if session.sittings.any? %>
+            <span class="text-xs bg-green-800 px-1 rounded">✓ sitting</span>
+          <% end %>
+          <% if has_faces %>
+            <span class="text-xs bg-blue-800 px-1 rounded">👤 faces</span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
   </div>
 <% end %>

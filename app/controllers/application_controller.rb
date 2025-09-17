@@ -1,12 +1,16 @@
 class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
-  
+
   # Include URL helpers for Active Storage
   include Rails.application.routes.url_helpers
-  
-  # Require authentication for all actions by default
-  before_action :authenticate_user!
+
+  # Track visits with Ahoy
+  after_action :track_action
+
+  # Require authentication for all actions by default,
+  # but allow Devise controllers (sign in, sign up, etc.)
+  before_action :authenticate_user!, unless: :devise_controller?
   
   # Permit additional parameters for devise
   before_action :configure_permitted_parameters, if: :devise_controller?
@@ -14,7 +18,10 @@ class ApplicationController < ActionController::Base
   protected
   
   def configure_permitted_parameters
-    devise_parameter_sanitizer.permit(:invite, keys: [:name, :admin])
+    invite_keys = [:name]
+    invite_keys << :admin if current_user&.superadmin?
+
+    devise_parameter_sanitizer.permit(:invite, keys: invite_keys)
     devise_parameter_sanitizer.permit(:accept_invitation, keys: [:name])
     devise_parameter_sanitizer.permit(:account_update, keys: [:name])
   end
@@ -31,5 +38,11 @@ class ApplicationController < ActionController::Base
       flash[:alert] = "Only superadmins can access this page"
       redirect_to root_path
     end
+  end
+
+  private
+
+  def track_action
+    ahoy.track "#{controller_name}##{action_name}", request.path_parameters
   end
 end

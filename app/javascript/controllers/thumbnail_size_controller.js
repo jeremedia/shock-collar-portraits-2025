@@ -27,24 +27,56 @@ export default class extends Controller {
   
   updateSize() {
     const size = parseInt(this.sliderTarget.value)
-    
+
+    // Check if mobile
+    const isMobile = window.innerWidth < 640 // sm breakpoint
+
     // Update all grids on the page
     this.gridTargets.forEach(grid => {
-      // Remove all grid-cols-* classes and compact mode class
-      grid.className = grid.className.replace(/grid-cols-\d+/g, '')
+      // Remove all grid-cols-* and sm:grid-cols-* classes and compact mode class
+      grid.className = grid.className.replace(/(?:sm:)?grid-cols-\d+/g, '')
       grid.classList.remove('compact-thumbnails')
-      
-      // Add new grid-cols class
-      grid.classList.add(`grid-cols-${size}`)
-      
-      // Add compact mode for 5+ columns
-      if (size >= 5) {
+
+      if (isMobile) {
+        // On mobile, map slider values to 1-3 columns
+        let mobileColumns
+        if (size <= 3) {
+          mobileColumns = 1  // Small size = 1 column
+        } else if (size <= 5) {
+          mobileColumns = 2  // Medium size = 2 columns
+        } else {
+          mobileColumns = 3  // Large size = 3 columns
+        }
+        grid.classList.add(`grid-cols-${mobileColumns}`)
+
+        // For desktop fallback
+        grid.classList.add(`sm:grid-cols-${size}`)
+      } else {
+        // Desktop uses slider value directly
+        grid.classList.add('grid-cols-3')  // Default mobile
+        grid.classList.add(`sm:grid-cols-${size}`)  // Desktop from slider
+      }
+
+      // Add compact mode for 5+ columns (desktop only)
+      if (!isMobile && size >= 5) {
         grid.classList.add('compact-thumbnails')
       }
     })
-    
-    // Update the count display
-    this.countTarget.textContent = `(${size} per row)`
+
+    // Update the count display based on actual columns shown
+    if (isMobile) {
+      let mobileColumns
+      if (size <= 3) {
+        mobileColumns = 1
+      } else if (size <= 5) {
+        mobileColumns = 2
+      } else {
+        mobileColumns = 3
+      }
+      this.countTarget.textContent = `(${mobileColumns} per row)`
+    } else {
+      this.countTarget.textContent = `(${size} per row)`
+    }
     
     // Update slider background to show position
     const min = parseInt(this.sliderTarget.min)

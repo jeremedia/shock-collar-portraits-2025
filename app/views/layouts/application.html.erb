@@ -18,60 +18,116 @@
     <link rel="apple-touch-icon" href="/icon.png">
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <!-- Flash messages for Devise -->
+  <!--
+    LAYOUT SYSTEM DOCUMENTATION
+
+    This application uses a flexbox-based layout to prevent unintended scrolling.
+
+    Body element:
+    - flex flex-col: Makes body a vertical flex container
+    - h-screen: Sets height to exactly 100vh (viewport height)
+    - overflow-hidden: Prevents body from scrolling
+    - bg-black: Default background color
+
+    Layout structure:
+    1. Flash messages (if any) - take natural height
+    2. User info bar (if logged in) - takes natural height (~40px)
+    3. Main content wrapper - uses flex-grow to fill remaining space
+
+    The main content wrapper has overflow-auto so content scrolls internally
+    when it exceeds the available height. This prevents the common issue
+    where min-h-screen on content causes the page to be taller than viewport.
+
+    Pages that need full viewport control (like gallery/show) use fixed positioning
+    to override this layout.
+  -->
+  <body class="flex flex-col h-screen overflow-hidden bg-black">
+    <!-- Flash messages for Devise - Variable height based on content -->
     <% if notice.present? %>
-      <div class="bg-green-600 text-white px-4 py-2 text-center">
+      <div class="bg-green-600 text-white px-4 py-2 text-center" data-controller="flash">
         <%= notice %>
       </div>
     <% end %>
     <% if alert.present? %>
-      <div class="bg-red-600 text-white px-4 py-2 text-center">
+      <div class="bg-red-600 text-white px-4 py-2 text-center" data-controller="flash">
         <%= alert %>
       </div>
     <% end %>
-    
-    <!-- User info bar -->
+
+    <!-- User info bar - Fixed height header (~40px when present) -->
     <% if user_signed_in? %>
       <div class="bg-gray-900 text-white px-4 py-2 text-sm flex justify-between items-center">
-        <div class="flex items-center gap-4">
-          <span>Logged in as: <strong><%= current_user.name || current_user.email %></strong></span>
-          <% if current_user.superadmin? %>
-            <span class="px-2 py-1 bg-red-600 text-white text-xs rounded">SUPERADMIN</span>
-          <% elsif current_user.admin? %>
-            <span class="px-2 py-1 bg-yellow-600 text-black text-xs rounded">ADMIN</span>
-          <% end %>
-          <%= link_to "Gallery", root_path, class: "text-blue-400 hover:text-blue-300" %>
-          <%= link_to "Heroes", heroes_path, class: "text-yellow-400 hover:text-yellow-300" %>
-          <%= link_to "Stats", stats_path, class: "text-green-400 hover:text-green-300" %>
+        <!-- Left side: Navigation links -->
+        <div class="flex items-center gap-6">
+          <%
+            active_class = "text-yellow-400 font-bold"
+            inactive_class = "text-gray-300 hover:text-white"
+            current_path = request.path
+          %>
+          <%= link_to "Gallery", root_path,
+              class: current_path == root_path || current_path.start_with?('/gallery', '/session') ? active_class : inactive_class %>
+          <%= link_to "Heroes", heroes_path,
+              class: current_path.start_with?('/heroes') ? active_class : inactive_class %>
+          <%= link_to "Stats", stats_path,
+              class: current_path == stats_path ? active_class : inactive_class %>
           <% if current_user.admin? %>
-            <%= link_to "Admin Thumbnails", admin_thumbnails_path, class: "text-purple-400 hover:text-purple-300" %>
-          <% end %>
-          <% if current_user.superadmin? %>
-            <%= link_to "Manage Admins", admin_invites_path, class: "text-red-400 hover:text-red-300" %>
+            <%= link_to "Admin", admin_path,
+                class: current_path.start_with?('/admin') ? active_class : inactive_class %>
           <% end %>
         </div>
-        <div>
-          <%= link_to "Logout", destroy_user_session_path, method: :delete, data: { turbo_method: :delete }, class: "text-red-400 hover:text-red-300" %>
+
+        <!-- Right side: User info and logout -->
+        <div class="flex items-center gap-4">
+          <span><%= current_user.name || current_user.email %></span>
+          <% if current_user.superadmin? %>
+            <span class="px-2 py-1 bg-red-600 text-white text-xs rounded font-bold">SUPERADMIN</span>
+          <% elsif current_user.admin? %>
+            <span class="px-2 py-1 bg-yellow-600 text-black text-xs rounded font-bold">ADMIN</span>
+          <% end %>
+          <%= link_to "Logout", destroy_user_session_path, method: :delete,
+              data: { turbo_method: :delete },
+              class: "text-red-400 hover:text-red-300" %>
         </div>
       </div>
     <% end %>
-    
-    <%= yield %>
+
+    <!--
+      Main content wrapper
+      - flex-grow: Expands to fill all remaining vertical space
+      - overflow-auto: Content scrolls internally if it exceeds available height
+      - This prevents pages from extending beyond viewport height
+    -->
+    <div class="flex-grow overflow-auto">
+      <%= yield %>
+    </div>
     
     <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        // Use the new persistent storage service worker
+        navigator.serviceWorker.register('/sw-persistent.js', { scope: '/' })
           .then(function(registration) {
-            console.log('Service Worker registered successfully:', registration.scope);
+            console.log('Service Worker (Persistent) registered successfully:', registration.scope);
             
             // Force update check
             registration.update();
+            
+            // Check if there's a waiting service worker
+            if (registration.waiting) {
+              console.log('New Service Worker is waiting, activating...');
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              
+              // Reload when the new service worker takes control
+              navigator.serviceWorker.addEventListener('controllerchange', function() {
+                console.log('New Service Worker activated, reloading...');
+                window.location.reload();
+              });
+            }
             
             // Listen for updates
             registration.addEventListener('updatefound', function() {
@@ -80,6 +136,11 @@
               
               newWorker.addEventListener('statechange', function() {
                 console.log('Service Worker state:', newWorker.state);
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // There's a new service worker waiting
+                  console.log('New Service Worker installed, activating...');
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
                 if (newWorker.state === 'activated') {
                   console.log('New Service Worker activated!');
                   // Reload to use new service worker

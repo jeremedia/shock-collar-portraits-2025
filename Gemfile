@@ -1,5 +1,8 @@
 source "https://rubygems.org"
 
+# Enforce Ruby version used across dev/CI/prod
+ruby "3.4.5"
+
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.0.2", ">= 8.0.2.1"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
@@ -40,10 +43,16 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 1.2"
+gem "image_processing"
 
 # AWS S3 support for Active Storage
 gem "aws-sdk-s3", require: false
+
+# Google Cloud Vision API for face analysis and gender detection
+gem "google-cloud-vision", "~> 1.4"
+
+# Tagging support for photo sessions
+gem "acts-as-taggable-on", "~> 12.0"
 
 # CORS support for API
 gem "rack-cors"
@@ -57,6 +66,9 @@ gem "csv"
 
 # ZIP file creation for download all functionality
 gem "rubyzip"
+
+# Analytics and visitor tracking
+gem "ahoy_matey"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
@@ -75,3 +87,5 @@ group :development do
 end
 
 gem "foreman", "~> 0.90.0"
+
+gem "chartkick", "~> 5.2"

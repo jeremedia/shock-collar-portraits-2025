@@ -1,5 +1,5 @@
 class ImageAttachmentService
-  require 'mini_magick'
+  require 'shellwords'
   
   class << self
     def attach_image(photo)
@@ -45,26 +45,47 @@ class ImageAttachmentService
     def attach_heic_image(photo, file_path)
       # Create a temporary JPEG file
       temp_path = Rails.root.join('tmp', "temp_photo_#{photo.id}_#{SecureRandom.hex(4)}.jpg")
-      
+
       begin
-        # Convert HEIC to JPEG using MiniMagick
-        image = MiniMagick::Image.open(file_path)
-        
-        # Auto-orient the image based on EXIF data
-        image.auto_orient
-        
-        # Convert to JPEG with high quality
-        image.format 'jpg'
-        image.quality 95
-        image.write temp_path
-        
+        converted = false
+
+        # 1) Prefer macOS `sips` for robust HEIC -> JPEG with orientation handling
+        if command_available?("sips")
+          cmd = [
+            "sips",
+            "-s", "format", "jpeg",
+            "-s", "formatOptions", "best",
+            Shellwords.escape(file_path),
+            "--out",
+            Shellwords.escape(temp_path.to_s)
+          ].join(' ')
+          Rails.logger.info "Converting HEIC via sips: #{cmd}"
+          converted = system(cmd)
+        end
+
+        # 2) Fallback: Swift CoreImage/ImageIO helper (maintained in repo)
+        if !converted && command_available?("swift") && File.exist?(Rails.root.join('bin/convert_heic.swift'))
+          cmd = [
+            "swift",
+            Rails.root.join('bin/convert_heic.swift').to_s,
+            file_path,
+            temp_path.to_s
+          ]
+          Rails.logger.info "Converting HEIC via Swift helper: #{cmd.join(' ')}"
+          converted = system(*cmd)
+        end
+
+        unless converted && File.exist?(temp_path) && File.size?(temp_path)
+          raise "HEIC conversion failed (sips/swift not available or conversion error)"
+        end
+
         # Attach the converted image
         photo.image.attach(
           io: File.open(temp_path),
           filename: photo.filename.sub(/\.hei[cf]$/i, '.jpg'),
           content_type: 'image/jpeg'
         )
-        
+
         Rails.logger.info "Attached HEIC image as JPEG for Photo ##{photo.id}"
       ensure
         # Clean up temporary file
@@ -95,6 +116,15 @@ class ImageAttachmentService
       )
       
       Rails.logger.info "Attached image for Photo ##{photo.id}"
+    end
+
+    def command_available?(name)
+      exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
+      ENV['PATH'].split(File::PATH_SEPARATOR).any? do |path|
+        exts.any? do |ext|
+          File.executable?(File.join(path, "#{name}#{ext}"))
+        end
+      end
     end
   end
 end

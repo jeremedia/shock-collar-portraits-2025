@@ -27,11 +27,12 @@ if [ ! -f .env ]; then
   echo "📝 Creating .env file..."
   cat > .env << 'EOF'
 # Development environment variables
-GMAIL_USERNAME=j@oknotok.com
+GMAIL_USERNAME=mrok@oknotok.com
 GMAIL_APP_PASSWORD=your-app-password-here
 RAILS_HOST=localhost
 EOF
   echo "⚠️  Don't forget to update .env with your Gmail app password!"
+  echo "💡  Prefer credentials? Run \"bin/rails credentials:edit\" and add smtp.username/app_password there."
 fi
 
 # Create storage directories if needed

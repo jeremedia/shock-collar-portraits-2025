@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OKNOTOK 2025 - Shock Collar Portraits Invitation</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #000000;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px;">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding: 20px 20px 30px 20px;">
+              <h1 style="margin: 0; font-size: 36px; font-weight: bold; color: #EAB308; letter-spacing: 2px;">
+                ⚡ OKNOTOK 2025 ⚡
+              </h1>
+              <h2 style="margin: 10px 0 0 0; font-size: 24px; color: #DC2626;">
+                Shock Collar Portraits
+              </h2>
+            </td>
+          </tr>
+
+          <!-- Main Content Box -->
+          <tr>
+            <td style="padding: 0 20px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border: 2px solid #DC2626; background-color: #111111; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <!-- Greeting -->
+                    <p style="margin: 0 0 20px 0; font-size: 18px; color: #EAB308; font-weight: 600;">
+                      Hello!
+                    </p>
+
+                    <!-- Invitation Message -->
+                    <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
+                      You've been invited to access the OKNOTOK Shock Collar Portrait gallery from Burning Man 2025.
+                    </p>
+
+                    <% if @resource.admin? %>
+                      <p  style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
+                        <strong>This invite grants admin access.</strong>
+                        After you accept, you’ll land on the
+                        <a href="<%= admin_help_url %>" style="color: #FCD34D; text-decoration: underline;">admin help page</a>
+                        with instructions for choosing hero photos and applying tags.
+                      </p>
+                    <% end %>
+
+                    <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
+                      This gallery contains <%= Photo.count %> portraits captured during OKNOTOK's legendary shock collar photo sessions.
+                    </p>
+
+                    <!-- CTA Button -->
+                    <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                      <tr>
+                        <td align="center" style="padding: 20px 0;">
+                          <a href="<%= accept_invitation_url(@resource, invitation_token: @token) %>"
+                             style="display: inline-block; padding: 16px 48px; background-color: #EAB308; color: #000000; text-decoration: none; font-weight: bold; font-size: 18px; border-radius: 8px; letter-spacing: 1px;">
+                            ACCEPT INVITATION
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Alternative Link -->
+                    <p style="margin: 30px 0 20px 0; font-size: 14px; color: #9CA3AF; text-align: center;">
+                      Or copy and paste this link into your browser:
+                    </p>
+                    <p style="margin: 0 0 30px 0; font-size: 14px; word-break: break-all; text-align: center;">
+                      <a href="<%= accept_invitation_url(@resource, invitation_token: @token) %>"
+                         style="color: #DC2626; text-decoration: underline;">
+                        <%= accept_invitation_url(@resource, invitation_token: @token) %>
+                      </a>
+                    </p>
+
+                    <% if @resource.invitation_due_at %>
+                      <!-- Expiration Notice -->
+                      <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                        <tr>
+                          <td style="background-color: rgba(220, 38, 38, 0.1); border-left: 4px solid #DC2626; padding: 15px;">
+                            <p style="margin: 0; font-size: 14px; color: #FCA5A5;">
+                              <strong>Note:</strong> This invitation expires on <%= l(@resource.invitation_due_at, format: :long) %>
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    <% end %>
+
+                    <!-- Ignore Message -->
+                    <p style="margin: 30px 0 0 0; font-size: 13px; color: #6B7280; text-align: center; font-style: italic;">
+                      If you don't want to accept this invitation, please ignore this email.<br>
+                      Your account won't be created until you access the link above and set your password.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px 20px;">
+              <p style="margin: 0 0 10px 0; font-size: 12px; color: #6B7280;">
+                OKNOTOK • 3:00 & Atwood • Black Rock City • Burning Man 2025
+              </p>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
