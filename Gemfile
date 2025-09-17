@@ -49,7 +49,7 @@ gem "image_processing"
 gem "aws-sdk-s3", require: false
 
 # Google Cloud Vision API for face analysis and gender detection
-gem "google-cloud-vision", "~> 1.4"
+gem "google-cloud-vision", "~> 2.0"
 
 # Tagging support for photo sessions
 gem "acts-as-taggable-on", "~> 12.0"
