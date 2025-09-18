@@ -1,9 +1,24 @@
 
 import { Controller } from "@hotwired/stimulus"
-// Register the Chart.js time scale adapter via importmap
-// import 'chartjs-adapter-date-fns'
 
 console.log("Stats controller file loaded!")
+
+// IMPORTANT: Chart.js Plugin Integration with Chartkick
+// ======================================================
+// When using Chart.js plugins with Chartkick in Rails:
+//
+// 1. Chartkick bundles Chart.js as "Chart.bundle.js"
+// 2. Plugins expect Chart.js and helpers to be available globally
+// 3. Must map both "chart.js" and "chart.js/helpers" to Chart.bundle.js in importmap
+// 4. Load plugins dynamically AFTER Chart.js is available
+//
+// To add a new Chart.js plugin:
+// a) Download the UMD version to vendor/javascript/
+// b) Add to config/importmap.rb: pin "plugin-name", to: "plugin-name.js"
+// c) Also ensure these mappings exist in importmap.rb:
+//    pin "chart.js/helpers", to: "Chart.bundle.js"
+//    pin "chart.js", to: "Chart.bundle.js"
+// d) Import dynamically in this controller after Chart is loaded
 
 export default class extends Controller {
   static targets = ["chart"]
@@ -20,10 +35,17 @@ export default class extends Controller {
     try {
       console.log("Stats controller connecting...")
 
-      // Try importmap first; fall back to CDN UMD if missing nested vendor deps
-      // const Chart = await this.loadChart()
+      // Chart.js is loaded by Chartkick's Chart.bundle.js
+      // This provides the global Chart object with all core functionality
       this.Chart = Chart
       console.log("Chart.js loaded:", this.Chart)
+
+      // Load annotation plugin after Chart.js is available
+      // The plugin self-registers with Chart.js when imported
+      if (window.Chart && !window.chartjsPluginAnnotation) {
+        await import("chartjs-plugin-annotation")
+        console.log("Annotation plugin loaded and registered")
+      }
 
       // Set OKNOTOK theme defaults
       Chart.defaults.color = '#FACC15' // Gold for text
@@ -72,6 +94,7 @@ export default class extends Controller {
       this.createDailyActivityChart(statsData)
       this.createDailyTimelineCharts(statsData)
       this.createCameraChart(statsData)
+      this.createHeroGenderChart(statsData)
       this.createCombinedTimelineChart(statsData)
       this.createDistributionChart(statsData)
     } catch (error) {
@@ -187,9 +210,87 @@ export default class extends Controller {
         const m = toMinutes(s.hour, s.minute)
         if (m >= startMin && m <= endMin) buckets.set(m, (buckets.get(m) || 0) + s.photo_count)
       })
-      // Axis labels: show h:mm without AM/PM per request
-      const labels = minutes.map(m => this.formatTimeNoMeridiem(Math.floor(m / 60), m % 60))
+      // Axis labels: show time every 15 minutes, empty string for others
+      const labels = minutes.map((m, index) => {
+        // Show label at 3:00, 3:15, 3:30, 3:45, 4:00, 4:15, 4:30, 4:45, 5:00
+        if (index % 15 === 0) {
+          return this.formatTimeNoMeridiem(Math.floor(m / 60), m % 60)
+        }
+        return '' // Empty label for non-15-minute marks
+      })
       const values = minutes.map(m => buckets.get(m) || 0)
+
+      // Rain annotations for affected days
+      const annotations = {}
+
+      // Monday: 3:28 PM through 4:46 PM
+      if (day === 'monday') {
+        annotations.rainBox = {
+          type: 'box',
+          xMin: 28,  // 3:28 PM is index 28 (28 minutes after 3:00)
+          xMax: 106, // 4:46 PM is index 106 (106 minutes after 3:00)
+          yMin: 0,
+          yMax: 'max',
+          backgroundColor: 'rgba(100, 116, 139, 0.2)', // Slate with transparency
+          borderColor: 'rgba(100, 116, 139, 0.5)',
+          borderWidth: 1,
+          label: {
+            display: true,
+            content: '🌧️ Rain',
+            position: 'start',
+            color: '#94a3b8',
+            font: {
+              size: 11
+            }
+          }
+        }
+      }
+
+      // Tuesday: 3:00-3:33 PM
+      if (day === 'tuesday') {
+        annotations.rainBox = {
+          type: 'box',
+          xMin: 0,  // 3:00 PM is index 0
+          xMax: 33, // 3:33 PM is index 33
+          yMin: 0,
+          yMax: 'max',
+          backgroundColor: 'rgba(100, 116, 139, 0.2)',
+          borderColor: 'rgba(100, 116, 139, 0.5)',
+          borderWidth: 1,
+          label: {
+            display: true,
+            content: '🌧️ Rain',
+            position: 'start',
+            color: '#94a3b8',
+            font: {
+              size: 11
+            }
+          }
+        }
+      }
+
+      // Wednesday: 4:06-5:33 PM (extends past our 5:00 PM window)
+      if (day === 'wednesday') {
+        annotations.rainBox = {
+          type: 'box',
+          xMin: 66,  // 4:06 PM is index 66 (66 minutes after 3:00)
+          xMax: 120, // 5:00 PM is index 120 (end of our window, rain continued to 5:33)
+          yMin: 0,
+          yMax: 'max',
+          backgroundColor: 'rgba(100, 116, 139, 0.2)',
+          borderColor: 'rgba(100, 116, 139, 0.5)',
+          borderWidth: 1,
+          label: {
+            display: true,
+            content: '🌧️ Rain (4:06-5:33)',
+            position: 'start',
+            color: '#94a3b8',
+            font: {
+              size: 11
+            }
+          }
+        }
+      }
 
       this.charts[day] = new this.Chart(canvas, {
         type: 'bar',
@@ -215,6 +316,9 @@ export default class extends Controller {
               callbacks: {
                 // Default tooltip title is the label (already formatted time)
               }
+            },
+            annotation: {
+              annotations: annotations
             }
           },
           scales: {
@@ -255,7 +359,15 @@ export default class extends Controller {
     const endMin   = toMinutes(17, 0)
     const minutes = []
     for (let m = startMin; m <= endMin; m += 10) minutes.push(m)
-    const labels = minutes.map(m => this.formatTimeNoMeridiem(Math.floor(m / 60), m % 60))
+    // Show labels every 30 minutes for the combined chart (less crowded)
+    const labels = minutes.map((m, index) => {
+      // Show at 3:00, 3:30, 4:00, 4:30, 5:00
+      const minutesFromStart = m - startMin
+      if (minutesFromStart % 30 === 0) {
+        return this.formatTimeNoMeridiem(Math.floor(m / 60), m % 60)
+      }
+      return ''
+    })
 
     const colors = {
       // Use non-theme colors for clarity
@@ -369,7 +481,55 @@ export default class extends Controller {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          title: { display: false }
+          title: { display: false },
+          legend: { display: false }
+        }
+      }
+    })
+  }
+
+  createHeroGenderChart(data) {
+    const canvas = document.getElementById('heroGenderChart')
+    if (!canvas || !data.heroGenders) return
+
+    const genders = data.heroGenders
+    const labels = []
+    const values = []
+    const colors = []
+
+    if (genders.male > 0) {
+      labels.push('Male')
+      values.push(genders.male)
+      colors.push('#3B82F6') // Blue
+    }
+    if (genders.female > 0) {
+      labels.push('Female')
+      values.push(genders.female)
+      colors.push('#EC4899') // Pink
+    }
+    if (genders.unknown > 0) {
+      labels.push('Unknown')
+      values.push(genders.unknown)
+      colors.push('#6B7280') // Gray
+    }
+
+    this.charts.heroGender = new this.Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderColor: colors,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: false },
+          legend: { display: false }
         }
       }
     })
@@ -399,15 +559,16 @@ export default class extends Controller {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          title: { display: false }
+          title: { display: false },
+          legend: { display: false }
         },
         scales: {
           y: {
             beginAtZero: true,
-            title: { display: true, text: 'Number of Sessions' }
+            title: { display: true, text: 'Sessions' }
           },
           x: {
-            title: { display: true, text: 'Photos per Session' }
+            title: { display: true, text: 'Photos' }
           }
         }
       }

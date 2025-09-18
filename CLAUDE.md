@@ -78,6 +78,7 @@ bin/rails routes -g gallery # Grep routes
 - `day_accordion_controller.js` - Collapsible day sections
 - `thumbnail_size_controller.js` - Dynamic thumbnail sizing
 - `queue_status_controller.js` - Real-time job queue monitoring
+- `stats_controller.js` - Statistics page with Chart.js visualizations
 
 ## API Endpoints & Routes
 
@@ -172,3 +173,56 @@ Photo.where(sitting: nil).count
 - `app/javascript/controllers/` - Frontend interactivity
 - `db/schema.rb` - Current database structure
 - `Procfile.dev` - Development server configuration
+
+## Chart.js Plugin Integration (CRITICAL for Stats Page)
+
+### Understanding the Architecture
+The stats page uses Chartkick which bundles Chart.js as `Chart.bundle.js`. This creates specific requirements for adding Chart.js plugins:
+
+1. **Chartkick provides Chart.js**: The `Chart.bundle.js` file contains the complete Chart.js library
+2. **Plugin dependency issue**: Chart.js plugins expect to import `chart.js` and `chart.js/helpers`
+3. **Solution**: Map these imports to the bundled version in importmap
+
+### Adding a Chart.js Plugin - Step by Step
+
+1. **Download the UMD version** (NOT the ESM version):
+```bash
+curl -o vendor/javascript/chartjs-plugin-name.js \
+  https://cdn.jsdelivr.net/npm/chartjs-plugin-name/dist/chartjs-plugin-name.min.js
+```
+
+2. **Configure importmap.rb** with REQUIRED mappings:
+```ruby
+# config/importmap.rb
+pin "chartkick", to: "chartkick.js"
+pin "Chart.bundle", to: "Chart.bundle.js"
+
+# CRITICAL: These mappings are REQUIRED for plugins to work
+pin "chart.js/helpers", to: "Chart.bundle.js"  # Plugins look for this
+pin "chart.js", to: "Chart.bundle.js"          # Plugins look for this
+
+# Your plugin
+pin "chartjs-plugin-name", to: "chartjs-plugin-name.js"
+```
+
+3. **Import in stats_controller.js**:
+```javascript
+// Load plugin AFTER Chart.js is available
+if (window.Chart && !window.chartjsPluginName) {
+  await import("chartjs-plugin-name")
+}
+```
+
+4. **Clear the stats cache**:
+```bash
+bin/rails runner 'StatsCache.stats_json(version: StatsCache.version, force: true)'
+```
+
+### Common Errors and Solutions
+
+- **"Cannot read properties of undefined (reading 'helpers')"**: The plugin can't find Chart.js helpers. Ensure the `chart.js/helpers` mapping exists in importmap.rb
+- **Plugin not loading**: Make sure you're using the UMD version, not ESM
+- **404 errors**: Check that the plugin file exists in `vendor/javascript/`
+
+### Example: Rain Annotation
+The Tuesday timeline chart shows a rain indicator from 3:00-3:33 PM using the chartjs-plugin-annotation plugin. This was added following the exact steps above.

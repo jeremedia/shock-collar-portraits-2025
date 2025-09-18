@@ -24,9 +24,12 @@ class StatsCache
         canon_sessions = PhotoSession.visible.where("burst_id LIKE 'burst_%'").count
         iphone_sessions = PhotoSession.visible.where("burst_id LIKE 'iphone_%'").count
 
+        # Hero gender distribution
+        hero_genders = hero_gender_distribution
+
         { total_sessions:, total_photos:, total_sittings:, total_heroes:, total_rejected:,
           faces_detected:, hero_rate:, rejection_rate:, canon_sessions:, iphone_sessions:,
-          total_storage_gb: estimate_storage_gb }
+          total_storage_gb: estimate_storage_gb, hero_genders: }
       end
     end
 
@@ -166,7 +169,8 @@ class StatsCache
           dailySessionTimelines: timelines,
           canonSessions: summary[:canon_sessions],
           iphoneSessions: summary[:iphone_sessions],
-          photoDistribution: dist
+          photoDistribution: dist,
+          heroGenders: summary[:hero_genders]
         }
         JSON.generate(data)
       end
@@ -190,6 +194,30 @@ class StatsCache
       canon_photos = Photo.joins(:photo_session).where("photo_sessions.burst_id LIKE 'burst_%'").count
       iphone_photos = Photo.joins(:photo_session).where("photo_sessions.burst_id LIKE 'iphone_%'").count
       ((canon_photos * 20 + iphone_photos * 3) / 1024.0).round(1)
+    end
+
+    def hero_gender_distribution
+      # Get all sittings with hero photos and check gender of their sessions
+      gender_counts = { male: 0, female: 0, unknown: 0 }
+
+      Sitting.where.not(hero_photo_id: nil).includes(photos: :photo_session).find_each do |sitting|
+        # Get the photo session that contains the hero photo
+        hero_photo = Photo.find_by(id: sitting.hero_photo_id)
+        next unless hero_photo
+
+        session = hero_photo.photo_session
+        next unless session
+
+        # Check if the session has gender analysis
+        if session.respond_to?(:detected_gender) && session.detected_gender.present?
+          gender = session.detected_gender.to_sym
+          gender_counts[gender] += 1 if [:male, :female].include?(gender)
+        else
+          gender_counts[:unknown] += 1
+        end
+      end
+
+      gender_counts
     end
   end
 end

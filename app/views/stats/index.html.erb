@@ -156,7 +156,7 @@
     </div>
 
     <!-- Charts Row 2 -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <!-- Camera Types -->
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
         <h2 class="text-xl font-bold mb-4 text-yellow-500">Camera Types</h2>
@@ -165,9 +165,17 @@
         </div>
       </div>
 
+      <!-- Hero Gender Distribution -->
+      <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
+        <h2 class="text-xl font-bold mb-4 text-yellow-500">Hero Photo Gender</h2>
+        <div style="position: relative; height: 250px;">
+          <canvas id="heroGenderChart"></canvas>
+        </div>
+      </div>
+
       <!-- Photo Distribution -->
       <div class="bg-gray-900 border border-red-600 rounded-lg p-4">
-        <h2 class="text-xl font-bold mb-4 text-yellow-500">Photos Per Session Distribution</h2>
+        <h2 class="text-xl font-bold mb-4 text-yellow-500">Photos Per Session</h2>
         <div style="position: relative; height: 250px;">
           <canvas id="distributionChart"></canvas>
         </div>
