@@ -132,3 +132,6 @@ pip-delete-this-directory.txt
 .env.staging
 deploy_key
 deploy_key.pub
+# Ignore unused importmap-generated files
+vendor/javascript/chart.js.js
+vendor/javascript/chart.js--helpers.js
