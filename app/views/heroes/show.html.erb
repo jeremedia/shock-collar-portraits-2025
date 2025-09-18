@@ -55,9 +55,9 @@
           <!-- Full Image with progressive loading and swipe navigation -->
           <div class="relative bg-black flex-grow flex items-center justify-center overflow-hidden p-3"
                data-controller="hero-image swipe-navigation"
-               data-hero-image-full-src-value="<%= @photo.image.variant(:large).url %>"
-               <% if @next_photo %>data-hero-image-next-src-value="<%= @next_photo.image.variant(:large).url %>"<% end %>
-               <% if @prev_photo %>data-hero-image-prev-src-value="<%= @prev_photo.image.variant(:large).url %>"<% end %>
+               data-hero-image-full-src-value="<%= smart_variant_url(@photo.image, :large) %>"
+               <% if @next_photo %>data-hero-image-next-src-value="<%= smart_variant_url(@next_photo.image, :large) %>"<% end %>
+               <% if @prev_photo %>data-hero-image-prev-src-value="<%= smart_variant_url(@prev_photo.image, :large) %>"<% end %>
                data-swipe-navigation-next-url-value="<%= @next_hero_id ? hero_path(@next_hero_id) : '' %>"
                data-swipe-navigation-prev-url-value="<%= @prev_hero_id ? hero_path(@prev_hero_id) : '' %>"
                data-swipe-navigation-index-url-value="<%= heroes_path %>">
