@@ -1,5 +1,7 @@
 class Api::PhotosController < ApplicationController
   before_action :authenticate_user!, except: [:random_hero_faces]
+  before_action :require_admin, only: [:extract_exif, :portrait_crop, :update_portrait_crop, :reset_portrait_crop]
+  before_action :set_photo, only: [:extract_exif, :portrait_crop, :update_portrait_crop, :reset_portrait_crop]
 
   def exif_config
     render json: {
@@ -31,14 +33,36 @@ class Api::PhotosController < ApplicationController
     }
   end
 
-  def extract_exif
-    photo = Photo.find(params[:id])
+  def portrait_crop
+    return if performed?
+    render_portrait_crop(@photo)
+  end
 
-    Rails.logger.info "Starting EXIF extraction for photo #{photo.id} at path: #{photo.original_path}"
+  def update_portrait_crop
+    return if performed?
+    @photo.update_portrait_crop!(portrait_crop_params)
+    render_portrait_crop(@photo)
+  rescue => e
+    Rails.logger.error "Failed to update portrait crop for photo #{@photo.id}: #{e.message}"
+    render json: { status: 'error', message: e.message }, status: 422
+  end
+
+  def reset_portrait_crop
+    return if performed?
+    @photo.reset_portrait_crop!
+    render_portrait_crop(@photo)
+  rescue => e
+    Rails.logger.error "Failed to reset portrait crop for photo #{@photo.id}: #{e.message}"
+    render json: { status: 'error', message: e.message }, status: 500
+  end
+
+  def extract_exif
+    return if performed?
+    Rails.logger.info "Starting EXIF extraction for photo #{@photo.id} at path: #{@photo.original_path}"
 
     # Check if photo has an attachment
-    unless photo.image.attached?
-      Rails.logger.warn "Photo #{photo.id} has no image attachment"
+    unless @photo.image.attached?
+      Rails.logger.warn "Photo #{@photo.id} has no image attachment"
       return render json: {
         status: 'error',
         message: 'Photo has no image attachment'
@@ -46,14 +70,14 @@ class Api::PhotosController < ApplicationController
     end
 
     # Extract full EXIF data using exiftool
-    exif_data = extract_full_exif(photo)
+    exif_data = extract_full_exif(@photo)
 
     if exif_data.present?
       # Merge with existing EXIF data
-      merged_data = (photo.exif_data || {}).merge(exif_data)
-      photo.update!(exif_data: merged_data)
+      merged_data = (@photo.exif_data || {}).merge(exif_data)
+      @photo.update!(exif_data: merged_data)
 
-      Rails.logger.info "Successfully extracted EXIF data for photo #{photo.id}: #{exif_data.keys.join(', ')}"
+      Rails.logger.info "Successfully extracted EXIF data for photo #{@photo.id}: #{exif_data.keys.join(', ')}"
 
       render json: {
         status: 'success',
@@ -61,7 +85,7 @@ class Api::PhotosController < ApplicationController
         message: 'EXIF data extracted successfully'
       }
     else
-      Rails.logger.warn "No EXIF data extracted for photo #{photo.id}"
+      Rails.logger.warn "No EXIF data extracted for photo #{@photo.id}"
       render json: {
         status: 'error',
         message: 'No EXIF data could be extracted from this file'
@@ -193,5 +217,37 @@ class Api::PhotosController < ApplicationController
 
     # Remove empty categories
     organized.reject { |_, v| v.empty? }
+  end
+
+  def set_photo
+    @photo = Photo.find(params[:id])
+  rescue ActiveRecord::RecordNotFound
+    render json: { status: 'error', message: 'Photo not found' }, status: 404
+  end
+
+  def require_admin
+    unless current_user&.admin?
+      render json: { status: 'error', message: 'Admin access required' }, status: 403
+    end
+  end
+
+  def portrait_crop_params
+    params.require(:portrait_crop).permit(:left, :top, :width, :height, :image_width, :image_height)
+  end
+
+  def render_portrait_crop(photo)
+    rect = photo.portrait_crop_rect
+    blob_metadata = photo.image&.blob&.metadata || {}
+    image_width = blob_metadata['width'] || rect&.[](:width)
+    image_height = blob_metadata['height'] || rect&.[](:height)
+
+    render json: {
+      status: 'success',
+      photo_id: photo.id,
+      rect: rect,
+      image_width: image_width,
+      image_height: image_height,
+      updated_at: photo.updated_at
+    }
   end
 end

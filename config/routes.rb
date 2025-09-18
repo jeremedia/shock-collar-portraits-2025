@@ -33,6 +33,9 @@ Rails.application.routes.draw do
     resources :photos, only: [] do
       member do
         post :extract_exif
+        get :portrait_crop
+        patch :portrait_crop, to: 'photos#update_portrait_crop'
+        delete :portrait_crop, to: 'photos#reset_portrait_crop'
       end
       collection do
         get :exif_config

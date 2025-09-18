@@ -32,7 +32,7 @@ class Photo < ApplicationRecord
     # silence active storage and active record logging for this operation
     #p "Generating variants for Photo ##{id}"
     ActiveRecord::Base.logger.silence do
-      VariantGenerationJob.perform_now(id, [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb])
+      VariantGenerationJob.perform_now(id, [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb, :portrait_crop])
     end
     #p "Variant generation complete for Photo ##{id}"
   end
@@ -203,7 +203,7 @@ class Photo < ApplicationRecord
   # Enqueue variant generation job for this photo
   def enqueue_variant_generation
     # Queue variant generation after attachment (will be skipped if no attachment)
-    VariantGenerationJob.perform_later(id, [:thumb, :large, :gallery, :tiny_square_thumb, :medium])
+    VariantGenerationJob.perform_later(id, [:thumb, :large, :gallery, :tiny_square_thumb, :medium, :face_thumb, :portrait_crop])
   end
   
   # Enqueue EXIF extraction job for this photo
@@ -239,7 +239,7 @@ class Photo < ApplicationRecord
   def face_crop_url(size: 300)
     p "Generating face crop URL for Photo ##{id} at size #{size}"
     return nil unless has_faces? && image.attached?
-    
+
     crop_params = ::FaceDetectionService.face_crop_params(self)
     return nil unless crop_params
     
@@ -269,6 +269,152 @@ class Photo < ApplicationRecord
       # Return nil if the file doesn't exist (e.g., still being uploaded to S3)
       nil
     end
+  end
+
+  def portrait_crop_rect
+    rect = portrait_crop_data&.symbolize_keys || default_portrait_crop_rect
+    rect ? normalize_portrait_rect(rect) : nil
+  end
+
+  def portrait_crop_variant(width: 720, height: 1280)
+    rect = portrait_crop_rect
+    return nil unless rect
+
+    normalized = normalize_portrait_rect(rect)
+    return nil unless normalized
+
+    {
+      extract_area: [normalized[:left], normalized[:top], normalized[:width], normalized[:height]],
+      resize_to_fill: [width, height],
+      saver: { quality: 90 },
+      format: :webp
+    }
+  end
+
+  def portrait_crop_url(width: 720, height: 1280)
+    return nil unless image.attached?
+
+    variant_params = portrait_crop_variant(width: width, height: height)
+    return nil unless variant_params
+
+    begin
+      Rails.application.routes.url_helpers.rails_blob_url(
+        image.variant(variant_params).processed,
+        only_path: true
+      )
+    rescue ActiveStorage::FileNotFoundError
+      nil
+    end
+  end
+
+  def reset_portrait_crop!
+    rect = default_portrait_crop_rect
+    update!(portrait_crop_data: rect)
+    rect
+  end
+
+  def update_portrait_crop!(rect_params)
+    update!(portrait_crop_data: sanitize_portrait_crop(rect_params))
+  end
+
+  def default_portrait_crop_rect
+    return nil unless image.attached?
+
+    ensure_blob_dimensions
+
+    blob_metadata = image.blob.metadata
+    blob_width = blob_metadata['width']
+    blob_height = blob_metadata['height']
+
+    if face_data.present?
+      blob_width ||= face_data['image_width']
+      blob_height ||= face_data['image_height']
+    end
+
+    blob_width = blob_width&.to_f
+    blob_height = blob_height&.to_f
+    return nil unless blob_width&.positive? && blob_height&.positive?
+
+    aspect_ratio = 9.0 / 16.0
+
+    crop_height = blob_height
+    crop_width = (crop_height * aspect_ratio)
+
+    if crop_width > blob_width
+      crop_width = blob_width
+      crop_height = (crop_width / aspect_ratio)
+    end
+
+    face_center_x = if has_faces?
+                      params = ::FaceDetectionService.face_crop_params(self)
+                      if params
+                        params[:left].to_f + (params[:width].to_f / 2.0)
+                      end
+                    end
+    face_center_x ||= blob_width / 2.0
+
+    left = (face_center_x - (crop_width / 2.0))
+    left = 0 if left.negative?
+    left = blob_width - crop_width if left + crop_width > blob_width
+
+    top = ((blob_height - crop_height) / 2.0)
+    top = 0 if top.negative?
+    top = blob_height - crop_height if top + crop_height > blob_height
+
+    normalize_portrait_rect(
+      {
+        left: left.round,
+        top: top.round,
+        width: crop_width.round,
+        height: crop_height.round,
+        source: 'default'
+      }
+    )
+  end
+
+  def sanitize_portrait_crop(rect_params)
+    rect_params = rect_params.to_unsafe_h if rect_params.respond_to?(:to_unsafe_h)
+    rect_params = rect_params.to_h if rect_params.respond_to?(:to_h) && !rect_params.is_a?(Hash)
+    return default_portrait_crop_rect unless rect_params.is_a?(Hash)
+
+    symbolized = rect_params.symbolize_keys
+    permitted = symbolized.slice(:left, :top, :width, :height)
+    image_width_hint = symbolized[:image_width]
+    image_height_hint = symbolized[:image_height]
+
+    ensure_blob_dimensions
+
+    blob_metadata = image&.blob&.metadata || {}
+    face_dimensions = face_data || {}
+    blob_width = (blob_metadata['width'] || face_dimensions['image_width'] || image_width_hint || permitted[:width])&.to_f
+    blob_height = (blob_metadata['height'] || face_dimensions['image_height'] || image_height_hint || permitted[:height])&.to_f
+
+    return default_portrait_crop_rect unless blob_width && blob_height
+
+    aspect_ratio = 9.0 / 16.0
+    height = permitted[:height].to_f
+    height = default_portrait_crop_rect[:height].to_f if height <= 0
+    min_height = [[blob_height * 0.1, 50].max, blob_height].min
+    height = [[height, min_height].max, blob_height].min
+    width = height * aspect_ratio
+    width = blob_width if width > blob_width
+    height = width / aspect_ratio if width >= blob_width
+
+    left = permitted[:left].to_f
+    top = permitted[:top].to_f
+
+    left = [[left, 0].max, blob_width - width].min
+    top = [[top, 0].max, blob_height - height].min
+
+    normalize_portrait_rect(
+      {
+        left: left.round,
+        top: top.round,
+        width: width.round,
+        height: height.round,
+        source: 'manual'
+      }
+    )
   end
   
   # Check if face detection is needed
@@ -350,5 +496,57 @@ class Photo < ApplicationRecord
 
   def gender_data
     photo_session&.gender_data
+  end
+
+  private :sanitize_portrait_crop
+
+  private
+
+  def normalize_portrait_rect(rect)
+    return nil unless rect.is_a?(Hash)
+
+    ensure_blob_dimensions
+
+    metadata = image&.blob&.metadata || {}
+    actual_width = metadata['width']&.to_i
+    actual_height = metadata['height']&.to_i
+
+    return rect.symbolize_keys unless actual_width&.positive? && actual_height&.positive?
+
+    left = rect[:left].to_i
+    top = rect[:top].to_i
+    width = rect[:width].to_i
+    height = rect[:height].to_i
+
+    left = left.clamp(0, actual_width - 1)
+    top = top.clamp(0, actual_height - 1)
+
+    max_width = [actual_width - left, 1].max
+    max_height = [actual_height - top, 1].max
+
+    width = width.clamp(1, max_width)
+    height = height.clamp(1, max_height)
+
+    {
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      source: rect[:source]
+    }
+  end
+
+  def ensure_blob_dimensions
+    return unless image.attached?
+
+    metadata = image.blob.metadata || {}
+    return if metadata['width'].present? && metadata['height'].present?
+
+    begin
+      image.blob.analyze
+      image.blob.reload
+    rescue => e
+      Rails.logger.warn("Failed to analyze blob dimensions for Photo ##{id}: #{e.message}")
+    end
   end
 end

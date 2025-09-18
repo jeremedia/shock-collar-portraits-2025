@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_17_014201) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_18_132446) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -129,8 +129,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_17_014201) do
     t.datetime "updated_at", null: false
     t.json "face_data"
     t.datetime "face_detected_at"
+    t.json "portrait_crop_data"
     t.index ["face_data"], name: "index_photos_on_face_data"
     t.index ["photo_session_id"], name: "index_photos_on_photo_session_id"
+    t.index ["portrait_crop_data"], name: "index_photos_on_portrait_crop_data"
     t.index ["sitting_id"], name: "index_photos_on_sitting_id"
   end
 

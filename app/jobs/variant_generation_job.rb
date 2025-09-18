@@ -23,6 +23,11 @@ class VariantGenerationJob < ApplicationJob
           else
             #p "Skipping face_thumb for Photo ##{photo.id} - no faces detected"
           end
+        elsif variant_name.to_sym == :portrait_crop
+          variant_params = photo.portrait_crop_variant
+          if variant_params
+            photo.portrait_crop_url
+          end
         else
           # Named Active Storage variant
           variant = photo.image.variant(variant_name)

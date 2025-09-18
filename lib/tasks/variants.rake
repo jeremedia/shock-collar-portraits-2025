@@ -21,10 +21,10 @@ namespace :variants do
     BatchProcessingService.queue_variant_generation(photos, variants: [:thumb, :large])
   end
 
-  desc "Generate ALL variants for all photos (tiny, thumb, medium, large, gallery, face_thumb)"
+  desc "Generate ALL variants for all photos (tiny, thumb, medium, large, gallery, face_thumb, portrait_crop)"
   task generate_all_variants: :environment do
     puts "=== Generating ALL Variants for All Photos ==="
-    puts "Variants: [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb]"
+    puts "Variants: [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb, :portrait_crop]"
 
     photos = Photo.joins(:image_attachment)
     total = photos.count
@@ -42,7 +42,7 @@ namespace :variants do
       end
     end
 
-    variants = [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb]
+    variants = [:tiny_square_thumb, :thumb, :medium, :large, :gallery, :face_thumb, :portrait_crop]
     BatchProcessingService.queue_variant_generation(photos, variants: variants)
   end
   
@@ -214,7 +214,7 @@ namespace :variants do
     end
   end
 
-  desc "Report how many photos have ALL variants created (includes face_thumb only when faces exist)"
+  desc "Report how many photos have ALL variants created (includes face_thumb when faces exist plus portrait_crop)"
   task status_full: :environment do
     require 'json'
 
@@ -223,6 +223,8 @@ namespace :variants do
     complete = 0
     with_faces = 0
     complete_with_faces = 0
+    portrait_success = 0
+    portrait_missing = 0
 
     per_variant_processed = Hash.new(0)
     per_variant_missing = Hash.new(0)
@@ -260,6 +262,19 @@ namespace :variants do
           end
         end
 
+        begin
+          portrait_url = p.portrait_crop_url
+          if portrait_url
+            portrait_success += 1
+          else
+            portrait_missing += 1
+            ok = false
+          end
+        rescue
+          portrait_missing += 1
+          ok = false
+        end
+
         complete += 1 if ok
         processed += 1
 
@@ -276,6 +291,8 @@ namespace :variants do
       photos_complete_all_variants: complete,
       photos_with_faces: with_faces,
       photos_complete_including_face: complete_with_faces,
+      portrait_crop_generated: portrait_success,
+      portrait_crop_missing: portrait_missing,
       per_variant_processed: per_variant_processed.transform_keys(&:to_s),
       per_variant_missing: per_variant_missing.transform_keys(&:to_s),
       elapsed_seconds: (Time.now - started_at).round(1)

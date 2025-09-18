@@ -5,15 +5,25 @@
   title_parts << day_name.capitalize if day_name
   title_parts << "Session #{session_number}"
   hero_title = title_parts.join(" - ")
+  portrait_url = @photo.portrait_crop_url(width: 1080, height: 1920)
 %>
 <% content_for :title, hero_title %>
 <div class="h-full flex items-center justify-center p-0 sm:p-8 bg-black text-white"
      <% if current_user&.admin? %>data-controller="admin-tagger" data-admin-tagger-session-id-value="<%= @session.id %>"<% end %>>
   <div class="max-w-7xl w-full h-full flex flex-col">
       <% if @photo.image.attached? %>
-        <div class="<%= current_user&.admin? ? 'sm:flex gap-0' : '' %> border-0 sm:border-4 border-red-600 rounded-none sm:rounded-lg overflow-hidden flex-grow">
+        <div class="<%= current_user&.admin? ? 'sm:flex gap-0' : '' %> border-0 sm:border-4 border-red-600 rounded-none sm:rounded-lg overflow-hidden flex-grow"
+             <% if current_user&.admin? %>
+               data-controller="portrait-crop"
+               data-portrait-crop-photo-id-value="<%= @photo.id %>"
+             <% end %>>
           <!-- Photo Container -->
-          <div class="<%= current_user&.admin? ? 'sm:flex-grow' : 'w-full' %> flex flex-col h-full">
+          <div class="<%= current_user&.admin? ? 'sm:flex-grow' : 'w-full' %> flex flex-col h-full"
+               data-controller="hero-image"
+               data-hero-image-full-src-value="<%= smart_variant_url(@photo.image, :large) %>"
+               data-hero-image-portrait-src-value="<%= portrait_url || '' %>"
+               <% if @next_photo %>data-hero-image-next-src-value="<%= smart_variant_url(@next_photo.image, :large) %>"<% end %>
+               <% if @prev_photo %>data-hero-image-prev-src-value="<%= smart_variant_url(@prev_photo.image, :large) %>"<% end %>>
           <!-- Navigation Bar (moved to top) -->
           <div class="bg-gray-900 border-b-2 sm:border-b-4 border-red-600 flex justify-between items-center">
             <%= link_to session_path(@session.id), class: "px-2 py-2 text-yellow-500 font-bold text-lg sm:text-2xl hover:text-yellow-400 transition-colors" do %>
@@ -54,10 +64,8 @@
 
           <!-- Full Image with progressive loading and swipe navigation -->
           <div class="relative bg-black flex-grow flex items-center justify-center overflow-hidden p-3"
-               data-controller="hero-image swipe-navigation"
-               data-hero-image-full-src-value="<%= smart_variant_url(@photo.image, :large) %>"
-               <% if @next_photo %>data-hero-image-next-src-value="<%= smart_variant_url(@next_photo.image, :large) %>"<% end %>
-               <% if @prev_photo %>data-hero-image-prev-src-value="<%= smart_variant_url(@prev_photo.image, :large) %>"<% end %>
+               data-controller="swipe-navigation"
+               <% if current_user&.admin? %>data-portrait-crop-target="imageWrapper"<% end %>
                data-swipe-navigation-next-url-value="<%= @next_hero_id ? hero_path(@next_hero_id) : '' %>"
                data-swipe-navigation-prev-url-value="<%= @prev_hero_id ? hero_path(@prev_hero_id) : '' %>"
                data-swipe-navigation-index-url-value="<%= heroes_path %>">
@@ -66,6 +74,17 @@
                  class="max-w-full max-h-full object-contain transition-opacity duration-500"
                  alt="Hero portrait"
                  style="opacity: 0;" />
+
+            <% if current_user&.admin? %>
+              <div data-portrait-crop-target="overlay"
+                   class="portrait-crop-overlay hidden absolute pointer-events-none">
+                <div data-portrait-crop-target="window"
+                     class="portrait-crop-window">
+                  <div data-portrait-crop-target="handleTop" class="portrait-crop-handle portrait-crop-handle--top"></div>
+                  <div data-portrait-crop-target="handleBottom" class="portrait-crop-handle portrait-crop-handle--bottom"></div>
+                </div>
+              </div>
+            <% end %>
 
             <!-- Loading spinner overlay -->
             <div data-hero-image-target="spinner" class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -93,7 +112,7 @@
           </div>
 
           <!-- Metadata -->
-          <div class="bg-gray-900 border-t-2 border-red-600 px-3 sm:px-6 py-3 sm:py-4 flex justify-center items-center gap-2 sm:gap-6 text-xs sm:text-sm">
+          <div class="bg-gray-900 border-t-2 border-red-600 px-3 sm:px-6 py-3 sm:py-4 flex justify-center items-center gap-2 sm:gap-6 text-xs sm:text-sm flex-wrap">
             <div class="flex items-center gap-1 sm:gap-2">
               <span class="text-red-400 hidden sm:inline">Day:</span>
               <span class="text-yellow-500 font-semibold text-xs sm:text-sm">
@@ -120,6 +139,14 @@
               <span class="text-red-400 hidden sm:inline">Photo:</span>
               <span class="text-yellow-500 font-semibold text-xs sm:text-sm">#<%= @photo.position %> of <%= @session.photo_count %></span>
             </div>
+            <span class="text-gray-600 hidden sm:inline">•</span>
+            <label class="flex items-center gap-2 text-yellow-400 text-xs sm:text-sm">
+              <input type="checkbox"
+                     class="h-4 w-4 rounded border border-yellow-500/60 bg-gray-800 text-yellow-500 focus:ring-yellow-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                     data-action="change->hero-image#togglePortraitMode click->hero-image#togglePortraitMode"
+                     data-hero-image-target="portraitToggle">
+              <span>Portrait mode</span>
+            </label>
           </div>
           </div><!-- End photo container -->
 
@@ -128,6 +155,24 @@
             <!-- Admin Sidebar (Desktop) -->
             <div data-admin-tagger-target="panel"
                  class="hidden sm:flex sm:flex-col w-64 xl:w-96 bg-gray-900 border-l border-red-600 p-3 overflow-y-auto h-full">
+
+              <div class="mb-4 space-y-2">
+                <h4 class="text-xs text-gray-500 font-semibold uppercase">Portrait Crop</h4>
+                <p data-portrait-crop-target="status" class="text-xs text-gray-400">Loading…</p>
+                <div class="flex gap-2">
+                  <button data-action="portrait-crop#save"
+                          data-portrait-crop-target="saveButton"
+                          class="px-2 py-1 text-xs font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-500/40 rounded hover:bg-yellow-600/40 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                          disabled>
+                    Save Now
+                  </button>
+                  <button data-action="portrait-crop#reset"
+                          class="px-2 py-1 text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700 rounded hover:border-yellow-500 transition">
+                    Reset
+                  </button>
+                </div>
+                <p class="text-[10px] leading-tight text-gray-500">Drag the golden frame over the hero image to adjust the 9×16 crop. Changes save automatically.</p>
+              </div>
 
               <!-- Two column layout on xl screens -->
               <div class="flex-grow xl:grid xl:grid-cols-2 xl:gap-4">
@@ -271,6 +316,24 @@
 
             <!-- Compact mobile layout -->
             <div class="space-y-3">
+              <div class="space-y-2">
+                <h4 class="text-xs text-gray-500 font-semibold uppercase">Portrait Crop</h4>
+                <p data-portrait-crop-target="status" class="text-xs text-gray-400">Loading…</p>
+                <div class="flex flex-wrap gap-2">
+                  <button data-action="portrait-crop#save"
+                          data-portrait-crop-target="saveButton"
+                          class="flex-1 px-2 py-1 text-xs font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-500/40 rounded hover:bg-yellow-600/40 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                          disabled>
+                    Save Now
+                  </button>
+                  <button data-action="portrait-crop#reset"
+                          class="px-2 py-1 text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700 rounded hover:border-yellow-500 transition">
+                    Reset
+                  </button>
+                </div>
+                <p class="text-[11px] leading-tight text-gray-500">Drag the frame to adjust the 9×16 crop. Changes save automatically.</p>
+              </div>
+
               <!-- Gender -->
               <div>
                 <h4 class="text-xs text-gray-500 mb-1 font-semibold uppercase">Gender</h4>
@@ -387,5 +450,75 @@
   }
   [data-hero-image-target="image"] {
     transition: opacity 0.5s ease-in-out;
+  }
+
+  .portrait-crop-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+    opacity: 1;
+  }
+
+  .portrait-crop-overlay--hidden {
+    opacity: 0;
+  }
+
+  .portrait-crop-window {
+    position: absolute;
+    pointer-events: auto;
+    border: 2px solid rgba(250, 204, 21, 0.9);
+    box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.55);
+    border-radius: 6px;
+    background: rgba(250, 204, 21, 0.08);
+  }
+
+  .portrait-crop-window::before,
+  .portrait-crop-window::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .portrait-crop-window::before {
+    border-left: 1px solid rgba(250, 204, 21, 0.35);
+    border-right: 1px solid rgba(250, 204, 21, 0.35);
+    left: 33.333%;
+    width: 33.333%;
+  }
+
+  .portrait-crop-window::after {
+    border-top: 1px solid rgba(250, 204, 21, 0.35);
+    border-bottom: 1px solid rgba(250, 204, 21, 0.35);
+    top: 33.333%;
+    height: 33.333%;
+  }
+
+  .portrait-crop-handle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 10px;
+    border-radius: 9999px;
+    background: rgba(250, 204, 21, 0.85);
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+    cursor: ns-resize;
+  }
+
+  .portrait-crop-handle--top {
+    top: -18px;
+  }
+
+  .portrait-crop-handle--bottom {
+    bottom: -18px;
+  }
+
+  .portrait-crop-window--disabled {
+    pointer-events: none;
   }
 </style>

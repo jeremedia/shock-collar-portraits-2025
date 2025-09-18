@@ -1,15 +1,20 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["image", "spinner"]
+  static targets = ["image", "spinner", "portraitToggle"]
   static values = {
     fullSrc: String,
     nextSrc: String,
-    prevSrc: String
+    prevSrc: String,
+    portraitSrc: String
   }
 
   connect() {
     this.setupContainerDimensions()
+    this.showPortrait = this.initialPortraitPreference()
+    console.log('[hero-image] has portrait toggle target?', this.hasPortraitToggleTarget)
+    this.syncPortraitToggle()
+    console.log('[hero-image] connect showPortrait?', this.showPortrait, 'portraitSrc?', this.portraitSrcValue)
     this.loadFullImage()
     this.setupResizeHandler()
     this.preloadAdjacentImages()
@@ -108,7 +113,16 @@ export default class extends Controller {
   }
 
   loadFullImage() {
-    if (!this.hasImageTarget || !this.fullSrcValue) return
+    if (!this.hasImageTarget) return
+
+    const src = this.activeImageSrc()
+    if (!src) {
+      console.warn('[hero-image] no source available, showPortrait?', this.showPortrait)
+      return
+    }
+
+    console.log('[hero-image] will change to', src)
+    this.dispatch('will-change', { detail: { src, portrait: this.showPortrait } })
 
     // Check if image is already in browser cache by creating a test image
     const testImage = new Image()
@@ -118,16 +132,18 @@ export default class extends Controller {
     testImage.onload = () => {
       imageInCache = true
     }
-    testImage.src = this.fullSrcValue
+    testImage.src = src
 
     // If image is cached, it will load synchronously
     if (imageInCache) {
       // Image is cached, load immediately without spinner
-      this.imageTarget.src = this.fullSrcValue
+      this.imageTarget.src = src
       this.imageTarget.style.opacity = '1'
       if (this.hasSpinnerTarget) {
         this.spinnerTarget.style.display = 'none'
       }
+      console.log('[hero-image] did change instantly (cached)', src)
+      this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
     } else {
       // Image not cached, show spinner and load
       this.imageTarget.style.opacity = '0'
@@ -166,6 +182,9 @@ export default class extends Controller {
           sessionStorage.setItem('heroImageWindowWidth', window.innerWidth)
           sessionStorage.setItem('heroImageIsAdmin', isAdmin.toString())
         }
+
+        console.log('[hero-image] did change after load', src)
+        this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
       }
 
       fullImage.onerror = () => {
@@ -174,10 +193,12 @@ export default class extends Controller {
         if (this.hasSpinnerTarget) {
           this.spinnerTarget.style.display = 'none'
         }
+        console.warn('[hero-image] load error, using fallback', src)
+        this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
       }
 
       // Start loading the full image
-      fullImage.src = this.fullSrcValue
+      fullImage.src = src
     }
   }
 
@@ -192,6 +213,92 @@ export default class extends Controller {
     if (this.prevSrcValue) {
       const prevImage = new Image()
       prevImage.src = this.prevSrcValue
+    }
+
+    if (this.portraitSrcValue) {
+      const portraitImage = new Image()
+      portraitImage.src = this.portraitSrcValue
+    }
+  }
+
+  togglePortraitMode(event) {
+    const enabled = event.currentTarget.checked
+    console.log('[hero-image] togglePortraitMode', enabled, 'event type', event.type, 'hasPortrait?', this.hasPortraitVariant())
+    if (enabled && !this.hasPortraitVariant()) {
+      this.showPortrait = false
+      this.persistPortraitPreference()
+      this.syncPortraitToggle()
+      return
+    }
+
+    this.showPortrait = enabled
+    this.persistPortraitPreference()
+    this.syncPortraitToggle()
+    console.log('[hero-image] mode set to', this.showPortrait ? 'portrait' : 'full')
+    this.loadFullImage()
+  }
+
+  activeImageSrc() {
+    if (this.showPortrait && this.hasPortraitVariant()) {
+      return this.portraitSrcValue
+    }
+    return this.fullSrcValue
+  }
+
+  hasPortraitVariant() {
+    const available = this.hasPortraitSrcValue && this.portraitSrcValue && this.portraitSrcValue.length > 0
+    if (!available) {
+      console.log('[hero-image] portrait variant missing')
+    }
+    return available
+  }
+
+  initialPortraitPreference() {
+    if (!this.hasPortraitVariant()) return false
+
+    try {
+      return localStorage.getItem('heroPortraitMode') === 'portrait'
+    } catch (e) {
+      return false
+    }
+  }
+
+  persistPortraitPreference() {
+    try {
+      if (this.showPortrait) {
+        localStorage.setItem('heroPortraitMode', 'portrait')
+      } else {
+        localStorage.setItem('heroPortraitMode', 'full')
+      }
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+
+  syncPortraitToggle() {
+    const hasVariant = this.hasPortraitVariant()
+    if (this.hasPortraitToggleTarget) {
+      const enabled = this.showPortrait && hasVariant
+      this.portraitToggleTarget.checked = enabled
+      this.portraitToggleTarget.disabled = !hasVariant
+      console.log('[hero-image] sync toggle => checked:', this.portraitToggleTarget.checked, 'disabled:', this.portraitToggleTarget.disabled)
+    } else {
+      console.log('[hero-image] no portrait toggle target found during sync')
+    }
+
+    if (hasVariant) {
+      this.element.setAttribute('data-hero-image-mode', this.showPortrait ? 'portrait' : 'full')
+    } else {
+      this.element.removeAttribute('data-hero-image-mode')
+    }
+
+    const cropHost = this.element.closest('[data-controller~="portrait-crop"]')
+    if (cropHost) {
+      if (hasVariant) {
+        cropHost.setAttribute('data-hero-image-mode', this.showPortrait ? 'portrait' : 'full')
+      } else {
+        cropHost.removeAttribute('data-hero-image-mode')
+      }
     }
   }
 }
