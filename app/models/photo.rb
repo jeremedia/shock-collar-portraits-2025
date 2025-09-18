@@ -237,6 +237,7 @@ class Photo < ApplicationRecord
   
   # Get face crop URL
   def face_crop_url(size: 300)
+    p "Generating face crop URL for Photo ##{id} at size #{size}"
     return nil unless has_faces? && image.attached?
     
     crop_params = ::FaceDetectionService.face_crop_params(self)
