@@ -37,8 +37,8 @@ Rails.application.configure do
   # Use Solid Cache for persistent database-backed caching
   config.cache_store = :solid_cache_store
 
-  # Store uploaded files on S3 for development testing
-  config.active_storage.service = :amazon
+  # Store uploaded files on MinIO (self-hosted S3 alternative)
+  config.active_storage.service = :minio
   
   # Set default URL options for Active Storage
   # Use the domain if accessed via domain, otherwise localhost
