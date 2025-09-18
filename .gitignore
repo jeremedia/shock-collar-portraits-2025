@@ -75,6 +75,7 @@ Temporary Items
 
 # Photo data (keep out of repo)
 sessions/
+session_originals/
 card_download*/
 iphone_sessions/
 recovered_files/

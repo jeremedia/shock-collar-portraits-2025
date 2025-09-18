@@ -3,31 +3,40 @@
 <% content_for :page_subtitle, "OKNOTOK Shock Collar Portraits - Burning Man 2025" %>
 
 <%= render 'shared/oknotok_admin_layout' do %>
-  <!-- Quick Stats Grid -->
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-    <div class="oknotok-stat-card">
-      <div class="text-3xl font-bold text-yellow-500"><%= @stats[:total_sessions] %></div>
-      <div class="text-red-400 text-sm">Total Sessions</div>
+  <!-- Primary Stats -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <div class="oknotok-stat-card text-center">
+      <div class="text-5xl font-bold text-yellow-500 mb-2"><%= @stats[:total_sessions] %></div>
+      <div class="text-gray-400 text-xs uppercase tracking-wider">Total Sessions</div>
     </div>
-    
-    <div class="oknotok-stat-card">
-      <div class="text-3xl font-bold text-yellow-500"><%= number_with_delimiter(@stats[:total_photos]) %></div>
-      <div class="text-red-400 text-sm">Total Photos</div>
+
+    <div class="oknotok-stat-card text-center">
+      <div class="text-5xl font-bold text-yellow-500 mb-2"><%= number_with_delimiter(@stats[:total_photos]) %></div>
+      <div class="text-gray-400 text-xs uppercase tracking-wider">Total Photos</div>
     </div>
-    
-    <div class="oknotok-stat-card">
-      <div class="text-3xl font-bold text-yellow-500"><%= @stats[:total_sittings] %></div>
-      <div class="text-red-400 text-sm">Email Collected</div>
+
+    <div class="oknotok-stat-card text-center">
+      <div class="text-5xl font-bold text-yellow-500 mb-2"><%= @stats[:total_sittings] %></div>
+      <div class="text-gray-400 text-xs uppercase tracking-wider">Emails Collected</div>
     </div>
-    
-    <div class="oknotok-stat-card">
-      <div class="text-3xl font-bold text-yellow-500"><%= @stats[:sessions_with_sittings] %></div>
-      <div class="text-red-400 text-sm">Sessions w/ Email</div>
+  </div>
+
+  <!-- Secondary Stats -->
+  <div class="grid grid-cols-2 gap-4 mb-8">
+    <div class="oknotok-stat-card flex items-center justify-between">
+      <div>
+        <div class="text-2xl font-bold text-red-400"><%= @stats[:sessions_with_sittings] %></div>
+        <div class="text-gray-500 text-xs uppercase">Sessions with Email</div>
+      </div>
+      <div class="text-3xl opacity-20">📧</div>
     </div>
-    
-    <div class="oknotok-stat-card">
-      <div class="text-3xl font-bold text-yellow-500"><%= @stats[:sessions_without_sittings] %></div>
-      <div class="text-red-400 text-sm">Sessions w/o Email</div>
+
+    <div class="oknotok-stat-card flex items-center justify-between">
+      <div>
+        <div class="text-2xl font-bold text-red-400"><%= @stats[:sessions_without_sittings] %></div>
+        <div class="text-gray-500 text-xs uppercase">Sessions without Email</div>
+      </div>
+      <div class="text-3xl opacity-20">📷</div>
     </div>
   </div>
 
@@ -35,56 +44,56 @@
   <div class="oknotok-card mb-8">
     <h2 class="text-2xl font-bold text-yellow-500 mb-6">👁️ Visitor Analytics</h2>
 
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-      <div class="text-center">
-        <div class="text-2xl font-bold text-green-400"><%= number_with_delimiter(@visitor_stats[:total_visits]) %></div>
-        <div class="text-sm text-gray-400">Total Visits</div>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-3xl font-bold text-yellow-500"><%= number_with_delimiter(@visitor_stats[:total_visits]) %></div>
+        <div class="text-xs text-gray-400 uppercase tracking-wider mt-1">Total Visits</div>
       </div>
 
-      <div class="text-center">
-        <div class="text-2xl font-bold text-blue-400"><%= number_with_delimiter(@visitor_stats[:total_unique_visitors]) %></div>
-        <div class="text-sm text-gray-400">Unique Visitors</div>
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-3xl font-bold text-yellow-500"><%= number_with_delimiter(@visitor_stats[:total_unique_visitors]) %></div>
+        <div class="text-xs text-gray-400 uppercase tracking-wider mt-1">Unique Visitors</div>
       </div>
 
-      <div class="text-center">
-        <div class="text-2xl font-bold text-yellow-400"><%= @visitor_stats[:visits_today] %></div>
-        <div class="text-sm text-gray-400">Today</div>
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-3xl font-bold text-yellow-500"><%= @visitor_stats[:visits_today] %></div>
+        <div class="text-xs text-gray-400 uppercase tracking-wider mt-1">Today</div>
       </div>
 
-      <div class="text-center">
-        <div class="text-2xl font-bold text-purple-400"><%= @visitor_stats[:visits_this_week] %></div>
-        <div class="text-sm text-gray-400">This Week</div>
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-3xl font-bold text-yellow-500"><%= @visitor_stats[:visits_this_week] %></div>
+        <div class="text-xs text-gray-400 uppercase tracking-wider mt-1">This Week</div>
       </div>
 
-      <div class="text-center">
-        <div class="text-2xl font-bold text-red-400"><%= @visitor_stats[:logged_in_visitors] %></div>
-        <div class="text-sm text-gray-400">Logged In Users</div>
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-3xl font-bold text-yellow-500"><%= @visitor_stats[:logged_in_visitors] %></div>
+        <div class="text-xs text-gray-400 uppercase tracking-wider mt-1">Logged In Users</div>
       </div>
 
-      <div class="text-center">
+      <div class="bg-gray-800 rounded-lg p-4">
         <% conversion_rate = @visitor_stats[:total_unique_visitors] > 0 ?
            ((@visitor_stats[:logged_in_visitors].to_f / @visitor_stats[:total_unique_visitors]) * 100).round(1) : 0 %>
-        <div class="text-2xl font-bold text-orange-400"><%= conversion_rate %>%</div>
-        <div class="text-sm text-gray-400">Login Rate</div>
+        <div class="text-3xl font-bold text-yellow-500"><%= conversion_rate %>%</div>
+        <div class="text-xs text-gray-400 uppercase tracking-wider mt-1">Login Rate</div>
       </div>
     </div>
 
     <!-- Recent Visits -->
     <% if @visitor_stats[:recent_visits].any? %>
       <div class="mt-6">
-        <h3 class="text-lg font-semibold text-yellow-500 mb-3">Recent Visits</h3>
+        <h3 class="text-lg font-semibold text-yellow-500 mb-4">Recent Visits</h3>
         <div class="space-y-2">
           <% @visitor_stats[:recent_visits].first(5).each do |visit| %>
-            <div class="flex justify-between items-center p-2 bg-gray-800 rounded">
-              <div class="flex items-center gap-3">
-                <span class="text-sm text-gray-400"><%= visit.started_at.strftime("%H:%M") %></span>
+            <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg hover:bg-gray-750 transition">
+              <div class="flex items-center gap-4">
+                <span class="text-sm font-mono text-gray-400"><%= visit.started_at.strftime("%H:%M") %></span>
                 <% if visit.user %>
-                  <span class="text-yellow-500">👤 <%= visit.user.email.split('@').first %></span>
+                  <span class="text-yellow-500 font-medium">👤 <%= visit.user.email.split('@').first %></span>
                 <% else %>
                   <span class="text-gray-500">🔒 Anonymous</span>
                 <% end %>
               </div>
-              <div class="text-xs text-gray-500">
+              <div class="text-xs text-gray-500 uppercase tracking-wider">
                 <%= visit.device_type || 'Unknown' %> • <%= visit.browser || 'Unknown' %>
               </div>
             </div>
@@ -95,7 +104,7 @@
   </div>
 
   <!-- Quick Actions -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <!-- Photo Management -->
     <div class="oknotok-card">
       <h3 class="text-xl font-bold text-yellow-500 mb-4">📸 Photo Management</h3>
@@ -108,7 +117,7 @@
     </div>
 
     <!-- Processing Tools -->
-    <div class="oknotok-card mb-6">
+    <div class="oknotok-card">
       <h3 class="text-xl font-bold text-yellow-500 mb-4">⚙️ Processing Tools</h3>
       <div class="space-y-3">
         <%= link_to admin_face_detection_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
@@ -126,8 +135,8 @@
       </div>
     </div>
 
-  <!-- Data & Reports -->
-  <div class="oknotok-card mb-6">
+    <!-- Data & Reports -->
+    <div class="oknotok-card">
     <h3 class="text-xl font-bold text-yellow-500 mb-4">📊 Data & Reports</h3>
     <div class="space-y-3">
         <%= link_to stats_path, class: "block p-3 bg-gray-800 hover:bg-gray-700 rounded transition" do %>
@@ -141,9 +150,9 @@
       </div>
     </div>
   </div>
-  
+
   <!-- Stats Cache Tools -->
-  <div class="oknotok-card  mb-6">
+  <div class="oknotok-card mb-8">
     <h3 class="text-xl font-bold text-yellow-500 mb-4">🧊 Stats Cache</h3>
     <div class="flex items-center justify-between">
       <div>
@@ -166,12 +175,12 @@
     <h2 class="text-2xl font-bold text-yellow-500 mb-6">📅 Sessions by Day</h2>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <% @days.each do |day| %>
-        <div class="bg-gray-800 border border-red-600 rounded p-4">
+        <div class="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition">
           <div class="font-bold text-yellow-500 capitalize"><%= day.day_name %></div>
-          <div class="text-sm text-red-400"><%= day.date.strftime('%b %d') %></div>
-          <div class="text-2xl font-bold text-white mt-2"><%= day.photo_sessions.visible.count %></div>
-          <div class="text-sm text-gray-400">sessions</div>
-          <div class="text-sm text-gray-500 mt-1">
+          <div class="text-xs text-gray-400 uppercase tracking-wider"><%= day.date.strftime('%b %d') %></div>
+          <div class="text-3xl font-bold text-white mt-2"><%= day.photo_sessions.visible.count %></div>
+          <div class="text-xs text-gray-500 uppercase">sessions</div>
+          <div class="text-sm text-gray-500 mt-2">
             <%= day.photo_sessions.visible.sum { |ps| ps.photo_count || 0 } %> photos
           </div>
         </div>
@@ -193,34 +202,34 @@
     
     <% if @recent_sittings.any? %>
       <div class="overflow-x-auto">
-        <table class="oknotok-table">
+        <table class="w-full">
           <thead>
-            <tr>
-              <th class="py-2">Session</th>
-              <th class="py-2">Day</th>
-              <th class="py-2">Name</th>
-              <th class="py-2">Email</th>
-              <th class="py-2">Notes</th>
-              <th class="py-2">Time</th>
+            <tr class="border-b border-gray-700">
+              <th class="text-left py-3 px-2 text-xs text-gray-400 uppercase tracking-wider">Session</th>
+              <th class="text-left py-3 px-2 text-xs text-gray-400 uppercase tracking-wider">Day</th>
+              <th class="text-left py-3 px-2 text-xs text-gray-400 uppercase tracking-wider">Name</th>
+              <th class="text-left py-3 px-2 text-xs text-gray-400 uppercase tracking-wider">Email</th>
+              <th class="text-left py-3 px-2 text-xs text-gray-400 uppercase tracking-wider">Notes</th>
+              <th class="text-left py-3 px-2 text-xs text-gray-400 uppercase tracking-wider">Time</th>
             </tr>
           </thead>
           <tbody>
             <% @recent_sittings.each do |sitting| %>
-              <tr class="hover:bg-gray-800">
-                <td class="py-2 text-white">
+              <tr class="border-b border-gray-800 hover:bg-gray-800 transition">
+                <td class="py-3 px-2 text-white font-medium">
                   <% if sitting.photo_session.burst_id.start_with?('placeholder_') %>
-                    <span class="text-gray-500">CSV Import</span>
+                    <span class="text-gray-500 text-sm">CSV Import</span>
                   <% else %>
                     #<%= sitting.photo_session.session_number %>
                   <% end %>
                 </td>
-                <td class="py-2 text-white capitalize">
+                <td class="py-3 px-2 text-gray-300 capitalize text-sm">
                   <%= sitting.photo_session.session_day.day_name %>
                 </td>
-                <td class="py-2 text-white"><%= sitting.name || '-' %></td>
-                <td class="py-2 text-yellow-500"><%= sitting.email %></td>
-                <td class="py-2 text-gray-400 text-sm"><%= truncate(sitting.notes || '-', length: 30) %></td>
-                <td class="py-2 text-gray-400 text-sm">
+                <td class="py-3 px-2 text-gray-300"><%= sitting.name || '-' %></td>
+                <td class="py-3 px-2 text-yellow-500 font-medium"><%= sitting.email %></td>
+                <td class="py-3 px-2 text-gray-500 text-sm"><%= truncate(sitting.notes || '-', length: 30) %></td>
+                <td class="py-3 px-2 text-gray-500 text-sm font-mono">
                   <%= sitting.created_at.strftime('%b %d %H:%M') %>
                 </td>
               </tr>

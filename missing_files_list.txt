@@ -1,0 +1,13 @@
+3647,IMG_5106.jpg,monday,session_originals/monday/IMG_5106/IMG_5106.jpg
+3648,IMG_5107.jpg,monday,session_originals/monday/IMG_5107/IMG_5107.jpg
+3649,IMG_5108.jpg,monday,session_originals/monday/IMG_5108/IMG_5108.jpg
+3650,IMG_5109.jpg,monday,session_originals/monday/IMG_5109/IMG_5109.jpg
+3651,IMG_5110.jpg,monday,session_originals/monday/IMG_5110/IMG_5110.jpg
+3652,IMG_5111.jpg,monday,session_originals/monday/IMG_5111/IMG_5111.jpg
+3653,IMG_5112.jpg,monday,session_originals/monday/IMG_5112/IMG_5112.jpg
+3654,IMG_5113.jpg,monday,session_originals/monday/IMG_5113/IMG_5113.jpg
+3655,IMG_5114.jpg,monday,session_originals/monday/IMG_5114/IMG_5114.jpg
+3656,IMG_5115.jpg,monday,session_originals/monday/IMG_5115/IMG_5115.jpg
+3657,IMG_5116.jpg,monday,session_originals/monday/IMG_5116/IMG_5116.jpg
+3658,IMG_5117.jpg,monday,session_originals/monday/IMG_5117/IMG_5117.jpg
+3659,IMG_5118.jpg,monday,session_originals/monday/IMG_5118/IMG_5118.jpg
