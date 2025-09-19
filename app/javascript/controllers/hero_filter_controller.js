@@ -24,6 +24,7 @@ export default class extends Controller {
       this.updateButtonStates()
     } else {
       this.updateStats()
+      this.saveVisibleHeroOrder()
     }
   }
 
@@ -160,6 +161,7 @@ export default class extends Controller {
 
     this.updateStats()
     this.updateActiveFiltersDisplay()
+    this.saveVisibleHeroOrder()
   }
 
   hasActiveFilters() {
@@ -169,6 +171,7 @@ export default class extends Controller {
   applyFilters() {
     let visibleCount = 0
     const visibleDays = new Set()
+    const visibleOrder = []
 
     // Hide/show cards based on filters
     this.heroCardTargets.forEach(card => {
@@ -183,6 +186,12 @@ export default class extends Controller {
         const daySection = card.closest("[data-day-section]")
         if (daySection) {
           visibleDays.add(daySection)
+        }
+
+        const heroId = parseInt(card.dataset.heroId, 10)
+        const heroLink = card.querySelector('a[href]')
+        if (heroId && heroLink) {
+          visibleOrder.push({ id: heroId, url: heroLink.href })
         }
       } else {
         card.classList.add("hidden")
@@ -209,6 +218,7 @@ export default class extends Controller {
     })
 
     this.updateStats(visibleCount)
+    this.saveVisibleHeroOrder(visibleOrder)
 
     // Show/hide no results message
     if (this.hasNoResultsTarget) {
@@ -367,6 +377,27 @@ export default class extends Controller {
       if (this.hasFilterLogicHintTarget) {
         this.filterLogicHintTarget.classList.add("hidden")
       }
+    }
+  }
+
+  saveVisibleHeroOrder(visibleOrder = null) {
+    try {
+      let order = visibleOrder
+      if (!order) {
+        order = []
+        this.heroCardTargets.forEach(card => {
+          if (card.classList.contains('hidden')) return
+          const heroId = parseInt(card.dataset.heroId, 10)
+          const heroLink = card.querySelector('a[href]')
+          if (heroId && heroLink) {
+            order.push({ id: heroId, url: heroLink.href })
+          }
+        })
+      }
+
+      localStorage.setItem('heroVisibleHeroes', JSON.stringify(order))
+    } catch (error) {
+      console.warn('Failed to save visible hero order', error)
     }
   }
 

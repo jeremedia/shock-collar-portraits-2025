@@ -133,13 +133,13 @@
         <!-- Expression Tags -->
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-yellow-500 text-xs font-semibold w-20">Expression:</span>
-          <% ["smiling", "serious", "laughing", "surprised", "shocked", "confused", "orgasm", "pain", "stoic", "jazz hands"].each do |tag| %>
+          <% TagDefinition.expression_tags.each do |tag| %>
             <button data-hero-filter-target="filterButton"
                     data-filter-type="expression"
-                    data-filter-value="<%= tag %>"
+                    data-filter-value="<%= tag.name %>"
                     data-action="click->hero-filter#toggleFilter"
                     class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
-              <%= tag.split.map(&:capitalize).join(' ') %>
+              <%= tag.tag_with_emoji %>
             </button>
           <% end %>
         </div>
@@ -147,13 +147,13 @@
         <!-- Appearance Tags -->
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-yellow-500 text-xs font-semibold w-20">Appearance:</span>
-          <% ["blonde", "brunette", "redhead", "bald", "extensions", "beard", "mustache", "tattoos", "piercings", "topless", "eyes closed", "mouth open"].each do |tag| %>
+          <% TagDefinition.appearance_tags.each do |tag| %>
             <button data-hero-filter-target="filterButton"
                     data-filter-type="appearance"
-                    data-filter-value="<%= tag %>"
+                    data-filter-value="<%= tag.name %>"
                     data-action="click->hero-filter#toggleFilter"
                     class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
-              <%= tag.split.map(&:capitalize).join(' ') %>
+              <%= tag.tag_with_emoji %>
             </button>
           <% end %>
         </div>
@@ -161,13 +161,13 @@
         <!-- Accessory Tags -->
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-yellow-500 text-xs font-semibold w-20">Accessories:</span>
-          <% ["hat", "sunglasses", "goggles", "glasses", "mask", "costume", "jewelry", "body paint"].each do |tag| %>
+          <% TagDefinition.accessory_tags.each do |tag| %>
             <button data-hero-filter-target="filterButton"
                     data-filter-type="accessory"
-                    data-filter-value="<%= tag %>"
+                    data-filter-value="<%= tag.name %>"
                     data-action="click->hero-filter#toggleFilter"
                     class="px-3 py-1 text-xs font-medium border rounded-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700 hover:border-red-600">
-              <%= tag.split.map(&:capitalize).join(' ') %>
+              <%= tag.tag_with_emoji %>
             </button>
           <% end %>
         </div>
@@ -210,14 +210,16 @@
           <% sessions.each do |session| %>
             <% # Get the hero photo directly from PhotoSession %>
             <% hero_photo = session.hero_photo %>
+            <% has_portrait_crop = hero_photo&.portrait_crop_data.present? %>
             <% if hero_photo&.image&.attached? %>
               <% # Get gender, quality and tag data from the session %>
               <% gender = session.detected_gender&.downcase || "not-set" %>
               <% gender = "not-set" if gender.blank? %>
               <% quality = session.quality || "ok" %>
               <% all_tags = session.all_tags_list.join('|') %>
-              <div class="group relative aspect-square overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105"
+              <div class="group relative aspect-square overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105 <%= has_portrait_crop ? 'hero-card--portrait' : '' %>"
                    data-hero-filter-target="heroCard"
+                   data-hero-id="<%= hero_photo.id %>"
                    data-gender="<%= gender %>"
                    data-quality="<%= quality %>"
                    data-tags="<%= all_tags %>"
@@ -240,17 +242,20 @@
                       alt: "Hero shot" %>
 
                   <!-- Overlay on hover -->
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div class="absolute bottom-0 left-0 right-0 p-2">
-                      <p class="text-xs text-yellow-500 font-semibold">
-                        Session #<%= sprintf('%03d', session.session_number) %>
-                      </p>
-                      <p class="text-xs text-gray-400">
-                        <%= session.started_at.in_time_zone('America/Los_Angeles').strftime("%-l:%M %p") %>
-                      </p>
-                    </div>
-                  </div>
-                <% end %>
+                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                   <div class="absolute bottom-0 left-0 right-0 p-2">
+                     <p class="text-xs text-yellow-500 font-semibold">
+                       Session #<%= sprintf('%03d', session.session_number) %>
+                     </p>
+                     <p class="text-xs text-gray-400">
+                       <%= session.started_at.in_time_zone('America/Los_Angeles').strftime("%-l:%M %p") %>
+                     </p>
+                      <% if has_portrait_crop %>
+                        <p class="text-[10px] text-emerald-300/80 font-medium">Portrait crop saved</p>
+                      <% end %>
+                   </div>
+                 </div>
+               <% end %>
               </div>
             <% end %>
           <% end %>
@@ -341,5 +346,15 @@
     background: linear-gradient(90deg, transparent, rgba(234, 179, 8, 0.05), transparent);
     background-size: 1000px 100%;
     animation: shimmer 8s infinite linear;
+  }
+
+  .hero-card--portrait::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 3px solid rgba(34, 197, 94, 0.7);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.35);
+    border-radius: inherit;
   }
 </style>

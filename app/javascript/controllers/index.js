@@ -14,6 +14,7 @@ import ImagePreloaderController from "controllers/image_preloader_controller"
 import ImageViewerController from "controllers/image_viewer_controller"
 import LazyImagesController from "controllers/lazy_images_controller"
 import PortraitCropController from "controllers/portrait_crop_controller"
+import HeroNavigationController from "controllers/hero_navigation_controller"
 import PreloaderScreenController from "controllers/preloader_screen_controller"
 import QueueStatusController from "controllers/queue_status_controller"
 import StatsController from "controllers/stats_controller"
@@ -33,6 +34,7 @@ application.register("image-preloader", ImagePreloaderController)
 application.register("image-viewer", ImageViewerController)
 application.register("lazy-images", LazyImagesController)
 application.register("portrait-crop", PortraitCropController)
+application.register("hero-navigation", HeroNavigationController)
 application.register("preloader-screen", PreloaderScreenController)
 application.register("queue-status", QueueStatusController)
 application.register("stats", StatsController)
