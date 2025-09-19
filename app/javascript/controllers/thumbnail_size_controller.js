@@ -9,7 +9,7 @@ export default class extends Controller {
     if (savedSize) {
       this.sliderTarget.value = savedSize
     }
-    
+
     if (this.hasFaceModeTarget) {
       const savedFaceMode = localStorage.getItem('faceMode') === 'true'
       this.faceModeTarget.checked = savedFaceMode
@@ -19,7 +19,7 @@ export default class extends Controller {
       const savedVariant = localStorage.getItem('heroThumbnailVariant') || 'face'
       this.variantTarget.value = savedVariant
     }
-    
+
     // Set initial value and update display
     this.updateSize()
     if (this.hasFaceModeTarget) {
@@ -28,10 +28,58 @@ export default class extends Controller {
     if (this.hasVariantTarget) {
       this.updateVariant()
     }
-    
+
     // Show grids after size is set
     this.gridTargets.forEach(grid => {
       grid.classList.remove('hidden')
+    })
+
+    // Trigger initial image loading for visible thumbnails
+    // This ensures images load even if lazy-images controller connected before elements were visible
+    setTimeout(() => {
+      this.triggerVisibleImageLoading()
+    }, 200)
+  }
+
+  triggerVisibleImageLoading() {
+    // Determine which thumbnails should be visible
+    const faceMode = this.hasFaceModeTarget && this.faceModeTarget.checked
+    const selector = faceMode ? '.face-thumbnail' : '.regular-thumbnail'
+    const visibleContainers = document.querySelectorAll(selector)
+
+    visibleContainers.forEach(container => {
+      const img = container.querySelector('img[data-src]')
+      if (img && img.dataset.src) {
+        // Try to find and use the lazy-images controller
+        const lazyElement = container.closest('[data-controller*="lazy-images"]')
+        if (lazyElement) {
+          const lazyController = this.application.getControllerForElementAndIdentifier(lazyElement, 'lazy-images')
+          if (lazyController && lazyController.loadImage) {
+            lazyController.loadImage(img)
+          } else {
+            // Fallback: create an observer for this image
+            const observer = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                  const targetImg = entry.target
+                  if (targetImg.dataset.src) {
+                    targetImg.src = targetImg.dataset.src
+                    targetImg.removeAttribute('data-src')
+                    targetImg.style.opacity = '1'
+                    observer.unobserve(targetImg)
+                  }
+                }
+              })
+            }, { rootMargin: '100px', threshold: 0.1 })
+            observer.observe(img)
+          }
+        } else {
+          // Direct fallback: just load the image
+          img.src = img.dataset.src
+          img.removeAttribute('data-src')
+          img.style.opacity = '1'
+        }
+      }
     })
   }
   
@@ -109,9 +157,9 @@ export default class extends Controller {
   
   updateFaceMode() {
     if (!this.hasFaceModeTarget) return
-    
+
     const faceMode = this.faceModeTarget.checked
-    
+
     // Update all session cards to show face crops or regular thumbnails
     this.gridTargets.forEach(grid => {
       if (faceMode) {
@@ -120,7 +168,13 @@ export default class extends Controller {
         grid.classList.remove('face-mode')
       }
     })
-    
+
+    // Trigger lazy loading for newly visible images
+    // Wait for CSS transition to complete
+    setTimeout(() => {
+      this.triggerVisibleImageLoading()
+    }, 100) // Small delay to ensure CSS has applied
+
     // Update status text
     if (this.hasFaceStatusTarget) {
       if (faceMode) {
@@ -132,7 +186,7 @@ export default class extends Controller {
         this.faceStatusTarget.textContent = ''
       }
     }
-    
+
     // Store preference
     localStorage.setItem('faceMode', faceMode)
   }
@@ -178,6 +232,7 @@ export default class extends Controller {
           if (variant === 'portrait' && !portraitSrc) {
             card.classList.add('hero-card--portrait-missing')
           }
+          img.dataset.heroVariant = variant
         }
       })
     })

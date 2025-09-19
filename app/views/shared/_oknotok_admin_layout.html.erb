@@ -26,7 +26,11 @@
             class: "px-4 py-2 rounded transition #{current_page?(admin_face_detection_path) ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
           <span class="font-semibold">👤 Face Detection</span>
         <% end %>
-        
+
+        <%= link_to admin_tags_path,
+            class: "px-4 py-2 rounded transition #{controller_name == 'tags' ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
+          <span class="font-semibold">🏷️ Tag Management</span>
+        <% end %>
 
 
         <%= link_to admin_help_path,

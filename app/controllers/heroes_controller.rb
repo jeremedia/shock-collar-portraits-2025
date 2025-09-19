@@ -1,4 +1,5 @@
 class HeroesController < ApplicationController
+  helper HeroHelper
   before_action :authenticate_user!  # Require login
 
   def index

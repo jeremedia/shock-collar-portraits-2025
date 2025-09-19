@@ -1,0 +1,140 @@
+<% content_for :title, "Tag Management" %>
+
+<div class="bg-gray-900 text-white p-6">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-yellow-500">Tag Management</h1>
+      <%= link_to new_admin_tag_path, class: "px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors" do %>
+        + Add New Tag
+      <% end %>
+    </div>
+
+    <!-- Tag Categories -->
+    <% @tags_by_category.each do |category, tags| %>
+      <div class="mb-8 bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-yellow-400 mb-4 capitalize">
+          <%= category %> Tags
+          <span class="text-sm text-gray-400 ml-2">(<%= tags.count %> tags)</span>
+        </h2>
+
+        <% if tags.any? %>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-left border-b border-gray-700">
+                  <th class="pb-2 text-gray-400">Order</th>
+                  <th class="pb-2 text-gray-400">Tag</th>
+                  <th class="pb-2 text-gray-400">Display Name</th>
+                  <th class="pb-2 text-gray-400">Emoji</th>
+                  <th class="pb-2 text-gray-400">Status</th>
+                  <th class="pb-2 text-gray-400">Description</th>
+                  <th class="pb-2 text-gray-400 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody data-category="<%= category %>" class="sortable-tags">
+                <% tags.each do |tag| %>
+                  <tr class="border-b border-gray-700 hover:bg-gray-750 transition-colors" data-tag-id="<%= tag.id %>">
+                    <!-- Order & Move buttons -->
+                    <td class="py-3 pr-4">
+                      <div class="flex items-center gap-2">
+                        <span class="text-gray-400 text-sm cursor-move">☰</span>
+                        <span class="text-gray-500"><%= tag.display_order %></span>
+                        <div class="flex flex-col">
+                          <%= button_to "↑", move_up_admin_tag_path(tag), method: :patch,
+                              class: "text-xs text-gray-500 hover:text-white",
+                              disabled: tag == tags.first %>
+                          <%= button_to "↓", move_down_admin_tag_path(tag), method: :patch,
+                              class: "text-xs text-gray-500 hover:text-white",
+                              disabled: tag == tags.last %>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Tag Name -->
+                    <td class="py-3 pr-4">
+                      <code class="bg-gray-700 px-2 py-1 rounded text-yellow-300"><%= tag.name %></code>
+                    </td>
+
+                    <!-- Display Name -->
+                    <td class="py-3 pr-4 text-gray-300">
+                      <%= tag.display_text %>
+                    </td>
+
+                    <!-- Emoji -->
+                    <td class="py-3 pr-4 text-2xl">
+                      <%= tag.emoji || "-" %>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="py-3 pr-4">
+                      <% if tag.active %>
+                        <span class="px-2 py-1 bg-green-900 text-green-300 rounded-full text-xs">Active</span>
+                      <% else %>
+                        <span class="px-2 py-1 bg-red-900 text-red-300 rounded-full text-xs">Inactive</span>
+                      <% end %>
+                    </td>
+
+                    <!-- Description -->
+                    <td class="py-3 pr-4 text-gray-400 text-sm max-w-xs truncate">
+                      <%= tag.description || "-" %>
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="py-3 text-center">
+                      <div class="flex gap-2 justify-center">
+                        <%= link_to "Edit", edit_admin_tag_path(tag),
+                            class: "text-blue-400 hover:text-blue-300 text-sm" %>
+                        <%= button_to "Delete", admin_tag_path(tag), method: :delete,
+                            data: { confirm: "Are you sure?" },
+                            class: "text-red-400 hover:text-red-300 text-sm" %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <p class="text-gray-500">No tags in this category yet.</p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Instructions -->
+    <div class="mt-8 p-4 bg-blue-900 rounded-lg">
+      <h3 class="text-blue-300 font-semibold mb-2">How to use tags:</h3>
+      <ul class="text-blue-200 text-sm space-y-1 list-disc list-inside">
+        <li>Tags are used to categorize and filter photos in the gallery</li>
+        <li>Drag tags using the ☰ icon to reorder them within their category</li>
+        <li>Inactive tags won't appear in the tagging interface but existing tags remain</li>
+        <li>The tag name is used internally, display name is what users see</li>
+        <li>Add emojis to make tags more visually distinctive</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Enable drag and drop reordering
+  const sortables = document.querySelectorAll('.sortable-tags');
+  sortables.forEach(tbody => {
+    new Sortable(tbody, {
+      animation: 150,
+      handle: '.cursor-move',
+      onEnd: function(evt) {
+        const tagIds = Array.from(tbody.querySelectorAll('[data-tag-id]')).map(tr => tr.dataset.tagId);
+        fetch('/admin/tags/bulk_reorder', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+          },
+          body: JSON.stringify({ tag_ids: tagIds })
+        });
+      }
+    });
+  });
+});
+</script>

@@ -1,0 +1,86 @@
+<%= form_with(model: @tag, url: @tag.persisted? ? admin_tag_path(@tag) : admin_tags_path, local: true) do |form| %>
+  <% if @tag.errors.any? %>
+    <div class="mb-4 p-4 bg-red-900 text-red-300 rounded">
+      <h3 class="font-semibold mb-2"><%= pluralize(@tag.errors.count, "error") %> prohibited this tag from being saved:</h3>
+      <ul class="list-disc list-inside">
+        <% @tag.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="space-y-4">
+    <!-- Tag Name -->
+    <div>
+      <%= form.label :name, class: "block text-sm font-medium text-gray-300 mb-1" %>
+      <%= form.text_field :name, class: "w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-yellow-500 focus:outline-none",
+          placeholder: "e.g., smiling (lowercase, no spaces)" %>
+      <p class="text-xs text-gray-500 mt-1">Internal tag name used in the database. Use lowercase letters and underscores only.</p>
+    </div>
+
+    <!-- Category -->
+    <div>
+      <%= form.label :category, class: "block text-sm font-medium text-gray-300 mb-1" %>
+      <%= form.select :category, TagDefinition::CATEGORIES.map { |c| [c.capitalize, c] },
+          { prompt: "Select a category" },
+          class: "w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-yellow-500 focus:outline-none" %>
+      <p class="text-xs text-gray-500 mt-1">Choose the category this tag belongs to.</p>
+    </div>
+
+    <!-- Display Name -->
+    <div>
+      <%= form.label :display_name, class: "block text-sm font-medium text-gray-300 mb-1" %>
+      <%= form.text_field :display_name, class: "w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-yellow-500 focus:outline-none",
+          placeholder: "e.g., Smiling (optional, defaults to humanized tag name)" %>
+      <p class="text-xs text-gray-500 mt-1">The name shown to users. Leave blank to use the humanized tag name.</p>
+    </div>
+
+    <!-- Emoji -->
+    <div>
+      <%= form.label :emoji, class: "block text-sm font-medium text-gray-300 mb-1" %>
+      <%= form.text_field :emoji, class: "w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-yellow-500 focus:outline-none",
+          placeholder: "e.g., 😊 (optional)" %>
+      <p class="text-xs text-gray-500 mt-1">Optional emoji to make the tag more visual.</p>
+    </div>
+
+    <!-- Display Order -->
+    <div>
+      <%= form.label :display_order, class: "block text-sm font-medium text-gray-300 mb-1" %>
+      <%= form.number_field :display_order, class: "w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-yellow-500 focus:outline-none",
+          placeholder: "0" %>
+      <p class="text-xs text-gray-500 mt-1">Lower numbers appear first. Tags with the same order are sorted alphabetically.</p>
+    </div>
+
+    <!-- Color -->
+    <div>
+      <%= form.label :color, "Color (hex)", class: "block text-sm font-medium text-gray-300 mb-1" %>
+      <%= form.text_field :color, class: "w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-yellow-500 focus:outline-none",
+          placeholder: "e.g., #FF5733 (optional)" %>
+      <p class="text-xs text-gray-500 mt-1">Optional color for visual distinction in the UI.</p>
+    </div>
+
+    <!-- Description -->
+    <div>
+      <%= form.label :description, class: "block text-sm font-medium text-gray-300 mb-1" %>
+      <%= form.text_area :description, rows: 3, class: "w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-yellow-500 focus:outline-none",
+          placeholder: "Brief description of what this tag represents (optional)" %>
+      <p class="text-xs text-gray-500 mt-1">Optional description for admin reference.</p>
+    </div>
+
+    <!-- Active Status -->
+    <div>
+      <label class="flex items-center">
+        <%= form.check_box :active, class: "mr-2 w-4 h-4 text-yellow-600 bg-gray-800 border-gray-600 rounded focus:ring-yellow-500" %>
+        <span class="text-sm font-medium text-gray-300">Active</span>
+      </label>
+      <p class="text-xs text-gray-500 mt-1">Inactive tags won't appear in the tagging interface.</p>
+    </div>
+
+    <!-- Submit Buttons -->
+    <div class="flex gap-4 pt-4">
+      <%= form.submit class: "px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors cursor-pointer" %>
+      <%= link_to "Cancel", admin_tags_path, class: "px-6 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors" %>
+    </div>
+  </div>
+<% end %>

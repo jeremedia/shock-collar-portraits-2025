@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_18_132446) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_18_203405) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -156,6 +156,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_18_132446) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["photo_session_id"], name: "index_sittings_on_photo_session_id"
+  end
+
+  create_table "tag_definitions", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "category", null: false
+    t.string "display_name"
+    t.string "emoji"
+    t.integer "display_order", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.string "color"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_tag_definitions_on_active"
+    t.index ["category", "display_order"], name: "index_tag_definitions_on_category_and_display_order"
+    t.index ["category"], name: "index_tag_definitions_on_category"
+    t.index ["name"], name: "index_tag_definitions_on_name", unique: true
   end
 
   create_table "taggings", force: :cascade do |t|

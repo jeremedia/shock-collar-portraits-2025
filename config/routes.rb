@@ -71,6 +71,15 @@ Rails.application.routes.draw do
         post :reset
       end
     end
+    resources :tags do
+      member do
+        patch :move_up
+        patch :move_down
+      end
+      collection do
+        post :bulk_reorder
+      end
+    end
   end
   
   # Face detection admin
