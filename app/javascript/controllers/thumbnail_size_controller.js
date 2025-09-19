@@ -34,53 +34,24 @@ export default class extends Controller {
       grid.classList.remove('hidden')
     })
 
-    // Trigger initial image loading for visible thumbnails
-    // This ensures images load even if lazy-images controller connected before elements were visible
+    // Force load visible images on initial page load
+    // This handles cases where lazy-images controller doesn't trigger properly
     setTimeout(() => {
-      this.triggerVisibleImageLoading()
-    }, 200)
-  }
+      const faceMode = this.hasFaceModeTarget && this.faceModeTarget.checked
+      const containerClass = faceMode ? '.face-thumbnail' : '.regular-thumbnail'
+      const containers = document.querySelectorAll(containerClass)
 
-  triggerVisibleImageLoading() {
-    // Determine which thumbnails should be visible
-    const faceMode = this.hasFaceModeTarget && this.faceModeTarget.checked
-    const selector = faceMode ? '.face-thumbnail' : '.regular-thumbnail'
-    const visibleContainers = document.querySelectorAll(selector)
-
-    visibleContainers.forEach(container => {
-      const img = container.querySelector('img[data-src]')
-      if (img && img.dataset.src) {
-        // Try to find and use the lazy-images controller
-        const lazyElement = container.closest('[data-controller*="lazy-images"]')
-        if (lazyElement) {
-          const lazyController = this.application.getControllerForElementAndIdentifier(lazyElement, 'lazy-images')
-          if (lazyController && lazyController.loadImage) {
-            lazyController.loadImage(img)
-          } else {
-            // Fallback: create an observer for this image
-            const observer = new IntersectionObserver((entries) => {
-              entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                  const targetImg = entry.target
-                  if (targetImg.dataset.src) {
-                    targetImg.src = targetImg.dataset.src
-                    targetImg.removeAttribute('data-src')
-                    targetImg.style.opacity = '1'
-                    observer.unobserve(targetImg)
-                  }
-                }
-              })
-            }, { rootMargin: '100px', threshold: 0.1 })
-            observer.observe(img)
-          }
-        } else {
-          // Direct fallback: just load the image
+      containers.forEach(container => {
+        const img = container.querySelector('img[data-src]')
+        if (img && img.dataset.src && !img.src.includes(img.dataset.src)) {
+          // Load the image
           img.src = img.dataset.src
           img.removeAttribute('data-src')
+          img.classList.add('loaded')
           img.style.opacity = '1'
         }
-      }
-    })
+      })
+    }, 100) // Small delay to ensure everything is initialized
   }
   
   updateSize() {
@@ -169,11 +140,26 @@ export default class extends Controller {
       }
     })
 
-    // Trigger lazy loading for newly visible images
-    // Wait for CSS transition to complete
+    // After toggling face mode, we need to load images that are now visible
+    // The lazy-images controller doesn't handle display:none -> display:block changes
     setTimeout(() => {
-      this.triggerVisibleImageLoading()
-    }, 100) // Small delay to ensure CSS has applied
+      // Find the container type that should now be visible
+      const containerClass = faceMode ? '.face-thumbnail' : '.regular-thumbnail'
+      const containers = document.querySelectorAll(containerClass)
+
+      containers.forEach(container => {
+        // Find unloaded images (those with data-src attribute)
+        const img = container.querySelector('img[data-src]')
+        if (img && img.dataset.src) {
+          // Simply load the image directly
+          img.src = img.dataset.src
+          img.removeAttribute('data-src')
+          img.classList.add('loaded')
+          img.style.transition = 'opacity 0.3s ease-in-out'
+          img.style.opacity = '1'
+        }
+      })
+    }, 50) // Small delay to ensure CSS has applied
 
     // Update status text
     if (this.hasFaceStatusTarget) {
@@ -232,7 +218,6 @@ export default class extends Controller {
           if (variant === 'portrait' && !portraitSrc) {
             card.classList.add('hero-card--portrait-missing')
           }
-          img.dataset.heroVariant = variant
         }
       })
     })
