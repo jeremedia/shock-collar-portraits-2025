@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["slider", "grid", "count", "faceMode", "faceStatus"]
+  static targets = ["slider", "grid", "count", "faceMode", "faceStatus", "variant"]
   
   connect() {
     // Load saved preferences
@@ -10,14 +10,24 @@ export default class extends Controller {
       this.sliderTarget.value = savedSize
     }
     
-    const savedFaceMode = localStorage.getItem('faceMode') === 'true'
     if (this.hasFaceModeTarget) {
+      const savedFaceMode = localStorage.getItem('faceMode') === 'true'
       this.faceModeTarget.checked = savedFaceMode
+    }
+
+    if (this.hasVariantTarget) {
+      const savedVariant = localStorage.getItem('heroThumbnailVariant') || 'face'
+      this.variantTarget.value = savedVariant
     }
     
     // Set initial value and update display
     this.updateSize()
-    this.updateFaceMode()
+    if (this.hasFaceModeTarget) {
+      this.updateFaceMode()
+    }
+    if (this.hasVariantTarget) {
+      this.updateVariant()
+    }
     
     // Show grids after size is set
     this.gridTargets.forEach(grid => {
@@ -87,6 +97,10 @@ export default class extends Controller {
     
     // Store preference in localStorage
     localStorage.setItem('thumbnailSize', size)
+
+    if (this.hasVariantTarget) {
+      this.updateVariant()
+    }
   }
   
   toggleFaceMode() {
@@ -121,5 +135,53 @@ export default class extends Controller {
     
     // Store preference
     localStorage.setItem('faceMode', faceMode)
+  }
+
+  updateVariant() {
+    if (!this.hasVariantTarget) return
+
+    const selected = this.variantTarget.value
+    const allowed = ['thumb', 'face', 'portrait']
+    const variant = allowed.includes(selected) ? selected : 'face'
+
+    this.gridTargets.forEach(grid => {
+      const images = grid.querySelectorAll('img[data-hero-thumb-src]')
+
+      images.forEach(img => {
+        const thumbSrc = img.dataset.heroThumbSrc
+        const faceSrc = img.dataset.heroFaceSrc
+        const portraitSrc = img.dataset.heroPortraitSrc
+
+        let targetSrc
+
+        switch (variant) {
+          case 'thumb':
+            targetSrc = thumbSrc || faceSrc || portraitSrc
+            break
+          case 'portrait':
+            targetSrc = portraitSrc || faceSrc || thumbSrc
+            break
+          case 'face':
+          default:
+            targetSrc = faceSrc || thumbSrc || portraitSrc
+            break
+        }
+
+        if (targetSrc && img.src !== targetSrc) {
+          img.src = targetSrc
+        }
+
+        const card = img.closest('[data-hero-filter-target="heroCard"]')
+        if (card) {
+          card.classList.remove('hero-variant-thumb', 'hero-variant-face', 'hero-variant-portrait', 'hero-card--portrait-missing')
+          card.classList.add(`hero-variant-${variant}`)
+          if (variant === 'portrait' && !portraitSrc) {
+            card.classList.add('hero-card--portrait-missing')
+          }
+        }
+      })
+    })
+
+    localStorage.setItem('heroThumbnailVariant', variant)
   }
 }

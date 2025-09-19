@@ -217,6 +217,33 @@
               <% gender = "not-set" if gender.blank? %>
               <% quality = session.quality || "ok" %>
               <% all_tags = session.all_tags_list.join('|') %>
+              <% thumb_url = nil %>
+              <% face_variant_url = nil %>
+              <% portrait_variant_url = nil %>
+
+              <% begin %>
+                thumb_url = hero_photo.image.variant(:thumb).url if hero_photo&.image&.attached?
+              <% rescue => e %>
+                Rails.logger.debug { "Hero thumb variant missing for photo ##{hero_photo&.id}: #{e.message}" }
+              <% end %>
+
+              <% begin %>
+                face_variant_url = hero_photo.face_crop_url(size: 320)
+              <% rescue => e %>
+                Rails.logger.debug { "Hero face crop missing for photo ##{hero_photo&.id}: #{e.message}" }
+                face_variant_url = nil
+              <% end %>
+              <% face_variant_url ||= thumb_url %>
+
+              <% begin %>
+                portrait_variant_url = hero_photo.portrait_crop_url(width: 360, height: 640)
+              <% rescue => e %>
+                Rails.logger.debug { "Hero portrait crop missing for photo ##{hero_photo&.id}: #{e.message}" }
+                portrait_variant_url = nil
+              <% end %>
+
+              <% display_url = face_variant_url || thumb_url || hero_photo.image.url %>
+
               <div class="group relative aspect-square overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105 <%= has_portrait_crop ? 'hero-card--portrait' : '' %>"
                    data-hero-filter-target="heroCard"
                    data-hero-id="<%= hero_photo.id %>"
@@ -225,19 +252,16 @@
                    data-tags="<%= all_tags %>"
                    data-appearance-tags="<%= session.appearance_tag_list.join('|') %>"
                    data-expression-tags="<%= session.expression_tag_list.join('|') %>"
-                   data-accessory-tags="<%= session.accessory_tag_list.join('|') %>">
+                   data-accessory-tags="<%= session.accessory_tag_list.join('|') %>"
+                   data-portrait-available="<%= portrait_variant_url.present? %>">
                 <%= link_to hero_path(hero_photo), class: "block w-full h-full", data: { turbo: false } do %>
-                  <%
-                    # Use face crop if available, otherwise fall back to regular thumb
-                    image_url = if hero_photo.face_data.present?
-                      face_url = hero_photo.face_crop_url(size: 300)
-                      face_url.present? ? face_url : hero_photo.image.variant(:thumb).url
-                    else
-                      hero_photo.image.variant(:thumb).url
-                    end
-                  %>
-                  <%= image_tag image_url,
-                      class: "w-full h-full object-cover",
+                  <%= image_tag display_url,
+                      class: "w-full h-full object-cover hero-card__image",
+                      data: {
+                        hero_thumb_src: thumb_url,
+                        hero_face_src: face_variant_url,
+                        hero_portrait_src: portrait_variant_url
+                      },
                       loading: "lazy",
                       alt: "Hero shot" %>
 
@@ -290,6 +314,22 @@
                  style="background: linear-gradient(to right, #dc2626 0%, #dc2626 33%, #374151 33%, #374151 100%);">
           <span class="text-gray-400 text-xs">Small</span>
           <span data-thumbnail-size-target="count" class="text-yellow-500 text-sm ml-2">(4 per row)</span>
+        </div>
+
+        <!-- Divider -->
+        <div class="w-px h-8 bg-red-700/50"></div>
+
+        <!-- Variant Selector -->
+        <div class="flex items-center gap-3">
+          <label for="thumbnail-variant" class="text-yellow-500 text-sm font-semibold">Variant:</label>
+          <select id="thumbnail-variant"
+                  data-thumbnail-size-target="variant"
+                  data-action="change->thumbnail-size#updateVariant"
+                  class="bg-gray-900 border border-red-700 text-yellow-500 text-sm rounded px-2 py-1 focus:outline-none focus:border-yellow-500">
+            <option value="thumb">Thumb</option>
+            <option value="face" selected>Face</option>
+            <option value="portrait">Portrait</option>
+          </select>
         </div>
       </div>
     </div>
@@ -356,5 +396,18 @@
     border: 3px solid rgba(34, 197, 94, 0.7);
     box-shadow: 0 0 12px rgba(34, 197, 94, 0.35);
     border-radius: inherit;
+  }
+
+  .hero-card__image {
+    transition: opacity 0.2s ease;
+  }
+
+  .hero-card--portrait.hero-card--portrait-missing::after {
+    border-color: rgba(249, 115, 22, 0.8);
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.4);
+  }
+
+  .hero-variant-portrait.hero-card--portrait-missing .hero-card__image {
+    opacity: 0.75;
   }
 </style>
