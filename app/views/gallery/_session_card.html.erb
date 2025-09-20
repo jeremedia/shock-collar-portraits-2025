@@ -17,15 +17,17 @@
 %>
 
 <%= link_to session_path(session.id),
-            class: "session-card block bg-black border-2 border-red-700 rounded-lg overflow-hidden hover:border-yellow-500 transition-all duration-300 transform hover:scale-105",
+            class: "session-card block bg-black border-2 border-red-700 rounded-lg overflow-hidden hover:border-yellow-500 transition-all duration-300 transform hover:scale-105 hero-variant-face",
             data: {
               session_id: session.id,
               burst_id: session.burst_id,
-              has_faces: has_faces
+              has_faces: has_faces,
+              thumbnail_card: true
             } do %>
   
-  <div class="thumbnail-container relative aspect-[3/4] bg-gradient-to-b from-red-900/20 to-black overflow-hidden"
-       data-controller="lazy-images">
+  <div class="thumbnail-container relative bg-gradient-to-b from-red-900/20 to-black overflow-hidden"
+       data-controller="lazy-images"
+       data-thumbnail-container="true">
 
     <!-- Crown emoji for hero selections -->
     <% if has_hero_selection %>
@@ -34,74 +36,24 @@
       </div>
     <% end %>
 
-    <!-- Regular thumbnail (shown by default) -->
-    <div class="regular-thumbnail w-full h-full">
-      <% if display_photo&.image&.attached? %>
-        <% cache ["session_thumb_url", display_photo.id, display_photo.updated_at] do %>
-          <img data-lazy-images-target="image"
-               data-src="<%= display_photo.image.variant(:thumb).url %>"
-               src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
-               alt="Sitting <%= session_id %>"
-               style="opacity: 0.3;"
-               class="w-full h-full object-cover" />
-        <% end %>
-      <% elsif display_photo %>
-        <img data-lazy-images-target="image"
-             data-src="<%= photo_path(path: display_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')) %>"
-             alt="Sitting <%= session_number %>"
-             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
-             style="opacity: 0.3;"
-             class="w-full h-full object-cover" />
-      <% else %>
-        <div class="flex items-center justify-center h-full text-gray-600">
-          No Image
-        </div>
-      <% end %>
-    </div>
-    
-    <!-- Face crop thumbnail (shown in face mode) -->
-    <div class="face-thumbnail w-full h-full hidden">
-      <% if has_faces && face_photo&.image&.attached? %>
-        <% cache ["session_face_url", face_photo.id, face_photo.updated_at] do %>
-          <% face_url = face_photo.face_crop_url(size: 300) %>
-          <% if face_url.present? %>
-            <img data-lazy-images-target="image"
-                 data-src="<%= face_url %>"
-                 alt="Sitting <%= session_id %>"
-                 style="opacity: 0;"
-                 class="w-full h-full object-cover bg-gray-800" />
-          <% else %>
-            <!-- Fallback to regular thumbnail if face crop fails -->
-            <img data-lazy-images-target="image"
-                 data-src="<%= face_photo.image.variant(:thumb).url %>"
-                 alt="Sitting <%= session_id %>"
-                 style="opacity: 0;"
-                 class="w-full h-full object-cover bg-gray-800" />
-          <% end %>
-        <% end %>
-      <% elsif display_photo&.image&.attached? %>
-        <!-- No face data, show regular thumbnail -->
-        <% cache ["session_thumb_url_face_fallback", display_photo.id, display_photo.updated_at] do %>
-          <img data-lazy-images-target="image"
-               data-src="<%= display_photo.image.variant(:thumb).url %>"
-               alt="Sitting <%= session_id %>"
-               src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
-               style="opacity: 0.3;"
-               class="w-full h-full object-cover" />
-        <% end %>
-      <% elsif display_photo %>
-        <img data-lazy-images-target="image"
-             data-src="<%= photo_path(path: display_photo.original_path.sub('/Users/jeremy/Desktop/OK-SHOCK-25/', '')) %>"
-             alt="Sitting <%= session_number %>"
-             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
-             style="opacity: 0.3;"
-             class="w-full h-full object-cover" />
-      <% else %>
-        <div class="flex items-center justify-center h-full text-gray-600">
-          No Image
-        </div>
-      <% end %>
-    </div>
+    <% sources = hero_thumbnail_sources(display_photo) %>
+    <% display_url = sources[:default] %>
+    <% thumb_url = sources[:thumb] %>
+    <% face_url = sources[:face] %>
+    <% portrait_url = sources[:portrait] %>
+
+    <img data-lazy-images-target="image"
+         data-src="<%= display_url || 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' %>"
+         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23374151'/%3E%3C/svg%3E"
+         data-hero-thumb-src="<%= thumb_url %>"
+         data-hero-face-src="<%= face_url %>"
+         data-hero-portrait-src="<%= portrait_url %>"
+         data-hero-current-src="<%= display_url %>"
+         data-hero-variant="face"
+         alt="Sitting <%= session_id %>"
+         class="w-full h-full object-cover session-thumbnail" />
+
+    <%= render "shared/thumbnail_loader" %>
   </div>
   
   <div class="session-info p-4 bg-gradient-to-b from-red-900/10 to-black/50">

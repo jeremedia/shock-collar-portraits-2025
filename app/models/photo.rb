@@ -293,7 +293,7 @@ class Photo < ApplicationRecord
 
   def portrait_crop_url(width: 720, height: 1280)
     return nil unless image.attached?
-
+    p "Generating portrait crop URL for Photo ##{id} at #{width}x#{height}"
     variant_params = portrait_crop_variant(width: width, height: height)
     return nil unless variant_params
 

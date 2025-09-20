@@ -1,5 +1,6 @@
 class GalleryController < ApplicationController
   helper VariantUrlHelper
+  helper HeroHelper
   skip_before_action :verify_authenticity_token, only: [:update_hero, :reject_photo, :save_email, :hide_session]
   # Preloader disabled - all variants are pre-generated
   # before_action :check_preloader_shown, only: [:index]

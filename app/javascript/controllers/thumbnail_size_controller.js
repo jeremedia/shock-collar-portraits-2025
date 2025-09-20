@@ -193,6 +193,7 @@ export default class extends Controller {
         const portraitSrc = img.dataset.heroPortraitSrc
 
         let targetSrc
+        let appliedVariant = variant
 
         switch (variant) {
           case 'thumb':
@@ -207,14 +208,38 @@ export default class extends Controller {
             break
         }
 
-        if (targetSrc && img.src !== targetSrc) {
-          img.src = targetSrc
+        const currentSrc = img.dataset.heroCurrentSrc
+        const needsLoad = targetSrc && targetSrc !== currentSrc
+
+        if (needsLoad && targetSrc) {
+          this.notifyLoading(img)
+          img.style.opacity = '0'
+          if (img.dataset.src !== undefined) {
+            img.dataset.src = targetSrc
+            if (img.classList.contains('loaded')) {
+              this.swapImageSource(img, targetSrc)
+            }
+          } else if (img.src !== targetSrc) {
+            this.swapImageSource(img, targetSrc)
+          }
+        } else if (targetSrc) {
+          img.style.opacity = '1'
         }
 
-        const card = img.closest('[data-hero-filter-target="heroCard"]')
+        if (targetSrc === thumbSrc && thumbSrc) {
+          appliedVariant = 'thumb'
+        } else if (targetSrc === faceSrc && faceSrc) {
+          appliedVariant = 'face'
+        } else if (targetSrc === portraitSrc && portraitSrc) {
+          appliedVariant = 'portrait'
+        }
+
+        img.dataset.heroVariant = appliedVariant
+
+        const card = img.closest('[data-hero-filter-target="heroCard"]') || img.closest('[data-thumbnail-card]')
         if (card) {
           card.classList.remove('hero-variant-thumb', 'hero-variant-face', 'hero-variant-portrait', 'hero-card--portrait-missing')
-          card.classList.add(`hero-variant-${variant}`)
+          card.classList.add(`hero-variant-${appliedVariant}`)
           if (variant === 'portrait' && !portraitSrc) {
             card.classList.add('hero-card--portrait-missing')
           }
@@ -223,5 +248,29 @@ export default class extends Controller {
     })
 
     localStorage.setItem('heroThumbnailVariant', variant)
+  }
+
+  swapImageSource(img, targetSrc) {
+    const loader = new Image()
+    loader.onload = () => {
+      img.src = targetSrc
+      img.style.opacity = '1'
+      img.classList.add('loaded')
+      img.dataset.heroCurrentSrc = targetSrc
+      this.notifyLoaded(img)
+    }
+    loader.onerror = () => {
+      img.src = targetSrc
+      this.notifyLoaded(img)
+    }
+    loader.src = targetSrc
+  }
+
+  notifyLoading(img) {
+    img.dispatchEvent(new CustomEvent('thumbnail:loading', { bubbles: true }))
+  }
+
+  notifyLoaded(img) {
+    img.dispatchEvent(new CustomEvent('thumbnail:loaded', { bubbles: true }))
   }
 }

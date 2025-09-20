@@ -78,17 +78,17 @@
         <!-- Divider -->
         <div class="w-px h-8 bg-red-700/50"></div>
         
-        <!-- Face Mode Checkbox -->
-        <div class="flex items-center gap-2">
-          <input type="checkbox"
-                 id="face-mode-toggle"
-                 data-thumbnail-size-target="faceMode"
-                 data-action="change->thumbnail-size#toggleFaceMode"
-                 class="w-4 h-4 rounded border-red-700 bg-black text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0">
-          <label for="face-mode-toggle" class="text-yellow-500 text-sm font-semibold cursor-pointer select-none">
-            Faces Only
-          </label>
-          <span data-thumbnail-size-target="faceStatus" class="text-gray-400 text-xs ml-1"></span>
+        <!-- Variant Selector -->
+        <div class="flex items-center gap-3">
+          <label for="thumbnail-variant" class="text-yellow-500 text-sm font-semibold">Variant:</label>
+          <select id="thumbnail-variant"
+                  data-thumbnail-size-target="variant"
+                  data-action="change->thumbnail-size#updateVariant"
+                  class="bg-gray-900 border border-red-700 text-yellow-500 text-sm rounded px-2 py-1 focus:outline-none focus:border-yellow-500">
+            <option value="thumb">Thumb</option>
+            <option value="face" selected>Face</option>
+            <option value="portrait">Portrait</option>
+          </select>
         </div>
 
         <% if current_user&.admin? %>
@@ -152,3 +152,33 @@
   %>
   <%# end %>
 </div>
+
+<style>
+  .hero-card__image {
+    transition: opacity 0.25s ease;
+  }
+
+  [data-thumbnail-container] {
+    transition: aspect-ratio 0.18s ease;
+  }
+
+  .hero-variant-thumb [data-thumbnail-container],
+  .hero-variant-thumb[data-thumbnail-card="true"] [data-thumbnail-container] {
+    aspect-ratio: 4 / 3;
+  }
+
+  .hero-variant-face [data-thumbnail-container],
+  .hero-variant-face[data-thumbnail-card="true"] [data-thumbnail-container] {
+    aspect-ratio: 1 / 1;
+  }
+
+  .hero-variant-portrait [data-thumbnail-container],
+  .hero-variant-portrait[data-thumbnail-card="true"] [data-thumbnail-container] {
+    aspect-ratio: 9 / 16;
+  }
+
+  .hero-variant-portrait.hero-card--portrait-missing .hero-card__image,
+  .hero-variant-portrait[data-thumbnail-card="true"].hero-card--portrait-missing .hero-card__image {
+    opacity: 0.75;
+  }
+</style>

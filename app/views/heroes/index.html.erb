@@ -223,8 +223,9 @@
               <% face_variant_url = sources[:face] %>
               <% portrait_variant_url = sources[:portrait] %>
 
-              <div class="group relative aspect-square overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105 <%= has_portrait_crop ? 'hero-card--portrait' : '' %>"
+              <div class="group relative overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105 hero-variant-face <%= has_portrait_crop ? 'hero-card--portrait' : '' %>"
                    data-hero-filter-target="heroCard"
+                   data-thumbnail-card="true"
                    data-hero-id="<%= hero_photo.id %>"
                    data-gender="<%= gender %>"
                    data-quality="<%= quality %>"
@@ -234,32 +235,39 @@
                    data-accessory-tags="<%= session.accessory_tag_list.join('|') %>"
                    data-portrait-available="<%= portrait_variant_url.present? %>">
                 <%= link_to hero_path(hero_photo), class: "block w-full h-full", data: { turbo: false } do %>
-                  <%= image_tag display_url,
-                      class: "w-full h-full object-cover hero-card__image",
-                      data: {
-                        hero_thumb_src: thumb_url,
-                        hero_face_src: face_variant_url,
-                        hero_portrait_src: portrait_variant_url,
-                        hero_variant: 'face'
-                      },
-                      loading: "lazy",
-                      alt: "Hero shot" %>
+                  <div class="thumbnail-container relative bg-gradient-to-b from-red-900/20 to-black overflow-hidden"
+                       data-controller="lazy-images"
+                       data-thumbnail-container="true">
+                    <%= image_tag display_url,
+                        class: "w-full h-full object-cover hero-card__image",
+                        data: {
+                          hero_thumb_src: thumb_url,
+                          hero_face_src: face_variant_url,
+                          hero_portrait_src: portrait_variant_url,
+                          hero_current_src: display_url,
+                          hero_variant: 'face'
+                        },
+                        loading: "lazy",
+                        alt: "Hero shot" %>
 
-                  <!-- Overlay on hover -->
-                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                   <div class="absolute bottom-0 left-0 right-0 p-2">
-                     <p class="text-xs text-yellow-500 font-semibold">
-                       Session #<%= sprintf('%03d', session.session_number) %>
-                     </p>
-                     <p class="text-xs text-gray-400">
-                       <%= session.started_at.in_time_zone('America/Los_Angeles').strftime("%-l:%M %p") %>
-                     </p>
-                      <% if has_portrait_crop %>
-                        <p class="text-[10px] text-emerald-300/80 font-medium">Portrait crop saved</p>
-                      <% end %>
-                   </div>
-                 </div>
-               <% end %>
+                    <%= render "shared/thumbnail_loader" %>
+
+                    <!-- Overlay on hover -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div class="absolute bottom-0 left-0 right-0 p-2">
+                        <p class="text-xs text-yellow-500 font-semibold">
+                          Session #<%= sprintf('%03d', session.session_number) %>
+                        </p>
+                        <p class="text-xs text-gray-400">
+                          <%= session.started_at.in_time_zone('America/Los_Angeles').strftime("%-l:%M %p") %>
+                        </p>
+                        <% if has_portrait_crop %>
+                          <p class="text-[10px] text-emerald-300/80 font-medium">Portrait crop saved</p>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
               </div>
             <% end %>
           <% end %>
@@ -379,7 +387,23 @@
   }
 
   .hero-card__image {
-    transition: opacity 0.2s ease;
+    transition: opacity 0.25s ease;
+  }
+
+  [data-thumbnail-container] {
+    transition: aspect-ratio 0.18s ease;
+  }
+
+  .hero-variant-thumb [data-thumbnail-container] {
+    aspect-ratio: 4 / 3;
+  }
+
+  .hero-variant-face [data-thumbnail-container] {
+    aspect-ratio: 1 / 1;
+  }
+
+  .hero-variant-portrait [data-thumbnail-container] {
+    aspect-ratio: 9 / 16;
   }
 
   .hero-card--portrait.hero-card--portrait-missing::after {
