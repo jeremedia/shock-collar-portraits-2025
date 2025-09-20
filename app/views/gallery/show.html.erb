@@ -137,10 +137,12 @@
             <% end %>
           <% else %>
             <!-- Placeholder for lazy loading -->
-            <div class="w-full h-full flex items-center justify-center">
-              <div class="text-gray-500">Loading...</div>
+            <div class="w-full h-full flex items-center justify-center text-gray-600 text-sm tracking-wide uppercase"
+                 data-image-viewer-placeholder>
+              Preparing photo…
             </div>
           <% end %>
+          <%= render "shared/thumbnail_loader" %>
           <!-- Face Rectangle Overlay -->
           <div class="absolute inset-0 pointer-events-none hidden" data-image-viewer-target="faceOverlay"></div>
         </div>
@@ -275,7 +277,7 @@
                   data-photo-id="<%= photo.id %>"
                   data-rejected="<%= photo.rejected %>"
                   data-image-viewer-target="thumbnail"
-                  class="flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 image-container <%= 
+                  class="relative flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 image-container <%= 
                     if @hero_photo&.id == photo.id
                       'border-yellow-500 border-4'
                     elsif index == @initial_index 
@@ -295,6 +297,7 @@
                             loading: "lazy",
                             class: "w-full h-full object-cover" %>
             <% end %>
+            <%= render "shared/thumbnail_loader" %>
           </button>
         <% end %>
       </div>

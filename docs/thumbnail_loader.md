@@ -26,6 +26,10 @@ The loader automatically manages its state when the container dispatches these c
 
 Both the `lazy_images_controller` and `thumbnail_size_controller` already emit these events. Controllers in other areas can adopt the same pattern to reuse the animation.
 
+### Image Viewer
+
+The primary gallery photo viewer (`image_viewer_controller.js`) now renders the shared loader on both the hero frame and the thumbnail strip. The controller manages loader state internally—no extra markup beyond the partial is needed. When adding new viewer panes, render the partial and call `attachImageLoader(img, container)` after inserting your `<img>` element so the loader can coordinate the fade.
+
 ## Behavior
 
 - **Deferred reveal**: the overlay only appears if loading exceeds one second.

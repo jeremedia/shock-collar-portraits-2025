@@ -4,6 +4,10 @@ export default class extends Controller {
   static targets = ["image", "counter", "thumbnail", "heroInput", "heroButton", "heroPhotoId", "emailForm", "rejectInput", "rejectButton", "splitButton", "imageWrapper", "faceOverlay", "faceRectangleToggle", "downloadButton", "exifPanel", "exifContent", "mainContainer", "photoContainer"]
   static values = { total: Number, sessionId: String, showRejected: Boolean, initialIndex: Number, prevSession: String, nextSession: String }
   
+  initialize() {
+    this.loaderStates = new WeakMap()
+  }
+
   connect() {
     // Check URL parameter for starting position
     const urlParams = new URLSearchParams(window.location.search)
@@ -51,51 +55,19 @@ export default class extends Controller {
   }
   
   setupImageLoading() {
-    // Add loading states to main images
     this.imageTargets.forEach((container) => {
-      this.addLoadingOverlay(container, 'loading-spinner')
-    })
-    
-    // Add loading states to thumbnails
-    this.thumbnailTargets.forEach((thumb) => {
-      this.addLoadingOverlay(thumb, 'loading-spinner loading-spinner-small')
-    })
-  }
-  
-  addLoadingOverlay(container, spinnerClass) {
-    const img = container.querySelector('img')
-    if (!img) return
-    
-    // Create loading overlay
-    const overlay = document.createElement('div')
-    overlay.className = 'loading-overlay'
-    
-    // Create spinner
-    const spinner = document.createElement('div')
-    spinner.className = spinnerClass
-    overlay.appendChild(spinner)
-    
-    // Add overlay to container
-    container.appendChild(overlay)
-    
-    // Remove overlay when image loads
-    const removeOverlay = () => {
-      if (overlay && overlay.parentNode) {
-        overlay.remove()
+      const img = container.querySelector('img')
+      if (img) {
+        this.attachImageLoader(img, container)
       }
-    }
-    
-    // Check if image is already loaded
-    if (img.complete && img.naturalHeight > 0) {
-      removeOverlay()
-    } else {
-      img.addEventListener('load', () => {
-        removeOverlay()
-        // Update face rectangles after image loads
-        this.updateFaceRectangles()
-      }, { once: true })
-      img.addEventListener('error', removeOverlay, { once: true })
-    }
+    })
+
+    this.thumbnailTargets.forEach((thumb) => {
+      const img = thumb.querySelector('img')
+      if (img) {
+        this.attachImageLoader(img, thumb)
+      }
+    })
   }
   
   disconnect() {
@@ -757,22 +729,27 @@ export default class extends Controller {
     if (!wrapper) return
     
     // Clear existing content
-    const existingContent = wrapper.querySelector('img, div')
-    if (existingContent) {
-      existingContent.remove()
+    const placeholder = wrapper.querySelector('[data-image-viewer-placeholder]')
+    if (placeholder) {
+      placeholder.remove()
     }
-    
+
+    const currentImg = wrapper.querySelector('img')
+    if (currentImg) {
+      currentImg.remove()
+    }
+
     // Create and insert the image
     const img = document.createElement('img')
-    img.src = largeUrl || fallbackUrl
     img.alt = `Photo ${index + 1}`
     img.className = 'w-full h-full object-contain cursor-pointer'
     img.dataset.action = 'click->image-viewer#next'
     img.dataset.photoId = photoId
-    
-    // Add loading overlay
-    this.addLoadingOverlay(container, 'loading-spinner')
-    
+
+    this.attachImageLoader(img, container)
+
+    img.src = largeUrl || fallbackUrl
+
     wrapper.appendChild(img)
     
     // Preload adjacent images for smoother navigation
@@ -811,6 +788,149 @@ export default class extends Controller {
     // Create a hidden image to trigger download
     const preloadImg = new Image()
     preloadImg.src = largeUrl || fallbackUrl
+  }
+
+  attachImageLoader(img, container) {
+    if (!img || !container) return
+
+    const loader = this.findLoader(container)
+    if (!loader) return
+
+    if (img.dataset.loaderBound === 'true') {
+      if (!(img.complete && img.naturalWidth > 0)) {
+        this.queueLoader(container)
+      } else {
+        this.resetLoader(container)
+      }
+      return
+    }
+
+    const handleLoad = () => {
+      this.completeLoader(container)
+      if (container.dataset.imageViewerTarget === 'image') {
+        this.updateFaceRectangles()
+      }
+      img.removeEventListener('load', handleLoad)
+      img.removeEventListener('error', handleError)
+      delete img.dataset.loaderBound
+    }
+
+    const handleError = () => {
+      this.resetLoader(container)
+      img.removeEventListener('load', handleLoad)
+      img.removeEventListener('error', handleError)
+      delete img.dataset.loaderBound
+    }
+
+    img.addEventListener('load', handleLoad)
+    img.addEventListener('error', handleError)
+    img.dataset.loaderBound = 'true'
+
+    if (!(img.complete && img.naturalWidth > 0)) {
+      this.queueLoader(container)
+    } else {
+      this.resetLoader(container)
+    }
+  }
+
+  findLoader(container) {
+    return container.querySelector('.thumbnail-loader')
+  }
+
+  loaderState(container) {
+    if (!this.loaderStates) {
+      this.loaderStates = new WeakMap()
+    }
+
+    let state = this.loaderStates.get(container)
+    if (!state) {
+      state = { shown: false, delayTimeout: null, completeTimeout: null }
+      this.loaderStates.set(container, state)
+    }
+
+    return state
+  }
+
+  queueLoader(container) {
+    const loader = this.findLoader(container)
+    if (!loader) return
+
+    const state = this.loaderState(container)
+
+    if (state.completeTimeout) {
+      clearTimeout(state.completeTimeout)
+      state.completeTimeout = null
+    }
+
+    if (state.shown) {
+      loader.classList.remove('thumbnail-loader--complete', 'thumbnail-loader--fading')
+      loader.classList.add('thumbnail-loader--active')
+      return
+    }
+
+    if (state.delayTimeout) {
+      clearTimeout(state.delayTimeout)
+    }
+
+    state.delayTimeout = setTimeout(() => {
+      loader.classList.remove('thumbnail-loader--complete', 'thumbnail-loader--fading')
+      loader.classList.add('thumbnail-loader--active')
+      state.shown = true
+    }, 1000)
+  }
+
+  completeLoader(container) {
+    const loader = this.findLoader(container)
+    if (!loader) return
+
+    const state = this.loaderState(container)
+
+    if (state.delayTimeout) {
+      clearTimeout(state.delayTimeout)
+      state.delayTimeout = null
+    }
+
+    if (!state.shown) {
+      this.startFadeOut(container, loader, state)
+      return
+    }
+
+    loader.classList.add('thumbnail-loader--complete')
+    this.startFadeOut(container, loader, state)
+  }
+
+  resetLoader(container) {
+    const loader = this.findLoader(container)
+    if (!loader) return
+
+    const state = this.loaderState(container)
+
+    if (state.delayTimeout) {
+      clearTimeout(state.delayTimeout)
+      state.delayTimeout = null
+    }
+
+    if (state.completeTimeout) {
+      clearTimeout(state.completeTimeout)
+      state.completeTimeout = null
+    }
+
+    loader.classList.remove('thumbnail-loader--active', 'thumbnail-loader--complete', 'thumbnail-loader--fading')
+    state.shown = false
+  }
+
+  startFadeOut(container, loader, state) {
+    loader.classList.remove('thumbnail-loader--active')
+    loader.classList.add('thumbnail-loader--fading')
+    state.shown = false
+
+    if (state.completeTimeout) {
+      clearTimeout(state.completeTimeout)
+    }
+
+    state.completeTimeout = setTimeout(() => {
+      this.resetLoader(container)
+    }, 900)
   }
 
   // Toggle EXIF panel visibility
