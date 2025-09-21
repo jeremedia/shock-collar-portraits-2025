@@ -60,8 +60,18 @@ jobs:
           # Install/update dependencies
           bundle install --deployment --without development test
 
-          # Run migrations (preserves existing SQLite databases)
-          RAILS_ENV=production bundle exec rails db:migrate
+          # IMPORTANT: Do NOT run db:setup or db:create
+          # SQLite databases are managed separately and contain production data
+          # Only run migrations if schema changes
+          if [ -f storage/production.sqlite3 ]; then
+            echo "✅ Production databases exist, running migrations only..."
+            RAILS_ENV=production bundle exec rails db:migrate
+          else
+            echo "⚠️  WARNING: No production databases found!"
+            echo "⚠️  Databases must be manually deployed first using:"
+            echo "⚠️  rsync -avz storage/production*.sqlite3 jeremy@jer-serve:/home/jeremy/apps/shock-collar-portraits-2025/storage/"
+            exit 1
+          fi
 
           # Precompile assets (minimal since most assets are in MinIO)
           RAILS_ENV=production bundle exec rails assets:precompile
