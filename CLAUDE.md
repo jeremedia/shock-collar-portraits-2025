@@ -24,6 +24,39 @@ OKNOTOK Shock Collar Portraits - A Rails 8 web application for managing 3,943 ph
 - `scripts/` - Photo sync utilities
 - `archive/vue-frontend/` - Historical Vue.js implementation (retired)
 
+## Production Release Process
+
+### Code Release Process
+
+1. **Commit and push to main:**
+```bash
+git add .
+git commit -m "Your changes"
+git push origin main
+```
+
+2. **Create a GitHub release to trigger deployment:**
+```bash
+gh release create v1.0.1 --title "Version 1.0.1" --notes "Your changes"
+```
+
+That's it! The GitHub Actions workflow will:
+- Pull the tagged code
+- Install dependencies
+- Run migrations (if any)
+- Precompile assets
+- Restart the service
+- Leave databases untouched
+
+The databases stay in place on production - only the code gets updated.
+
+**For even faster releases**, you can do it in one command:
+```bash
+gh release create v1.0.1 --title "Quick fix" --notes "Description" --target main
+```
+
+This creates the release directly from your current main branch without needing to push first (though you should still push to keep the repo in sync).
+
 ## Common Development Commands
 
 ### Rails Development
