@@ -143,10 +143,11 @@ export default class extends Controller {
   navigateNext() {
     if (this.nextUrlValue) {
       this.showFeedback('Next', '→')
-      this.checkAndFadeForNavigation(true)
+      this.fadeOutCurrentImage()
+      // Navigate immediately after starting fade
       setTimeout(() => {
         Turbo.visit(this.nextUrlValue)
-      }, 200)
+      }, 50) // Very short delay
     } else {
       this.showFeedback('Last Hero', '⚡')
     }
@@ -155,10 +156,11 @@ export default class extends Controller {
   navigatePrev() {
     if (this.prevUrlValue) {
       this.showFeedback('Previous', '←')
-      this.checkAndFadeForNavigation(false)
+      this.fadeOutCurrentImage()
+      // Navigate immediately after starting fade
       setTimeout(() => {
         Turbo.visit(this.prevUrlValue)
-      }, 200)
+      }, 50) // Very short delay
     } else {
       this.showFeedback('First Hero', '⚡')
     }
@@ -170,96 +172,16 @@ export default class extends Controller {
       this.fadeOutCurrentImage()
       setTimeout(() => {
         Turbo.visit(this.indexUrlValue)
-      }, 200)
+      }, 50)
     }
-  }
-
-  checkAndFadeForNavigation(isNext) {
-    // Get the appropriate image URL to check
-    const heroController = document.querySelector('[data-controller="hero-image"]')
-    if (!heroController) {
-      // No hero controller, just fade out
-      this.fadeOutCurrentImage()
-      this.showLoadingState()
-      return
-    }
-
-    // Get the next or previous image URL based on current portrait mode
-    const showPortrait = localStorage.getItem('heroPortraitMode') === 'portrait'
-    let nextImageUrl
-
-    if (isNext) {
-      nextImageUrl = showPortrait
-        ? heroController.dataset.heroImageNextPortraitSrcValue
-        : heroController.dataset.heroImageNextSrcValue
-    } else {
-      nextImageUrl = showPortrait
-        ? heroController.dataset.heroImagePrevPortraitSrcValue
-        : heroController.dataset.heroImagePrevSrcValue
-    }
-
-    // Check if the image is cached
-    this.checkImageCached(nextImageUrl).then(isCached => {
-      if (isCached) {
-        // Image is cached, very subtle fade for visual feedback
-        // No loader needed - the new page will load instantly
-        const heroImage = document.querySelector('[data-controller="hero-image"] img')
-        if (heroImage) {
-          heroImage.style.transition = 'opacity 0.08s ease-out'
-          heroImage.style.opacity = '0.85' // Very subtle fade
-        }
-      } else {
-        // Image not cached, full fade and show spinner
-        this.fadeOutCurrentImage()
-        this.showLoadingState()
-      }
-    })
-  }
-
-  checkImageCached(url) {
-    if (!url) return Promise.resolve(false)
-
-    return new Promise((resolve) => {
-      const img = new Image()
-
-      // If image loads very quickly (within 5ms), it's cached
-      let loaded = false
-      const timeout = setTimeout(() => {
-        if (!loaded) resolve(false)
-      }, 5)
-
-      img.onload = () => {
-        loaded = true
-        clearTimeout(timeout)
-        // Check if truly loaded and has dimensions
-        resolve(img.complete && img.naturalWidth > 0)
-      }
-
-      img.onerror = () => {
-        loaded = true
-        clearTimeout(timeout)
-        resolve(false)
-      }
-
-      img.src = url
-    })
   }
 
   fadeOutCurrentImage() {
     // Find the hero image element and fade it out immediately
     const heroImage = document.querySelector('[data-controller="hero-image"] img')
     if (heroImage) {
-      heroImage.style.transition = 'opacity 0.2s ease-out'
+      heroImage.style.transition = 'opacity 0.15s ease-out'
       heroImage.style.opacity = '0'
-    }
-  }
-
-  showLoadingState() {
-    // Find or create a spinner element
-    const spinner = document.querySelector('[data-hero-image-target="spinner"]')
-    if (spinner) {
-      spinner.style.display = 'flex'
-      spinner.style.opacity = '1'
     }
   }
 }
