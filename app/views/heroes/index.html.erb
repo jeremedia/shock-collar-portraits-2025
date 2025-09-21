@@ -1,7 +1,7 @@
 <% content_for :title, "OKNOTOK Heroes - Best Portraits" %>
 <div class="bg-black text-white pb-20" data-controller="thumbnail-size hero-filter">
   <!-- Header -->
-  <div class="bg-gray-900 border-b-2 border-red-600 mb-4 sm:mb-0">
+  <div class="bg-gray-900 border-b-2 border-red-600">
     <div class="max-w-7xl mx-auto px-4 py-4 text-center">
       <h1 class="text-4xl font-bold text-yellow-500 leading-none mb-1">Shock&nbsp;Collar Portrait&nbsp;Heroes</h1>
       <p class="text-red-400 text-2xl leading-none">OKNOTOK 2025</p>
@@ -10,7 +10,7 @@
           <span class="text-yellow-500 font-bold text-2xl"><%= @total_days %> Days,&nbsp;</span>
         </span>
         <span class="text-gray-400">
-          <span class="text-yellow-500 font-bold text-2xl"><%= @total_sessions %> Sessions,&nbsp;</span>
+          <span class="text-yellow-500 font-bold text-2xl"><%= @total_photos %> Photos,&nbsp;</span>
         </span>
         <span class="text-gray-400">
           <span class="text-yellow-500 font-bold text-2xl"><%= @total_heroes %> Heroes</span>
@@ -190,25 +190,27 @@
   </div>
 
   <!-- Heroes Grid by Day -->
-  <div class="max-w-7xl mx-auto px-0 sm:px-4 pb-16">
+  <div class="max-w-7xl mx-auto px-2 sm:px-4 pb-16" data-controller="day-accordion">
     <% @heroes_by_day.each do |day, sessions| %>
-      <div class="mb-8 sm:mb-12" data-day-section data-hero-filter-target="daySection">
+      <div data-day-section data-hero-filter-target="daySection" data-day-accordion-target="day" data-day-name="<%= day.date.strftime('%Y-%m-%d') %>">
         <!-- Day Header -->
-        <div class="sticky top-0 z-30 bg-black/95 backdrop-blur-sm py-2 -mx-4 sm:mx-0 px-4 sm:px-0 border-b-2 border-red-600 sm:border-b-0">
-          <div class="flex items-center mb-3 sm:mb-6 px-2 sm:px-0">
-          <div class="flex-grow border-t-2 border-red-600"></div>
-          <div class="px-3 sm:px-6">
-            <h2 class="text-xl sm:text-2xl font-bold text-yellow-500">
+        <div class="sticky top-0 z-30 bg-black/95 backdrop-blur-sm day-header -mx-2 sm:mx-0 px-2 sm:px-0">
+          <button class="flex items-center py-3 sm:py-4 px-4 w-full text-left group"
+                  data-action="click->day-accordion#toggle">
+            <span class="text-yellow-500 transition-transform duration-300 mr-3"
+                  data-day-accordion-target="icon">▶</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-yellow-500 uppercase flex-grow">
               <%= day.day_name %>, <%= day.date.strftime('%B %d') %>
             </h2>
-            <p class="text-red-400 text-center text-sm" data-day-count><%= sessions.count %> heroes</p>
-          </div>
-          <div class="flex-grow border-t-2 border-red-600"></div>
-          </div>
+            <span class="text-red-400 text-base sm:text-lg" data-day-count><%= sessions.count %> heroes</span>
+          </button>
         </div>
         
         <!-- Heroes Grid for this day -->
-        <div data-thumbnail-size-target="grid" class="grid grid-cols-3 sm:grid-cols-4 gap-0 sm:gap-4 transition-all duration-300">
+        <div data-day-accordion-target="content" class="hidden">
+          <div data-thumbnail-size-target="grid"
+               data-day-accordion-target="grid"
+               class="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-4 transition-all duration-300">
           <% sessions.each do |session| %>
             <% # Get the hero photo directly from PhotoSession %>
             <% hero_photo = session.hero_photo %>
@@ -273,6 +275,7 @@
               </div>
             <% end %>
           <% end %>
+          </div>
         </div>
       </div>
     <% end %>
@@ -317,8 +320,8 @@
                   data-action="change->thumbnail-size#updateVariant"
                   class="bg-gray-900 border border-red-700 text-yellow-500 text-sm rounded px-2 py-1 focus:outline-none focus:border-yellow-500">
             <option value="thumb">Thumb</option>
-            <option value="face" selected>Face</option>
-            <option value="portrait">Portrait</option>
+            <option value="face">Face</option>
+            <option value="portrait" selected>Portrait</option>
           </select>
         </div>
       </div>
@@ -364,6 +367,13 @@
   /* Sticky filter bar shadow */
   .sticky {
     box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1), 0 2px 4px -1px rgba(220, 38, 38, 0.06);
+  }
+
+  /* Day header sticky border */
+  .day-header {
+    position: sticky;
+    top: 0;
+    box-shadow: 0 1px 0 0 rgb(220, 38, 38);
   }
 
   /* Filter bar background animation */

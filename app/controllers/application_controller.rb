@@ -16,7 +16,18 @@ class ApplicationController < ActionController::Base
   before_action :configure_permitted_parameters, if: :devise_controller?
   
   protected
-  
+
+  # Override Devise's default redirect after sign in
+  def after_sign_in_path_for(resource)
+    if resource.admin? || resource.superadmin?
+      # Admins go to admin dashboard or stored location
+      stored_location_for(resource) || admin_dashboard_path
+    else
+      # Non-admins go to root (heroes page) or stored location
+      stored_location_for(resource) || root_path
+    end
+  end
+
   def configure_permitted_parameters
     invite_keys = [:name]
     invite_keys << :admin if current_user&.superadmin?

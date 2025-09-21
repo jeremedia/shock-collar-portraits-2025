@@ -87,6 +87,29 @@ export default class extends Controller {
     const link = event.currentTarget
     if (link.classList.contains('nav-link--disabled') || link.getAttribute('aria-disabled') === 'true' || link.getAttribute('href') === '#') {
       event.preventDefault()
+      return
+    }
+
+    // Provide immediate visual feedback
+    this.fadeOutCurrentImage()
+    this.showLoadingState()
+  }
+
+  fadeOutCurrentImage() {
+    // Find the hero image element and fade it out immediately
+    const heroImage = document.querySelector('[data-controller="hero-image"] img')
+    if (heroImage) {
+      heroImage.style.transition = 'opacity 0.2s ease-out'
+      heroImage.style.opacity = '0'
+    }
+  }
+
+  showLoadingState() {
+    // Find or create a spinner element
+    const spinner = document.querySelector('[data-hero-image-target="spinner"]')
+    if (spinner) {
+      spinner.style.display = 'flex'
+      spinner.style.opacity = '1'
     }
   }
 }

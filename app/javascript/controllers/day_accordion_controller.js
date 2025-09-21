@@ -5,35 +5,25 @@ export default class extends Controller {
   static values = { day: String }
   
   connect() {
-    // Check if user has explicitly set accordion state
-    const hasAccordionState = localStorage.getItem('accordionStateSet') === 'true'
-    const savedDay = localStorage.getItem('openDay')
+    // Get saved states for each day
+    const savedStates = this.getSavedStates()
 
-    // Find all day sections
+    // Find all day sections and apply saved state (default to collapsed)
     this.dayTargets.forEach(dayElement => {
       const dayName = dayElement.dataset.dayName
       const content = dayElement.querySelector('[data-day-accordion-target="content"]')
       const icon = dayElement.querySelector('[data-day-accordion-target="icon"]')
       const grid = dayElement.querySelector('[data-day-accordion-target="grid"]')
 
-      if (dayName === savedDay) {
-        // Open the saved day
+      // Check saved state - default to collapsed (false)
+      const isExpanded = savedStates[dayName] === true
+
+      if (isExpanded) {
         this.openDay(dayElement, content, icon, grid)
       } else {
-        // Close all other days
         this.closeDay(content, icon)
       }
     })
-
-    // Only open first day if user has never interacted with accordion
-    if (!hasAccordionState && this.dayTargets.length > 0) {
-      const firstDay = this.dayTargets[0]
-      const content = firstDay.querySelector('[data-day-accordion-target="content"]')
-      const icon = firstDay.querySelector('[data-day-accordion-target="icon"]')
-      const grid = firstDay.querySelector('[data-day-accordion-target="grid"]')
-      this.openDay(firstDay, content, icon, grid)
-      // Don't save this automatic opening
-    }
   }
   
   toggle(event) {
@@ -43,37 +33,28 @@ export default class extends Controller {
     const content = dayElement.querySelector('[data-day-accordion-target="content"]')
     const icon = dayElement.querySelector('[data-day-accordion-target="icon"]')
     const grid = dayElement.querySelector('[data-day-accordion-target="grid"]')
-    
+
     // Check if this day is currently open (using hidden class)
     const isOpen = !content.classList.contains('hidden')
-    
-    // Close all days
-    this.dayTargets.forEach(otherDay => {
-      const otherContent = otherDay.querySelector('[data-day-accordion-target="content"]')
-      const otherIcon = otherDay.querySelector('[data-day-accordion-target="icon"]')
-      this.closeDay(otherContent, otherIcon)
-    })
-    
-    // Mark that user has interacted with accordion
-    localStorage.setItem('accordionStateSet', 'true')
 
-    // If the clicked day was closed, open it
-    if (!isOpen) {
-      this.openDay(dayElement, content, icon, grid)
-      localStorage.setItem('openDay', dayName)
+    // Toggle this day's state
+    if (isOpen) {
+      this.closeDay(content, icon)
     } else {
-      // Clear saved state if closing the only open day
-      localStorage.removeItem('openDay')
+      this.openDay(dayElement, content, icon, grid)
     }
+
+    // Save the new state
+    this.saveState(dayName, !isOpen)
   }
   
   openDay(dayElement, content, icon, grid) {
     // Show the content
     content.classList.remove('hidden')
 
-    // Rotate icon
+    // Update icon to down arrow
     if (icon) {
-      icon.style.transform = "rotate(0deg)"
+      icon.textContent = '▼'
     }
 
     // Make grid visible (sessions are pre-rendered server-side)
@@ -88,9 +69,9 @@ export default class extends Controller {
     // Hide the content
     content.classList.add('hidden')
 
-    // Rotate icon
+    // Update icon to right arrow
     if (icon) {
-      icon.style.transform = "rotate(-90deg)"
+      icon.textContent = '▶'
     }
   }
   
@@ -120,5 +101,19 @@ export default class extends Controller {
       console.error('Error loading sessions:', error)
       grid.innerHTML = '<div class="col-span-full text-center text-red-500 py-8">Error loading sessions</div>'
     })
+  }
+
+  saveState(dayName, isExpanded) {
+    const savedStates = this.getSavedStates()
+    savedStates[dayName] = isExpanded
+    localStorage.setItem('herosDayAccordionStates', JSON.stringify(savedStates))
+  }
+
+  getSavedStates() {
+    try {
+      return JSON.parse(localStorage.getItem('herosDayAccordionStates')) || {}
+    } catch {
+      return {}
+    }
   }
 }

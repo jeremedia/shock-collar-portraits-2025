@@ -143,6 +143,8 @@ export default class extends Controller {
   navigateNext() {
     if (this.nextUrlValue) {
       this.showFeedback('Next', '→')
+      this.fadeOutCurrentImage()
+      this.showLoadingState()
       setTimeout(() => {
         Turbo.visit(this.nextUrlValue)
       }, 200)
@@ -154,6 +156,8 @@ export default class extends Controller {
   navigatePrev() {
     if (this.prevUrlValue) {
       this.showFeedback('Previous', '←')
+      this.fadeOutCurrentImage()
+      this.showLoadingState()
       setTimeout(() => {
         Turbo.visit(this.prevUrlValue)
       }, 200)
@@ -165,9 +169,28 @@ export default class extends Controller {
   navigateToIndex() {
     if (this.indexUrlValue) {
       this.showFeedback('All Heroes', '↑')
+      this.fadeOutCurrentImage()
       setTimeout(() => {
         Turbo.visit(this.indexUrlValue)
       }, 200)
+    }
+  }
+
+  fadeOutCurrentImage() {
+    // Find the hero image element and fade it out immediately
+    const heroImage = document.querySelector('[data-controller="hero-image"] img')
+    if (heroImage) {
+      heroImage.style.transition = 'opacity 0.2s ease-out'
+      heroImage.style.opacity = '0'
+    }
+  }
+
+  showLoadingState() {
+    // Find or create a spinner element
+    const spinner = document.querySelector('[data-hero-image-target="spinner"]')
+    if (spinner) {
+      spinner.style.display = 'flex'
+      spinner.style.opacity = '1'
     }
   }
 }

@@ -26,9 +26,12 @@ export default class extends Controller {
     //   prevPortraitSrc: this.prevPortraitSrcValue
     // })
 
+    // Start preloading adjacent images immediately, even before loading current image
+    // This ensures they're ready when user navigates
+    this.preloadAdjacentImages()
+
     this.loadFullImage()
     this.setupResizeHandler()
-    this.preloadAdjacentImages()
   }
 
   disconnect() {
@@ -135,82 +138,88 @@ export default class extends Controller {
     // console.log('[hero-image] will change to', src)
     this.dispatch('will-change', { detail: { src, portrait: this.showPortrait } })
 
-    // Check if image is already in browser cache by creating a test image
+    // Create a test image to check if it's cached
     const testImage = new Image()
-    let imageInCache = false
 
-    // Check if already cached
-    testImage.onload = () => {
-      imageInCache = true
-    }
+    // Set up promise-based cache checking
+    const checkCache = new Promise((resolve) => {
+      testImage.onload = () => resolve(true)
+      testImage.onerror = () => resolve(false)
+      // Set a timeout - if image doesn't load within 10ms, it's not cached
+      setTimeout(() => resolve(false), 10)
+    })
+
     testImage.src = src
 
-    // If image is cached, it will load synchronously
-    if (imageInCache) {
-      // Image is cached, load immediately without spinner
-      this.imageTarget.src = src
-      this.imageTarget.style.opacity = '1'
-      if (this.hasSpinnerTarget) {
-        this.spinnerTarget.style.display = 'none'
-      }
-      // console.log('[hero-image] did change instantly (cached)', src)
-      this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
-    } else {
-      // Image not cached, show spinner and load
-      this.imageTarget.style.opacity = '0'
-      if (this.hasSpinnerTarget) {
-        this.spinnerTarget.style.display = 'flex'
-        this.spinnerTarget.style.opacity = '1'
-      }
-
-      // Create a new image to preload the full version
-      const fullImage = new Image()
-
-      fullImage.onload = () => {
-        // Replace the src with the full resolution image
-        this.imageTarget.src = fullImage.src
-
-        // Fade in the image
-        this.imageTarget.style.opacity = '1'
-
-        // Hide spinner if it exists
-        if (this.hasSpinnerTarget) {
-          this.spinnerTarget.style.opacity = '0'
-          // Remove spinner after fade out
-          setTimeout(() => {
-            this.spinnerTarget.style.display = 'none'
-          }, 300)
-        }
-
-        // Store the container dimensions now that image is loaded
-        const container = this.element
-        const rect = container.getBoundingClientRect()
-        const isAdmin = document.querySelector('[data-controller*="admin-tagger"]') !== null
-
-        if (rect.height > 0 && rect.width > 0) {
-          sessionStorage.setItem('heroImageContainerHeight', `${rect.height}px`)
-          sessionStorage.setItem('heroImageContainerWidth', `${rect.width}px`)
-          sessionStorage.setItem('heroImageWindowWidth', window.innerWidth)
-          sessionStorage.setItem('heroImageIsAdmin', isAdmin.toString())
-        }
-
-        // console.log('[hero-image] did change after load', src)
-        this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
-      }
-
-      fullImage.onerror = () => {
-        // On error, show image anyway
+    checkCache.then(isCached => {
+      if (isCached && testImage.complete && testImage.naturalWidth > 0) {
+        // Image is cached, load immediately without spinner
+        this.imageTarget.src = src
+        this.imageTarget.style.transition = 'opacity 0.2s ease-in'
         this.imageTarget.style.opacity = '1'
         if (this.hasSpinnerTarget) {
           this.spinnerTarget.style.display = 'none'
         }
-        console.warn('[hero-image] load error, using fallback', src)
+        // console.log('[hero-image] did change instantly (cached)', src)
         this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
-      }
+      } else {
+        // Image not cached, show spinner and load
+        this.imageTarget.style.opacity = '0'
+        if (this.hasSpinnerTarget) {
+          this.spinnerTarget.style.display = 'flex'
+          this.spinnerTarget.style.opacity = '1'
+        }
 
-      // Start loading the full image
-      fullImage.src = src
-    }
+        // Create a new image to preload the full version
+        const fullImage = new Image()
+
+        fullImage.onload = () => {
+          // Replace the src with the full resolution image
+          this.imageTarget.src = fullImage.src
+
+          // Fade in the image
+          this.imageTarget.style.transition = 'opacity 0.3s ease-in'
+          this.imageTarget.style.opacity = '1'
+
+          // Hide spinner if it exists
+          if (this.hasSpinnerTarget) {
+            this.spinnerTarget.style.opacity = '0'
+            // Remove spinner after fade out
+            setTimeout(() => {
+              this.spinnerTarget.style.display = 'none'
+            }, 300)
+          }
+
+          // Store the container dimensions now that image is loaded
+          const container = this.element
+          const rect = container.getBoundingClientRect()
+          const isAdmin = document.querySelector('[data-controller*="admin-tagger"]') !== null
+
+          if (rect.height > 0 && rect.width > 0) {
+            sessionStorage.setItem('heroImageContainerHeight', `${rect.height}px`)
+            sessionStorage.setItem('heroImageContainerWidth', `${rect.width}px`)
+            sessionStorage.setItem('heroImageWindowWidth', window.innerWidth)
+            sessionStorage.setItem('heroImageIsAdmin', isAdmin.toString())
+          }
+
+          // console.log('[hero-image] did change after load', src)
+          this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
+        }
+
+        fullImage.onerror = () => {
+          // On error, show image anyway
+          this.imageTarget.style.opacity = '1'
+          if (this.hasSpinnerTarget) {
+            this.spinnerTarget.style.display = 'none'
+          }
+          console.warn('[hero-image] load error, using fallback', src)
+          this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
+        }
+
+        // Start loading the full image
+        fullImage.src = src
+      }
+    })
   }
 
   preloadAdjacentImages() {
@@ -294,9 +303,11 @@ export default class extends Controller {
     if (!this.hasPortraitVariant()) return false
 
     try {
-      return localStorage.getItem('heroPortraitMode') === 'portrait'
+      const savedMode = localStorage.getItem('heroPortraitMode')
+      // Default to portrait mode if no preference saved
+      return savedMode === null ? true : savedMode === 'portrait'
     } catch (e) {
-      return false
+      return true // Default to portrait on error
     }
   }
 

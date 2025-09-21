@@ -16,7 +16,7 @@ export default class extends Controller {
     }
 
     if (this.hasVariantTarget) {
-      const savedVariant = localStorage.getItem('heroThumbnailVariant') || 'face'
+      const savedVariant = localStorage.getItem('heroThumbnailVariant') || 'portrait'
       this.variantTarget.value = savedVariant
     }
 

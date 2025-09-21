@@ -9,7 +9,8 @@
 %>
 <% content_for :title, hero_title %>
 <div class="h-full flex items-center justify-center p-0 sm:p-8 bg-black text-white"
-     <% if current_user&.admin? %>data-controller="admin-tagger" data-admin-tagger-session-id-value="<%= @session.id %>"<% end %>>
+     data-controller="turbo-navigation-feedback <%= current_user&.admin? ? 'admin-tagger' : '' %>"
+     <% if current_user&.admin? %>data-admin-tagger-session-id-value="<%= @session.id %>"<% end %>>
   <div class="max-w-7xl w-full h-full flex flex-col">
       <% if @photo.image.attached? %>
         <div class="<%= current_user&.admin? ? 'sm:flex gap-0' : '' %> border-0 sm:border-4 border-red-600 rounded-none sm:rounded-lg overflow-hidden flex-grow"

@@ -22,6 +22,7 @@ class HeroesController < ApplicationController
 
     # Stats for header
     @total_sessions = PhotoSession.visible.count
+    @total_photos = Photo.count
     @total_heroes = @hero_sessions.count
     @total_days = @heroes_by_day.count
 

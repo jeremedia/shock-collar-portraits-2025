@@ -116,6 +116,6 @@ Rails.application.routes.draw do
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check
   
-  # Root path - now points to gallery
-  root to: 'gallery#index'
+  # Root path - points to heroes (main landing page for users)
+  root to: 'heroes#index'
 end
