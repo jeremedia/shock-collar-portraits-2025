@@ -55,5 +55,53 @@ class HeroesController < ApplicationController
     # Get the actual photo objects for preloading
     @prev_photo = Photo.find(@prev_hero_id) if @prev_hero_id
     @next_photo = Photo.find(@next_hero_id) if @next_hero_id
+
+    # Handle JSON requests for smooth client-side navigation
+    respond_to do |format|
+      format.html
+      format.json { render json: hero_json_data }
+    end
+  end
+
+  private
+
+  def hero_json_data
+    # Queue background job to pre-generate next/prev portrait variants
+    # This happens while the user is viewing the current photo
+    if @prev_photo && @prev_photo.portrait_crop_data.present?
+      PortraitVariantJob.perform_later(@prev_photo.id)
+    end
+    if @next_photo && @next_photo.portrait_crop_data.present?
+      PortraitVariantJob.perform_later(@next_photo.id)
+    end
+
+    {
+      photo: {
+        id: @photo.id,
+        full_url: helpers.smart_variant_url(@photo.image, :large),
+        portrait_url: @photo.portrait_crop_url(width: 1080, height: 1920),
+        position: @photo.position
+      },
+      session: {
+        id: @session.id,
+        session_number: @session.session_number,
+        photo_count: @session.photo_count,
+        day_name: @session.session_day&.day_name,
+        date: @session.session_day&.date&.strftime('%b %d'),
+        time: @photo.photo_taken_at ?
+          @photo.photo_taken_at.in_time_zone('America/Los_Angeles').strftime('%-l:%M:%S %p') :
+          @session.started_at.in_time_zone('America/Los_Angeles').strftime('%-l:%M %p')
+      },
+      navigation: {
+        prev_id: @prev_hero_id,
+        next_id: @next_hero_id,
+        prev_url: @prev_hero_id ? hero_path(@prev_hero_id) : nil,
+        next_url: @next_hero_id ? hero_path(@next_hero_id) : nil,
+        prev_portrait_url: @prev_photo&.portrait_crop_url,
+        next_portrait_url: @next_photo&.portrait_crop_url,
+        prev_full_url: @prev_photo ? helpers.smart_variant_url(@prev_photo.image, :large) : nil,
+        next_full_url: @next_photo ? helpers.smart_variant_url(@next_photo.image, :large) : nil
+      }
+    }
   end
 end

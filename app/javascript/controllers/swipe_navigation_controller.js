@@ -143,11 +143,14 @@ export default class extends Controller {
   navigateNext() {
     if (this.nextUrlValue) {
       this.showFeedback('Next', '→')
-      this.fadeOutCurrentImage()
-      // Navigate immediately after starting fade
-      setTimeout(() => {
-        Turbo.visit(this.nextUrlValue)
-      }, 50) // Very short delay
+      // Delegate to hero navigation controller
+      const navController = document.querySelector('[data-controller~="hero-navigation"]')
+      if (navController) {
+        const controller = this.application.getControllerForElementAndIdentifier(navController, 'hero-navigation')
+        if (controller) {
+          controller.navigateToHero(this.nextUrlValue)
+        }
+      }
     } else {
       this.showFeedback('Last Hero', '⚡')
     }
@@ -156,11 +159,14 @@ export default class extends Controller {
   navigatePrev() {
     if (this.prevUrlValue) {
       this.showFeedback('Previous', '←')
-      this.fadeOutCurrentImage()
-      // Navigate immediately after starting fade
-      setTimeout(() => {
-        Turbo.visit(this.prevUrlValue)
-      }, 50) // Very short delay
+      // Delegate to hero navigation controller
+      const navController = document.querySelector('[data-controller~="hero-navigation"]')
+      if (navController) {
+        const controller = this.application.getControllerForElementAndIdentifier(navController, 'hero-navigation')
+        if (controller) {
+          controller.navigateToHero(this.prevUrlValue)
+        }
+      }
     } else {
       this.showFeedback('First Hero', '⚡')
     }
@@ -170,8 +176,9 @@ export default class extends Controller {
     if (this.indexUrlValue) {
       this.showFeedback('All Heroes', '↑')
       this.fadeOutCurrentImage()
+      // Index page still needs full navigation
       setTimeout(() => {
-        Turbo.visit(this.indexUrlValue)
+        window.location.href = this.indexUrlValue
       }, 50)
     }
   }

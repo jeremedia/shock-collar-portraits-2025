@@ -140,6 +140,9 @@ class GalleryController < ApplicationController
     # This ensures the gallery index page shows the new hero photo
     @session.touch
 
+    # Queue background job to pre-generate portrait variants
+    PortraitVariantJob.perform_later(@photo.id) if @photo.portrait_crop_data.present?
+
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_to gallery_path(@session.burst_id) }

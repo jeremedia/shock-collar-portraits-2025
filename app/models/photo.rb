@@ -293,18 +293,31 @@ class Photo < ApplicationRecord
 
   def portrait_crop_url(width: 720, height: 1280)
     return nil unless image.attached?
-    p "Generating portrait crop URL for Photo ##{id} at #{width}x#{height}"
     variant_params = portrait_crop_variant(width: width, height: height)
     return nil unless variant_params
 
     begin
+      # Don't call .processed here - it forces synchronous generation!
+      # Just return the URL and let it process on first actual request
+      variant = image.variant(variant_params)
       Rails.application.routes.url_helpers.rails_blob_url(
-        image.variant(variant_params).processed,
+        variant,
         only_path: true
       )
     rescue ActiveStorage::FileNotFoundError
       nil
     end
+  end
+
+  def ensure_portrait_processed!(width: 720, height: 1280)
+    return nil unless image.attached?
+    variant_params = portrait_crop_variant(width: width, height: height)
+    return nil unless variant_params
+
+    # This method explicitly processes the variant
+    image.variant(variant_params).processed
+  rescue ActiveStorage::FileNotFoundError
+    nil
   end
 
   def reset_portrait_crop!

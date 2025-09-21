@@ -192,12 +192,12 @@
   <!-- Heroes Grid by Day -->
   <div class="max-w-7xl mx-auto px-2 sm:px-4 pb-16" data-controller="day-accordion">
     <% @heroes_by_day.each do |day, sessions| %>
-      <div data-day-section data-hero-filter-target="daySection" data-day-accordion-target="day" data-day-name="<%= day.date.strftime('%Y-%m-%d') %>">
+      <div data-day-section data-hero-filter-target="daySection" data-day-accordion-target="day" data-day-name="<%= day.day_name.downcase %>">
         <!-- Day Header -->
         <div class="sticky top-0 z-30 bg-black/95 backdrop-blur-sm day-header -mx-2 sm:mx-0 px-2 sm:px-0">
           <button class="flex items-center py-3 sm:py-4 px-4 w-full text-left group"
                   data-action="click->day-accordion#toggle">
-            <span class="text-yellow-500 transition-transform duration-300 mr-3"
+            <span class="text-yellow-500 transition-transform duration-300 mr-3 invisible"
                   data-day-accordion-target="icon">▶</span>
             <h2 class="text-xl sm:text-2xl font-bold text-yellow-500 uppercase flex-grow">
               <%= day.day_name %>, <%= day.date.strftime('%B %d') %>
@@ -210,6 +210,7 @@
         <div data-day-accordion-target="content" class="hidden">
           <div data-thumbnail-size-target="grid"
                data-day-accordion-target="grid"
+               data-controller="lazy-images"
                class="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-4 transition-all duration-300">
           <% sessions.each do |session| %>
             <% # Get the hero photo directly from PhotoSession %>
@@ -240,19 +241,19 @@
                    data-portrait-available="<%= portrait_variant_url.present? %>">
                 <%= link_to hero_path(hero_photo), class: "block w-full h-full", data: { turbo: false } do %>
                   <div class="thumbnail-container relative bg-gradient-to-b from-red-900/20 to-black overflow-hidden"
-                       data-controller="lazy-images"
                        data-thumbnail-container="true">
-                    <%= image_tag display_url,
-                        class: "w-full h-full object-cover hero-card__image",
-                        data: {
-                          hero_thumb_src: thumb_url,
-                          hero_face_src: face_variant_url,
-                          hero_portrait_src: portrait_variant_url,
-                          hero_current_src: display_url,
-                          hero_variant: 'face'
-                        },
-                        loading: "lazy",
-                        alt: "Hero shot" %>
+                    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                         class="w-full h-full object-cover hero-card__image"
+                         style="opacity: 0;"
+                         data-src="<%= display_url %>"
+                         data-lazy-images-target="image"
+                         data-hero-thumb-src="<%= thumb_url %>"
+                         data-hero-face-src="<%= face_variant_url %>"
+                         data-hero-portrait-src="<%= portrait_variant_url %>"
+                         data-hero-current-src="<%= display_url %>"
+                         data-hero-variant="face"
+                         loading="lazy"
+                         alt="Hero shot" />
 
                     <%= render "shared/thumbnail_loader" %>
 
@@ -373,7 +374,7 @@
   .day-header {
     position: sticky;
     top: 0;
-    box-shadow: 0 1px 0 0 rgb(220, 38, 38);
+    /*box-shadow: 0 1px 0 0 rgb(220, 38, 38);*/
   }
 
   /* Filter bar background animation */

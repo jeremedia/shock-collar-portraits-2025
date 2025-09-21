@@ -14,15 +14,24 @@ export default class extends Controller {
     this.loaderDelayTimeout = null
     this.loaderShown = false
 
+    // For grid-level controller, find loader in child containers
     this.startLoadingListener = (event) => {
-      if (this.imageTargets.includes(event.target)) {
-        this.queueLoader()
+      const container = event.target.closest('[data-thumbnail-container]')
+      if (container && this.element.contains(container)) {
+        const loader = container.querySelector('[data-lazy-images-target="loader"]')
+        if (loader) {
+          this.queueLoaderForElement(loader)
+        }
       }
     }
 
     this.finishLoadingListener = (event) => {
-      if (this.imageTargets.includes(event.target)) {
-        this.completeLoader()
+      const container = event.target.closest('[data-thumbnail-container]')
+      if (container && this.element.contains(container)) {
+        const loader = container.querySelector('[data-lazy-images-target="loader"]')
+        if (loader) {
+          this.completeLoaderForElement(loader)
+        }
       }
     }
 
@@ -36,6 +45,13 @@ export default class extends Controller {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const img = entry.target
+
+          // Check if the image is actually visible (not in a hidden container)
+          if (!this.isElementReallyVisible(img)) {
+            // console.log('🚫 Skipping hidden image')
+            return
+          }
+
           if (img.dataset.src) {
             // console.log('🔄 Observer: Loading image', img.dataset.src.substring(0, 80) + '...')
             this.loadImage(img)
@@ -48,12 +64,15 @@ export default class extends Controller {
       threshold: 0.1
     })
     
-    // Start observing all image targets
-    this.imageTargets.forEach(img => {
-      if (img.dataset.src) {
-        this.observer.observe(img)
-      }
-    })
+    // Start observing all images in the grid
+    // Don't start observing if we're hidden initially
+    // Check if we're inside a hidden accordion content section
+    const accordionContent = this.element.closest('[data-day-accordion-target="content"]')
+    const isHidden = accordionContent && accordionContent.classList.contains('hidden')
+
+    if (!isHidden) {
+      this.observeImages()
+    }
   }
   
   disconnect() {
@@ -67,40 +86,128 @@ export default class extends Controller {
     this.clearCompletionTimeout()
   }
   
-  loadImage(img) {
+  observeImages() {
+    // Find all images in the grid
+    const images = this.element.querySelectorAll('img[data-src]')
+    images.forEach(img => {
+      this.observer.observe(img)
+    })
+  }
+
+  unobserveImages() {
+    // Stop observing all images
+    const images = this.element.querySelectorAll('img[data-src]')
+    images.forEach(img => {
+      this.observer.unobserve(img)
+    })
+  }
+
+  isElementReallyVisible(element) {
+    // Check if element or any parent has display:none or is hidden
+    let el = element
+    while (el) {
+      const style = window.getComputedStyle(el)
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return false
+      }
+
+      // Check for the hidden class (used by accordion)
+      if (el.classList && el.classList.contains('hidden')) {
+        return false
+      }
+
+      // Check for accordion content target that might be hidden
+      if (el.dataset && el.dataset.dayAccordionTarget === 'content') {
+        if (el.classList.contains('hidden')) {
+          return false
+        }
+      }
+
+      el = el.parentElement
+    }
+    return true
+  }
+
+  async loadImage(img) {
     const src = img.dataset.src
     if (!src) return
-    
-    // console.log('🔄 Starting load:', src.substring(0, 80) + '...')
-    
+
+    // Check if image is in cache first
+    let cachedResponse = null
+    if ('caches' in window) {
+      try {
+        const cache = await caches.open('thumbnail-cache-v1')
+        cachedResponse = await cache.match(src)
+      } catch (e) {
+        console.warn('Cache check failed:', e)
+      }
+    }
+
+    // If we have a cached response, use it directly
+    if (cachedResponse) {
+      try {
+        const blob = await cachedResponse.blob()
+        const objectURL = URL.createObjectURL(blob)
+        img.src = objectURL
+        img.classList.add('loaded')
+        img.removeAttribute('data-src')
+        img.dataset.heroCurrentSrc = src
+        img.style.transition = 'opacity 0.3s ease-in-out'
+        img.style.opacity = '1'
+        img.dispatchEvent(new CustomEvent('thumbnail:loaded', { bubbles: true }))
+        return
+      } catch (e) {
+        console.warn('Failed to use cached image:', e)
+        // Fall through to normal loading
+      }
+    }
+
+    // Not in cache, need to load it
+    const container = img.closest('[data-thumbnail-container]')
+    const loader = container ? container.querySelector('[data-lazy-images-target="loader"]') : null
+    if (loader) {
+      this.queueLoaderForElement(loader)
+    }
+
     // Create a new image to preload
     const imageLoader = new Image()
 
-    this.queueLoader()
-    
-    imageLoader.onload = () => {
-      // console.log('✅ SUCCESS:', src.substring(0, 80) + '...')
+    imageLoader.onload = async () => {
       img.src = src
       img.classList.add('loaded')
       img.removeAttribute('data-src')
       img.dataset.heroCurrentSrc = src
-      
+
       // Fade in effect
       img.style.transition = 'opacity 0.3s ease-in-out'
       img.style.opacity = '1'
+
+      // Store in cache for future use
+      if ('caches' in window) {
+        try {
+          const cache = await caches.open('thumbnail-cache-v1')
+          // Fetch the image to get it as a Response
+          const response = await fetch(src)
+          if (response.ok) {
+            // Clone the response before storing it
+            await cache.put(src, response.clone())
+          }
+        } catch (e) {
+          console.warn('Failed to cache image:', e)
+        }
+      }
 
       img.dispatchEvent(new CustomEvent('thumbnail:loaded', { bubbles: true }))
     }
 
     imageLoader.onerror = () => {
-      // console.error('❌ FAILED:', src.substring(0, 80) + '...')
       img.classList.add('error')
-      
-      // Show error state visually
       img.style.backgroundColor = '#dc2626'
       img.style.opacity = '0.5'
 
-      this.resetLoader()
+      if (loader) {
+        this.resetLoaderElement(loader)
+      }
     }
 
     // Start loading
@@ -116,75 +223,82 @@ export default class extends Controller {
     })
   }
 
-  queueLoader() {
-    if (!this.hasLoaderTarget) return
-    const loader = this.loaderTarget
-    this.clearCompletionTimeout()
-    if (this.loaderShown) {
+  queueLoaderForElement(loader) {
+    if (!loader) return
+    // Store timeout on the loader element itself
+    if (loader.completeTimeout) clearTimeout(loader.completeTimeout)
+
+    if (loader.classList.contains('thumbnail-loader--active')) {
       loader.classList.remove('thumbnail-loader--complete')
       loader.classList.remove('thumbnail-loader--fading')
-      loader.classList.add('thumbnail-loader--active')
       return
     }
-    this.clearLoaderDelay()
-    this.loaderDelayTimeout = setTimeout(() => {
-      this.activateLoader()
+
+    if (loader.delayTimeout) clearTimeout(loader.delayTimeout)
+    loader.delayTimeout = setTimeout(() => {
+      this.activateLoaderElement(loader)
     }, 1000)
   }
 
-  completeLoader() {
-    if (!this.hasLoaderTarget) return
-    this.clearLoaderDelay()
-    this.clearCompletionTimeout()
-    const loader = this.loaderTarget
-    if (!this.loaderShown) {
-      this.startFadeOut(loader)
+  completeLoaderForElement(loader) {
+    if (!loader) return
+    if (loader.delayTimeout) {
+      clearTimeout(loader.delayTimeout)
+      loader.delayTimeout = null
+    }
+    if (loader.completeTimeout) {
+      clearTimeout(loader.completeTimeout)
+      loader.completeTimeout = null
+    }
+
+    if (!loader.classList.contains('thumbnail-loader--active')) {
+      this.startFadeOutElement(loader)
       return
     }
     loader.classList.add('thumbnail-loader--complete')
-    this.startFadeOut(loader)
+    this.startFadeOutElement(loader)
   }
 
-  resetLoader() {
-    if (!this.hasLoaderTarget) return
-    const loader = this.loaderTarget
+  resetLoaderElement(loader) {
+    if (!loader) return
     loader.classList.remove('thumbnail-loader--active', 'thumbnail-loader--complete', 'thumbnail-loader--fading')
-    this.clearLoaderDelay()
-    this.clearCompletionTimeout()
-    this.loaderShown = false
+    if (loader.delayTimeout) {
+      clearTimeout(loader.delayTimeout)
+      loader.delayTimeout = null
+    }
+    if (loader.completeTimeout) {
+      clearTimeout(loader.completeTimeout)
+      loader.completeTimeout = null
+    }
   }
 
-  activateLoader() {
-    if (!this.hasLoaderTarget) return
-    this.loaderShown = true
-    const loader = this.loaderTarget
+  activateLoaderElement(loader) {
+    if (!loader) return
     loader.classList.remove('thumbnail-loader--complete')
     loader.classList.remove('thumbnail-loader--fading')
     loader.classList.add('thumbnail-loader--active')
   }
 
-  clearLoaderDelay() {
-    if (this.loaderDelayTimeout) {
-      clearTimeout(this.loaderDelayTimeout)
-      this.loaderDelayTimeout = null
-    }
+  // Legacy methods for compatibility with old views
+  queueLoader() {
+    // Find first loader in element
+    const loader = this.element.querySelector('[data-lazy-images-target="loader"]')
+    if (loader) this.queueLoaderForElement(loader)
   }
 
-  clearCompletionTimeout() {
-    if (this.completeTimeout) {
-      clearTimeout(this.completeTimeout)
-      this.completeTimeout = null
-    }
+  completeLoader() {
+    // Find first loader in element
+    const loader = this.element.querySelector('[data-lazy-images-target="loader"]')
+    if (loader) this.completeLoaderForElement(loader)
   }
 
-  startFadeOut(loader) {
+  startFadeOutElement(loader) {
     if (!loader) return
-    this.clearCompletionTimeout()
+    if (loader.completeTimeout) clearTimeout(loader.completeTimeout)
     loader.classList.remove('thumbnail-loader--active')
     loader.classList.add('thumbnail-loader--fading')
-    this.loaderShown = false
-    this.completeTimeout = setTimeout(() => {
-      this.resetLoader()
+    loader.completeTimeout = setTimeout(() => {
+      this.resetLoaderElement(loader)
     }, 900)
   }
 }

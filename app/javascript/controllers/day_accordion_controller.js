@@ -3,29 +3,45 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["day", "content", "icon", "grid"]
   static values = { day: String }
-  
-  connect() {
-    // Get saved states for each day
-    const savedStates = this.getSavedStates()
 
-    // Find all day sections and apply saved state (default to collapsed)
+  connect() {
+    // Get saved open day (only one allowed)
+    const savedOpenDay = localStorage.getItem('heroOpenDay')
+
+    // Hide all icons initially to prevent flash
+    this.iconTargets.forEach(icon => {
+      icon.style.visibility = 'hidden'
+    })
+
+    // Find all day sections and set initial state
     this.dayTargets.forEach(dayElement => {
       const dayName = dayElement.dataset.dayName
       const content = dayElement.querySelector('[data-day-accordion-target="content"]')
       const icon = dayElement.querySelector('[data-day-accordion-target="icon"]')
       const grid = dayElement.querySelector('[data-day-accordion-target="grid"]')
 
-      // Check saved state - default to collapsed (false)
-      const isExpanded = savedStates[dayName] === true
+      // Only the saved day should be open
+      const shouldBeOpen = dayName === savedOpenDay
 
-      if (isExpanded) {
-        this.openDay(dayElement, content, icon, grid)
+      if (shouldBeOpen) {
+        // Open without animation on initial load
+        content.classList.remove('hidden')
+        icon.textContent = '▼'
+        if (grid) {
+          grid.classList.remove('hidden')
+          grid.dataset.loaded = 'true'
+        }
       } else {
-        this.closeDay(content, icon)
+        // Ensure closed
+        content.classList.add('hidden')
+        icon.textContent = '▶'
       }
+
+      // Now show the icon
+      icon.style.visibility = 'visible'
     })
   }
-  
+
   toggle(event) {
     // Find the clicked day section
     const dayElement = event.currentTarget.closest('[data-day-accordion-target="day"]')
@@ -34,18 +50,29 @@ export default class extends Controller {
     const icon = dayElement.querySelector('[data-day-accordion-target="icon"]')
     const grid = dayElement.querySelector('[data-day-accordion-target="grid"]')
 
-    // Check if this day is currently open (using hidden class)
+    // Check if this day is currently open
     const isOpen = !content.classList.contains('hidden')
 
-    // Toggle this day's state
     if (isOpen) {
+      // Close this day
       this.closeDay(content, icon)
+      // Clear saved state
+      localStorage.removeItem('heroOpenDay')
     } else {
-      this.openDay(dayElement, content, icon, grid)
-    }
+      // Close all other days first (only one open at a time)
+      this.dayTargets.forEach(otherDay => {
+        if (otherDay !== dayElement) {
+          const otherContent = otherDay.querySelector('[data-day-accordion-target="content"]')
+          const otherIcon = otherDay.querySelector('[data-day-accordion-target="icon"]')
+          this.closeDay(otherContent, otherIcon)
+        }
+      })
 
-    // Save the new state
-    this.saveState(dayName, !isOpen)
+      // Open this day
+      this.openDay(dayElement, content, icon, grid)
+      // Save the open day
+      localStorage.setItem('heroOpenDay', dayName)
+    }
   }
   
   openDay(dayElement, content, icon, grid) {
@@ -62,6 +89,16 @@ export default class extends Controller {
       grid.classList.remove('hidden')
       // Mark as loaded since content is pre-rendered
       grid.dataset.loaded = 'true'
+
+      // Trigger lazy loading for the grid
+      // The grid itself should have the lazy-images controller
+      if (grid.dataset.controller && grid.dataset.controller.includes('lazy-images')) {
+        const controller = this.application.getControllerForElementAndIdentifier(grid, 'lazy-images')
+        if (controller) {
+          // Start observing images now that the grid is visible
+          controller.observeImages()
+        }
+      }
     }
   }
 
@@ -72,6 +109,15 @@ export default class extends Controller {
     // Update icon to right arrow
     if (icon) {
       icon.textContent = '▶'
+    }
+
+    // Stop observing images in the grid when closed
+    const grid = content.querySelector('[data-day-accordion-target="grid"]')
+    if (grid && grid.dataset.controller && grid.dataset.controller.includes('lazy-images')) {
+      const controller = this.application.getControllerForElementAndIdentifier(grid, 'lazy-images')
+      if (controller) {
+        controller.unobserveImages()
+      }
     }
   }
   
@@ -101,19 +147,5 @@ export default class extends Controller {
       console.error('Error loading sessions:', error)
       grid.innerHTML = '<div class="col-span-full text-center text-red-500 py-8">Error loading sessions</div>'
     })
-  }
-
-  saveState(dayName, isExpanded) {
-    const savedStates = this.getSavedStates()
-    savedStates[dayName] = isExpanded
-    localStorage.setItem('herosDayAccordionStates', JSON.stringify(savedStates))
-  }
-
-  getSavedStates() {
-    try {
-      return JSON.parse(localStorage.getItem('herosDayAccordionStates')) || {}
-    } catch {
-      return {}
-    }
   }
 }
