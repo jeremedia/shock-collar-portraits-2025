@@ -63,6 +63,10 @@ Rails.application.routes.draw do
       member do
         post :resend
       end
+      collection do
+        get :sitters
+        post :invite_sitter
+      end
     end
     resources :sessions, only: [:index]
     resources :sittings, only: [:index]

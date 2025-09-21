@@ -1,0 +1,179 @@
+<%# Admin page for managing sitter invitations %>
+<div class="bg-black text-white min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <%# Header %>
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-3xl font-bold text-yellow-500">Sitter Invitations</h1>
+        <%= link_to "← Back to Admin", admin_invites_path, class: "text-gray-400 hover:text-yellow-500 transition" %>
+      </div>
+
+      <%# Stats Bar %>
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-900 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">Total Emails</div>
+          <div class="text-2xl font-bold text-yellow-500"><%= @total_emails %></div>
+        </div>
+        <div class="bg-gray-900 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">Invited</div>
+          <div class="text-2xl font-bold text-blue-500"><%= @invited_count %></div>
+        </div>
+        <div class="bg-gray-900 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">Accepted</div>
+          <div class="text-2xl font-bold text-green-500"><%= @accepted_count %></div>
+        </div>
+        <div class="bg-gray-900 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">Pending</div>
+          <div class="text-2xl font-bold text-orange-500"><%= @pending_count %></div>
+        </div>
+      </div>
+
+      <%# Progress Bar %>
+      <div class="bg-gray-800 rounded-full h-3 mb-2">
+        <div class="bg-gradient-to-r from-green-600 to-green-500 h-3 rounded-full transition-all duration-500"
+             style="width: <%= (@accepted_count.to_f / @total_emails * 100).round %>%"></div>
+      </div>
+      <div class="text-sm text-gray-400">
+        <%= (@accepted_count.to_f / @total_emails * 100).round(1) %>% of sitters have accepted their invitations
+      </div>
+    </div>
+
+    <%# Filters %>
+    <div class="mb-6 flex gap-2">
+      <button data-filter="all" class="filter-btn px-4 py-2 rounded-lg bg-yellow-600 text-black font-semibold">
+        All (<%= @total_emails %>)
+      </button>
+      <button data-filter="not-invited" class="filter-btn px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700">
+        Not Invited (<%= @total_emails - @invited_count %>)
+      </button>
+      <button data-filter="pending" class="filter-btn px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700">
+        Pending (<%= @pending_count %>)
+      </button>
+      <button data-filter="accepted" class="filter-btn px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700">
+        Accepted (<%= @accepted_count %>)
+      </button>
+    </div>
+
+    <%# Sitter List %>
+    <div class="bg-gray-900 rounded-lg overflow-hidden">
+      <table class="w-full">
+        <thead>
+          <tr class="bg-gray-800 text-gray-300">
+            <th class="px-4 py-3 text-left">Email</th>
+            <th class="px-4 py-3 text-center">Sessions</th>
+            <th class="px-4 py-3 text-center">Status</th>
+            <th class="px-4 py-3 text-center">Invited</th>
+            <th class="px-4 py-3 text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @sitters_data.each do |sitter| %>
+            <tr class="border-t border-gray-800 hover:bg-gray-800/50 transition sitter-row"
+                data-status="<%= sitter[:accepted] ? 'accepted' : (sitter[:invited] ? 'pending' : 'not-invited') %>">
+              <td class="px-4 py-3">
+                <div class="font-mono text-sm"><%= sitter[:email] %></div>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="text-gray-400"><%= sitter[:sessions_count] %></span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <% if sitter[:accepted] %>
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/50 text-green-400">
+                    ✅ Accepted
+                  </span>
+                <% elsif sitter[:invited] %>
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-900/50 text-orange-400">
+                    ⏳ Pending
+                  </span>
+                <% else %>
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-400">
+                    📧 Not Invited
+                  </span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <% if sitter[:invitation_sent_at] %>
+                  <div class="text-xs text-gray-400">
+                    <%= sitter[:invitation_sent_at].strftime("%b %d, %Y") %>
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    <%= time_ago_in_words(sitter[:invitation_sent_at]) %> ago
+                  </div>
+                <% else %>
+                  <span class="text-gray-600">—</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <% if sitter[:accepted] %>
+                  <span class="text-gray-500 text-sm">Already joined</span>
+                <% else %>
+                  <%= form_with url: invite_sitter_admin_invites_path, method: :post, local: false,
+                                class: "inline", data: { turbo: false } do |f| %>
+                    <%= hidden_field_tag :email, sitter[:email] %>
+                    <button type="submit"
+                            class="px-3 py-1 rounded-lg text-sm font-medium transition
+                                   <%= sitter[:invited] ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-yellow-600 hover:bg-yellow-700 text-black' %>">
+                      <%= sitter[:invited] ? '🔄 Resend' : '📤 Send Invite' %>
+                    </button>
+                  <% end %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <%# Bulk Actions %>
+    <div class="mt-6 p-4 bg-gray-900 rounded-lg">
+      <h3 class="text-lg font-semibold text-yellow-500 mb-3">Bulk Actions</h3>
+      <div class="flex gap-4">
+        <%= form_with url: invite_sitter_admin_invites_path, method: :post, local: false,
+                      id: "bulk-invite-form", data: { turbo: false } do |f| %>
+          <%= hidden_field_tag :bulk_action, 'not_invited' %>
+          <button type="submit" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-black font-semibold rounded-lg transition">
+            📮 Send Invites to All Non-Invited (<%= @total_emails - @invited_count %>)
+          </button>
+        <% end %>
+
+        <%= form_with url: invite_sitter_admin_invites_path, method: :post, local: false,
+                      id: "bulk-resend-form", data: { turbo: false } do |f| %>
+          <%= hidden_field_tag :bulk_action, 'pending' %>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
+            🔄 Resend to All Pending (<%= @pending_count %>)
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Filter functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const rows = document.querySelectorAll('.sitter-row');
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update button states
+      filterBtns.forEach(b => {
+        b.classList.remove('bg-yellow-600', 'text-black');
+        b.classList.add('bg-gray-800', 'text-gray-300');
+      });
+      btn.classList.remove('bg-gray-800', 'text-gray-300');
+      btn.classList.add('bg-yellow-600', 'text-black');
+
+      // Filter rows
+      const filter = btn.dataset.filter;
+      rows.forEach(row => {
+        if (filter === 'all') {
+          row.style.display = '';
+        } else {
+          row.style.display = row.dataset.status === filter ? '' : 'none';
+        }
+      });
+    });
+  });
+});
+</script>
