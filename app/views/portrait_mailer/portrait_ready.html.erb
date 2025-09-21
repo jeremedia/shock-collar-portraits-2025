@@ -3,7 +3,7 @@
 <head>
   <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>OKNOTOK 2025 - Shock Collar Portraits Invitation</title>
+  <title>OKNOTOK 2025 - Your Shock Collar Portrait is Ready!</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
   <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #000000;">
@@ -17,7 +17,7 @@
                 ⚡ OKNOTOK 2025 ⚡
               </h1>
               <h2 style="margin: 10px 0 0 0; font-size: 24px; color: #DC2626;">
-                Shock Collar Portraits
+                Your Shock Collar Portrait is Ready!
               </h2>
             </td>
           </tr>
@@ -39,68 +39,53 @@
                     </p>
 
                     <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
-                      If not... not sure how you ended up on this list. Let's assume you remember: your portrait is ready.
+                      If not... not sure how you ended up on this list. But if so, your portrait is ready!
                     </p>
 
-                    <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
-                      We tried to keep the email-to-session matching straight but that didn't happen. So you'll have to scroll through the <%= PhotoSession.count %> portraits to find yours. One day we'll have a better system. If you remember the day you were shocked, that might help.
+                    <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
+                      We tried to keep the email-to-session straight but that didn't happen. So you'll have to scroll through them to find yours. Sorry about that! One day we'll have a better system. If you remember the day you were shocked, that might help.
                     </p>
-
-                    <% if @resource.admin? %>
-                      <p  style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
-                        <strong>This invite grants admin access.</strong>
-                        After you accept, you'll land on the
-                        <a href="<%= admin_help_url %>" style="color: #FCD34D; text-decoration: underline;">admin help page</a>
-                        with instructions for choosing hero photos and applying tags.
-                      </p>
-                    <% else %>
-                      <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
-                        Click below to set up your account and browse all the portraits. There is no public access.
-                      </p>
-                    <% end %>
 
                     <!-- CTA Button -->
                     <table border="0" cellspacing="0" cellpadding="0" width="100%">
                       <tr>
                         <td align="center" style="padding: 20px 0;">
-                          <a href="<%= accept_invitation_url(@resource, invitation_token: @token) %>"
+                          <a href="<%= @heroes_url %>"
                              style="display: inline-block; padding: 16px 48px; background-color: #DC2626; color: #FFFFFF; text-decoration: none; font-weight: bold; font-size: 18px; border-radius: 8px; letter-spacing: 1px;">
-                            FIND YOUR PORTRAIT
+                            BROWSE ALL PORTRAITS
                           </a>
                         </td>
                       </tr>
                     </table>
 
                     <!-- Alternative Link -->
-                    <p style="margin: 30px 0 20px 0; font-size: 14px; color: #9CA3AF; text-align: center;">
+                    <p style="margin: 30px 0 10px 0; font-size: 14px; color: #9CA3AF; text-align: center;">
                       Or copy and paste this link into your browser:
                     </p>
                     <p style="margin: 0 0 30px 0; font-size: 14px; word-break: break-all; text-align: center;">
-                      <a href="<%= accept_invitation_url(@resource, invitation_token: @token) %>"
-                         style="color: #DC2626; text-decoration: underline;">
-                        <%= accept_invitation_url(@resource, invitation_token: @token) %>
+                      <a href="<%= @heroes_url %>"
+                         style="color: #EAB308; text-decoration: underline;">
+                        <%= @heroes_url %>
                       </a>
                     </p>
 
-                    <% if @resource.invitation_due_at %>
-                      <!-- Expiration Notice -->
-                      <table border="0" cellspacing="0" cellpadding="0" width="100%">
-                        <tr>
-                          <td style="background-color: rgba(220, 38, 38, 0.1); border-left: 4px solid #DC2626; padding: 15px;">
-                            <p style="margin: 0; font-size: 14px; color: #FCA5A5;">
-                              <strong>Note:</strong> This invitation expires on <%= l(@resource.invitation_due_at, format: :long) %>
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
-                    <% end %>
+                    <!-- Privacy Note -->
+                    <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                      <tr>
+                        <td style="background-color: rgba(234, 179, 8, 0.1); border-left: 4px solid #EAB308; padding: 15px;">
+                          <p style="margin: 0; font-size: 14px; color: #FCD34D;">
+                            <strong>Privacy Note:</strong> If after downloading you'd like your portrait removed from the app, send me the URL. There is no public gallery.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
 
                     <!-- Sign off -->
-                    <p style="margin: 30px 0 10px 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
-                      Thank you for trusting us with your portrait and for being part of this fun project.
+                    <p style="margin: 30px 0 0 0; font-size: 16px; line-height: 1.6; color: #D1D5DB;">
+                      Thank you for trusting us with your portrait and for being part of this project!
                     </p>
 
-                    <p style="margin: 10px 0 0 0; font-size: 16px; color: #EAB308;">
+                    <p style="margin: 20px 0 0 0; font-size: 16px; color: #EAB308;">
                       With electric love,<br>
                       <span style="color: #DC2626; font-weight: bold;">MR OK & the OKNOTOK Team</span>
                     </p>
@@ -114,9 +99,14 @@
           <tr>
             <td align="center" style="padding: 30px 20px;">
               <p style="margin: 0 0 10px 0; font-size: 12px; color: #6B7280;">
-                OKNOTOK • 3:00 & Atwood • Black Rock City
+                You're receiving this because you provided your email at an OKNOTOK Shock Collar Portrait session.
               </p>
-
+              <p style="margin: 0 0 10px 0; font-size: 12px; color: #6B7280;">
+                Questions? Reply to this email or find us at camp next year!
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 12px; color: #9CA3AF;">
+                OKNOTOK • 3:00 & A • Black Rock City • Burning Man 2025
+              </p>
             </td>
           </tr>
         </table>
