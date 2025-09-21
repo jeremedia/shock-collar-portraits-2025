@@ -135,3 +135,4 @@ deploy_key.pub
 # Ignore unused importmap-generated files
 vendor/javascript/chart.js.js
 vendor/javascript/chart.js--helpers.js
+db_backups/
