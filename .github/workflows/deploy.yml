@@ -1,0 +1,82 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to deploy (e.g., v1.0.0)'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy Release to Production
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        # Target server (jer-serve via Tailscale)
+        host: 100.74.87.20
+        username: jeremy
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        port: 22
+
+        # Jump host (Caddy server with public IP)
+        proxy_host: 143.110.147.77
+        proxy_username: root
+        proxy_key: ${{ secrets.JUMP_HOST_SSH_KEY }}
+        proxy_port: 22
+
+        # Deployment script
+        script: |
+          cd /home/jeremy/apps/shock-collar-portraits-2025
+
+          # Determine which tag to deploy
+          DEPLOY_TAG="${{ github.event.release.tag_name }}"
+          if [ -z "$DEPLOY_TAG" ]; then
+            DEPLOY_TAG="${{ github.event.inputs.tag }}"
+          fi
+
+          if [ -z "$DEPLOY_TAG" ]; then
+            echo "❌ No release tag specified for deployment"
+            exit 1
+          fi
+
+          echo "🚀 Deploying Shock Collar Portraits 2025 release: $DEPLOY_TAG"
+
+          # Fetch latest tags and changes
+          git fetch --all --tags
+
+          # Checkout the specific release tag
+          git checkout tags/$DEPLOY_TAG -f
+
+          # Setup Ruby environment with RVM
+          source /usr/share/rvm/scripts/rvm
+          rvm use 3.4.5
+
+          # Install/update dependencies
+          bundle install --deployment --without development test
+
+          # Run migrations (preserves existing SQLite databases)
+          RAILS_ENV=production bundle exec rails db:migrate
+
+          # Precompile assets (minimal since most assets are in MinIO)
+          RAILS_ENV=production bundle exec rails assets:precompile
+
+          # Clear Rails cache
+          RAILS_ENV=production bundle exec rails tmp:clear
+
+          # Restart the service
+          sudo systemctl restart shock-collar-portraits.service
+
+          # Wait for service to start
+          sleep 5
+
+          # Check service status
+          sudo systemctl status shock-collar-portraits.service --no-pager
+
+          echo "✅ Shock Collar Portraits 2025 release $DEPLOY_TAG deployed successfully!"
+          echo "🌐 Live at: https://scp-2025.oknotok.com"
