@@ -60,8 +60,8 @@
       <div class="flex items-center justify-center gap-6">
         <!-- Size Slider -->
         <div class="flex items-center gap-3">
-          <label class="text-yellow-500 text-sm font-semibold">Size:</label>
-          <span class="text-gray-400 text-xs">Large</span>
+          <label class="hidden md:inline text-yellow-500 text-sm font-semibold">Size:</label>
+          <span class="hidden md:inline text-gray-400 text-xs">Large</span>
           <input type="range" 
                  data-thumbnail-size-target="slider"
                  data-action="input->thumbnail-size#updateSize"
@@ -71,16 +71,16 @@
                  step="1"
                  class="w-48 h-2 bg-red-900 rounded-lg appearance-none cursor-pointer slider"
                  style="background: linear-gradient(to right, #dc2626 0%, #dc2626 33%, #374151 33%, #374151 100%);">
-          <span class="text-gray-400 text-xs">Small</span>
-          <span data-thumbnail-size-target="count" class="text-yellow-500 text-sm ml-2">(4 per row)</span>
+          <span class="hidden md:inline text-gray-400 text-xs">Small</span>
+          <span data-thumbnail-size-target="count" class="hidden md:inline text-yellow-500 text-sm ml-2">(4 per row)</span>
         </div>
         
         <!-- Divider -->
-        <div class="w-px h-8 bg-red-700/50"></div>
+        <div class="hidden md:block w-px h-8 bg-red-700/50"></div>
         
         <!-- Variant Selector -->
         <div class="flex items-center gap-3">
-          <label for="thumbnail-variant" class="text-yellow-500 text-sm font-semibold">Variant:</label>
+          <label for="thumbnail-variant" class="hidden md:inline text-yellow-500 text-sm font-semibold">Variant:</label>
           <select id="thumbnail-variant"
                   data-thumbnail-size-target="variant"
                   data-action="change->thumbnail-size#updateVariant"
@@ -93,7 +93,7 @@
 
         <% if current_user&.admin? %>
           <!-- Divider -->
-          <div class="w-px h-8 bg-red-700/50"></div>
+          <div class="hidden md:block w-px h-8 bg-red-700/50"></div>
 
           <!-- Hide Heroes Checkbox (Admin Only) -->
           <%= form_with url: toggle_hide_heroes_gallery_index_path, method: :post, local: false, data: { turbo_frame: "_top" }, class: "flex items-center gap-2" do |f| %>

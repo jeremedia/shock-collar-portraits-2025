@@ -55,10 +55,29 @@ export default class extends Controller {
   }
   
   updateSize() {
-    const size = parseInt(this.sliderTarget.value)
+    let size = parseInt(this.sliderTarget.value)
 
     // Check if mobile
     const isMobile = window.innerWidth < 640 // sm breakpoint
+
+    // On mobile, snap to 3 discrete positions
+    if (isMobile) {
+      const min = parseInt(this.sliderTarget.min)
+      const max = parseInt(this.sliderTarget.max)
+      const range = max - min
+
+      // Map slider range to 3 positions
+      if (size <= min + range * 0.33) {
+        size = min  // Snap to minimum (1 column)
+      } else if (size <= min + range * 0.67) {
+        size = Math.round(min + range * 0.5)  // Snap to middle (2 columns)
+      } else {
+        size = max  // Snap to maximum (3 columns)
+      }
+
+      // Update slider to snapped position
+      this.sliderTarget.value = size
+    }
 
     // Update all grids on the page
     this.gridTargets.forEach(grid => {
@@ -106,12 +125,12 @@ export default class extends Controller {
     } else {
       this.countTarget.textContent = `(${size} per row)`
     }
-    
+
     // Update slider background to show position
     const min = parseInt(this.sliderTarget.min)
     const max = parseInt(this.sliderTarget.max)
     const percentage = ((size - min) / (max - min)) * 100
-    
+
     this.sliderTarget.style.background = `linear-gradient(to right, #dc2626 0%, #dc2626 ${percentage}%, #374151 ${percentage}%, #374151 100%)`
     
     // Store preference in localStorage

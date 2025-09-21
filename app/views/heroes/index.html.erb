@@ -1,7 +1,7 @@
 <% content_for :title, "OKNOTOK Heroes - Best Portraits" %>
 <div class="bg-black text-white pb-20" data-controller="thumbnail-size hero-filter">
   <!-- Header -->
-  <div class="bg-gray-900 border-b-2 border-red-600 mb-0">
+  <div class="bg-gray-900 border-b-2 border-red-600 mb-4 sm:mb-0">
     <div class="max-w-7xl mx-auto px-4 py-4 text-center">
       <h1 class="text-4xl font-bold text-yellow-500 leading-none mb-1">Shock&nbsp;Collar Portrait&nbsp;Heroes</h1>
       <p class="text-red-400 text-2xl leading-none">OKNOTOK 2025</p>
@@ -21,7 +21,7 @@
   </div>
 
   <!-- Filter Bar -->
-  <div class="sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-red-600/50 mb-6">
+  <div class="hidden md:block sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-red-600/50 mb-6">
     <div class="max-w-7xl mx-auto px-4 py-4">
       <!-- Main Filter Controls -->
       <div class="mb-3">
@@ -31,12 +31,12 @@
                   data-filter-type="all"
                   data-filter-value="all"
                   data-action="click->hero-filter#clearAllFilters"
-                  class="flex-1 px-4 py-2 text-sm font-medium border-2 border-r-0 rounded-l-full transition-all duration-200 bg-yellow-500 text-black border-yellow-500">
+                  class="flex-1 px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium border-2 border-r-0 rounded-l-full transition-all duration-200 bg-yellow-500 text-black border-yellow-500">
             ✨ Show All
           </button>
           <button data-hero-filter-target="expandButton"
                   data-action="click->hero-filter#toggleFilterPanel"
-                  class="flex-1 px-4 py-2 text-sm font-medium border-2 rounded-r-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700">
+                  class="flex-1 px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium border-2 rounded-r-full transition-all duration-200 bg-gray-800 text-gray-400 border-gray-700">
             <span data-hero-filter-target="expandText">🔽 Filters</span>
           </button>
         </div>
@@ -174,7 +174,7 @@
       </div>
 
       <!-- Filter Stats -->
-      <div class="text-sm text-gray-400">
+      <div class="text-sm text-gray-400 text-center md:text-left">
         <span data-hero-filter-target="stats">Showing all <%= @total_heroes %> heroes</span>
         <span data-hero-filter-target="filterLogicHint" class="hidden ml-3 text-xs text-yellow-500/70">
           (Filters: AND between categories, OR within)
@@ -194,7 +194,8 @@
     <% @heroes_by_day.each do |day, sessions| %>
       <div class="mb-8 sm:mb-12" data-day-section data-hero-filter-target="daySection">
         <!-- Day Header -->
-        <div class="flex items-center mb-3 sm:mb-6 px-2 sm:px-0">
+        <div class="sticky top-0 z-30 bg-black/95 backdrop-blur-sm py-2 -mx-4 sm:mx-0 px-4 sm:px-0 border-b-2 border-red-600 sm:border-b-0">
+          <div class="flex items-center mb-3 sm:mb-6 px-2 sm:px-0">
           <div class="flex-grow border-t-2 border-red-600"></div>
           <div class="px-3 sm:px-6">
             <h2 class="text-xl sm:text-2xl font-bold text-yellow-500">
@@ -203,6 +204,7 @@
             <p class="text-red-400 text-center text-sm" data-day-count><%= sessions.count %> heroes</p>
           </div>
           <div class="flex-grow border-t-2 border-red-600"></div>
+          </div>
         </div>
         
         <!-- Heroes Grid for this day -->
@@ -223,7 +225,7 @@
               <% face_variant_url = sources[:face] %>
               <% portrait_variant_url = sources[:portrait] %>
 
-              <div class="group relative overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105 hero-variant-face <%= has_portrait_crop ? 'hero-card--portrait' : '' %>"
+              <div class="group relative overflow-hidden rounded-none sm:rounded-lg border-0 sm:border-2 border-gray-800 hover:border-red-600 transition-all duration-300 transform hover:scale-105 hero-variant-face <%= (has_portrait_crop && current_user&.admin?) ? 'hero-card--portrait' : '' %>"
                    data-hero-filter-target="heroCard"
                    data-thumbnail-card="true"
                    data-hero-id="<%= hero_photo.id %>"
@@ -289,8 +291,8 @@
       <div class="flex items-center justify-center gap-6">
         <!-- Size Slider -->
         <div class="flex items-center gap-3">
-          <label class="text-yellow-500 text-sm font-semibold">Size:</label>
-          <span class="text-gray-400 text-xs">Large</span>
+          <label class="hidden md:inline text-yellow-500 text-sm font-semibold">Size:</label>
+          <span class="hidden md:inline text-gray-400 text-xs">Large</span>
           <input type="range"
                  data-thumbnail-size-target="slider"
                  data-action="input->thumbnail-size#updateSize"
@@ -300,16 +302,16 @@
                  step="1"
                  class="w-48 h-2 bg-red-900 rounded-lg appearance-none cursor-pointer slider"
                  style="background: linear-gradient(to right, #dc2626 0%, #dc2626 33%, #374151 33%, #374151 100%);">
-          <span class="text-gray-400 text-xs">Small</span>
-          <span data-thumbnail-size-target="count" class="text-yellow-500 text-sm ml-2">(4 per row)</span>
+          <span class="hidden md:inline text-gray-400 text-xs">Small</span>
+          <span data-thumbnail-size-target="count" class="hidden md:inline text-yellow-500 text-sm ml-2">(4 per row)</span>
         </div>
 
         <!-- Divider -->
-        <div class="w-px h-8 bg-red-700/50"></div>
+        <div class="hidden md:block w-px h-8 bg-red-700/50"></div>
 
         <!-- Variant Selector -->
         <div class="flex items-center gap-3">
-          <label for="thumbnail-variant" class="text-yellow-500 text-sm font-semibold">Variant:</label>
+          <label for="thumbnail-variant" class="hidden md:inline text-yellow-500 text-sm font-semibold">Variant:</label>
           <select id="thumbnail-variant"
                   data-thumbnail-size-target="variant"
                   data-action="change->thumbnail-size#updateVariant"

@@ -1,7 +1,7 @@
 
 import { Controller } from "@hotwired/stimulus"
 
-console.log("Stats controller file loaded!")
+// console.log("Stats controller file loaded!")
 
 // IMPORTANT: Chart.js Plugin Integration with Chartkick
 // ======================================================
@@ -24,27 +24,27 @@ export default class extends Controller {
   static targets = ["chart"]
 
   initialize() {
-    console.log("📊 STATS CONTROLLER INITIALIZED!")
+    // console.log("📊 STATS CONTROLLER INITIALIZED!")
     // initialized
   }
 
   async connect() {
-    console.log("🚀 STATS CONTROLLER CONNECT CALLED!")
-    console.log("Element:", this.element)
-    console.log("Stimulus working:", this.identifier)
+    // console.log("🚀 STATS CONTROLLER CONNECT CALLED!")
+    // console.log("Element:", this.element)
+    // console.log("Stimulus working:", this.identifier)
     try {
-      console.log("Stats controller connecting...")
+      // console.log("Stats controller connecting...")
 
       // Chart.js is loaded by Chartkick's Chart.bundle.js
       // This provides the global Chart object with all core functionality
       this.Chart = Chart
-      console.log("Chart.js loaded:", this.Chart)
+      // console.log("Chart.js loaded:", this.Chart)
 
       // Load annotation plugin after Chart.js is available
       // The plugin self-registers with Chart.js when imported
       if (window.Chart && !window.chartjsPluginAnnotation) {
         await import("chartjs-plugin-annotation")
-        console.log("Annotation plugin loaded and registered")
+        // console.log("Annotation plugin loaded and registered")
       }
 
       // Set OKNOTOK theme defaults
@@ -53,11 +53,11 @@ export default class extends Controller {
 
       // Get stats data from window object
       const statsData = window.statsData || {}
-      console.log("Stats data:", statsData)
+      // console.log("Stats data:", statsData)
 
       // Initialize all charts
       this.initializeCharts()
-      console.log("Charts initialized")
+      // console.log("Charts initialized")
     } catch (error) {
       console.error("Error in stats controller connect:", error)
     }
@@ -88,7 +88,7 @@ export default class extends Controller {
 
     // Get data from window object
     const statsData = window.statsData || {}
-    console.log("Initializing charts with data:", statsData)
+    // console.log("Initializing charts with data:", statsData)
 
     try {
       this.createDailyActivityChart(statsData)
@@ -103,10 +103,10 @@ export default class extends Controller {
   }
 
   createDailyActivityChart(data) {
-    console.log("Creating daily activity chart...")
+    // console.log("Creating daily activity chart...")
     const canvas = document.getElementById('dailyActivityChart')
-    console.log("Canvas found:", canvas)
-    console.log("Daily details:", data.dailyDetails)
+    // console.log("Canvas found:", canvas)
+    // console.log("Daily details:", data.dailyDetails)
 
     if (!canvas) {
       console.warn("dailyActivityChart canvas not found")

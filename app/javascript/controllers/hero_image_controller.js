@@ -6,15 +6,26 @@ export default class extends Controller {
     fullSrc: String,
     nextSrc: String,
     prevSrc: String,
-    portraitSrc: String
+    portraitSrc: String,
+    nextPortraitSrc: String,
+    prevPortraitSrc: String
   }
 
   connect() {
     this.setupContainerDimensions()
     this.showPortrait = this.initialPortraitPreference()
-    console.log('[hero-image] has portrait toggle target?', this.hasPortraitToggleTarget)
+    // console.log('[hero-image] has portrait toggle target?', this.hasPortraitToggleTarget)
     this.syncPortraitToggle()
-    console.log('[hero-image] connect showPortrait?', this.showPortrait, 'portraitSrc?', this.portraitSrcValue)
+    // console.log('[hero-image] connect showPortrait?', this.showPortrait, 'portraitSrc?', this.portraitSrcValue)
+
+    // Debug: Log all preload values
+    // console.log('[hero-image] Preload values:', {
+    //   nextSrc: this.nextSrcValue,
+    //   nextPortraitSrc: this.nextPortraitSrcValue,
+    //   prevSrc: this.prevSrcValue,
+    //   prevPortraitSrc: this.prevPortraitSrcValue
+    // })
+
     this.loadFullImage()
     this.setupResizeHandler()
     this.preloadAdjacentImages()
@@ -121,7 +132,7 @@ export default class extends Controller {
       return
     }
 
-    console.log('[hero-image] will change to', src)
+    // console.log('[hero-image] will change to', src)
     this.dispatch('will-change', { detail: { src, portrait: this.showPortrait } })
 
     // Check if image is already in browser cache by creating a test image
@@ -142,7 +153,7 @@ export default class extends Controller {
       if (this.hasSpinnerTarget) {
         this.spinnerTarget.style.display = 'none'
       }
-      console.log('[hero-image] did change instantly (cached)', src)
+      // console.log('[hero-image] did change instantly (cached)', src)
       this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
     } else {
       // Image not cached, show spinner and load
@@ -183,7 +194,7 @@ export default class extends Controller {
           sessionStorage.setItem('heroImageIsAdmin', isAdmin.toString())
         }
 
-        console.log('[hero-image] did change after load', src)
+        // console.log('[hero-image] did change after load', src)
         this.dispatch('did-change', { detail: { src, portrait: this.showPortrait } })
       }
 
@@ -203,27 +214,53 @@ export default class extends Controller {
   }
 
   preloadAdjacentImages() {
-    // Preload next image if available
+    // Always preload BOTH standard and portrait versions for adjacent images
+    // This ensures instant loading regardless of which mode the user chooses
+
+    // Preload next image (both versions)
     if (this.nextSrcValue) {
       const nextImage = new Image()
       nextImage.src = this.nextSrcValue
+      // console.log('[hero-image] Preloading next image:', this.nextSrcValue)
     }
 
-    // Preload previous image if available
+    if (this.nextPortraitSrcValue) {
+      const nextPortraitImage = new Image()
+      nextPortraitImage.src = this.nextPortraitSrcValue
+      // console.log('[hero-image] Preloading next portrait:', this.nextPortraitSrcValue)
+    }
+
+    // Preload previous image (both versions)
     if (this.prevSrcValue) {
       const prevImage = new Image()
       prevImage.src = this.prevSrcValue
+      // console.log('[hero-image] Preloading prev image:', this.prevSrcValue)
     }
 
-    if (this.portraitSrcValue) {
+    if (this.prevPortraitSrcValue) {
+      const prevPortraitImage = new Image()
+      prevPortraitImage.src = this.prevPortraitSrcValue
+      // console.log('[hero-image] Preloading prev portrait:', this.prevPortraitSrcValue)
+    }
+
+    // Also preload the alternate version of current image
+    // If showing portrait, preload standard; if showing standard, preload portrait
+    if (this.showPortrait && this.fullSrcValue) {
+      // Currently showing portrait, so preload the standard version
+      const standardImage = new Image()
+      standardImage.src = this.fullSrcValue
+      // console.log('[hero-image] Preloading current standard (for toggle):', this.fullSrcValue)
+    } else if (!this.showPortrait && this.portraitSrcValue) {
+      // Currently showing standard, so preload the portrait version
       const portraitImage = new Image()
       portraitImage.src = this.portraitSrcValue
+      // console.log('[hero-image] Preloading current portrait (for toggle):', this.portraitSrcValue)
     }
   }
 
   togglePortraitMode(event) {
     const enabled = event.currentTarget.checked
-    console.log('[hero-image] togglePortraitMode', enabled, 'event type', event.type, 'hasPortrait?', this.hasPortraitVariant())
+    // console.log('[hero-image] togglePortraitMode', enabled, 'event type', event.type, 'hasPortrait?', this.hasPortraitVariant())
     if (enabled && !this.hasPortraitVariant()) {
       this.showPortrait = false
       this.persistPortraitPreference()
@@ -234,7 +271,7 @@ export default class extends Controller {
     this.showPortrait = enabled
     this.persistPortraitPreference()
     this.syncPortraitToggle()
-    console.log('[hero-image] mode set to', this.showPortrait ? 'portrait' : 'full')
+    // console.log('[hero-image] mode set to', this.showPortrait ? 'portrait' : 'full')
     this.loadFullImage()
   }
 
@@ -248,7 +285,7 @@ export default class extends Controller {
   hasPortraitVariant() {
     const available = this.hasPortraitSrcValue && this.portraitSrcValue && this.portraitSrcValue.length > 0
     if (!available) {
-      console.log('[hero-image] portrait variant missing')
+      // console.log('[hero-image] portrait variant missing')
     }
     return available
   }
@@ -281,9 +318,9 @@ export default class extends Controller {
       const enabled = this.showPortrait && hasVariant
       this.portraitToggleTarget.checked = enabled
       this.portraitToggleTarget.disabled = !hasVariant
-      console.log('[hero-image] sync toggle => checked:', this.portraitToggleTarget.checked, 'disabled:', this.portraitToggleTarget.disabled)
+      // console.log('[hero-image] sync toggle => checked:', this.portraitToggleTarget.checked, 'disabled:', this.portraitToggleTarget.disabled)
     } else {
-      console.log('[hero-image] no portrait toggle target found during sync')
+      // console.log('[hero-image] no portrait toggle target found during sync')
     }
 
     if (hasVariant) {

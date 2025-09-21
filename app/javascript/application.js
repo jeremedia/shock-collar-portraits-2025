@@ -4,4 +4,4 @@ import "controllers"
 // import "@kurkle/color"
 import "chartkick"
 import "Chart.bundle"
-console.log("Hello from application.js")
+// console.log("Hello from application.js")

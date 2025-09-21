@@ -18,12 +18,18 @@
                data-portrait-crop-photo-id-value="<%= @photo.id %>"
              <% end %>>
           <!-- Photo Container -->
-          <div class="<%= current_user&.admin? ? 'sm:flex-grow' : 'w-full' %> flex flex-col h-full"
+          <div class="<%= current_user&.admin? ? 'sm:flex-grow' : 'w-full' %> flex flex-col h-full border-t sm:border-t-0 border-red-600"
                data-controller="hero-image"
                data-hero-image-full-src-value="<%= smart_variant_url(@photo.image, :large) %>"
                data-hero-image-portrait-src-value="<%= portrait_url || '' %>"
-               <% if @next_photo %>data-hero-image-next-src-value="<%= smart_variant_url(@next_photo.image, :large) %>"<% end %>
-               <% if @prev_photo %>data-hero-image-prev-src-value="<%= smart_variant_url(@prev_photo.image, :large) %>"<% end %>>
+               <% if @next_photo %>
+                 data-hero-image-next-src-value="<%= smart_variant_url(@next_photo.image, :large) %>"
+                 data-hero-image-next-portrait-src-value="<%= @next_photo.portrait_crop_url || '' %>"
+               <% end %>
+               <% if @prev_photo %>
+                 data-hero-image-prev-src-value="<%= smart_variant_url(@prev_photo.image, :large) %>"
+                 data-hero-image-prev-portrait-src-value="<%= @prev_photo.portrait_crop_url || '' %>"
+               <% end %>>
           <% default_prev_url = @prev_hero_id ? hero_path(@prev_hero_id) : nil %>
           <% default_next_url = @next_hero_id ? hero_path(@next_hero_id) : nil %>
 
@@ -33,10 +39,38 @@
                data-hero-navigation-current-id-value="<%= @photo.id %>"
                data-hero-navigation-default-prev-url-value="<%= default_prev_url || '' %>"
                data-hero-navigation-default-next-url-value="<%= default_next_url || '' %>">
-            <%= link_to session_path(@session.id), class: "px-2 py-2 text-yellow-500 font-bold text-lg sm:text-2xl hover:text-yellow-400 transition-colors" do %>
-              <span class="hidden sm:inline">Session #<%= sprintf('%03d', @session.session_number) %></span>
-              <span class="sm:hidden">#<%= sprintf('%03d', @session.session_number) %></span>
-            <% end %>
+            <div class="flex items-center gap-2 sm:gap-4">
+              <%= link_to session_path(@session.id), class: "px-2 py-2 text-yellow-500 font-bold text-lg sm:text-2xl hover:text-yellow-400 transition-colors" do %>
+                <span class="hidden sm:inline">Session #<%= sprintf('%03d', @session.session_number) %></span>
+                <span class="sm:hidden">#<%= sprintf('%03d', @session.session_number) %></span>
+              <% end %>
+              <!-- Metadata moved from footer -->
+              <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+                <div class="flex items-center gap-1">
+                  <span class="text-yellow-500 font-semibold text-xs sm:text-sm">
+                    <span class="hidden sm:inline"><%= @session.session_day.day_name %>, </span><%= @session.session_day.date.strftime('%b %d') %>
+                  </span>
+                </div>
+                <span class="text-gray-600 hidden sm:inline">•</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-yellow-500 font-semibold text-xs sm:text-sm">
+                    <%
+                      # Use actual photo taken time from EXIF data, already in PST
+                      photo_time = @photo.photo_taken_at
+                      if photo_time
+                    %>
+                      <%= photo_time.in_time_zone('America/Los_Angeles').strftime('%-l:%M:%S %p') %>
+                    <% else %>
+                      <%= @session.started_at.in_time_zone('America/Los_Angeles').strftime('%-l:%M %p') %>
+                    <% end %>
+                  </span>
+                </div>
+                <span class="text-gray-600 hidden sm:inline">•</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-yellow-500 font-semibold text-xs sm:text-sm">#<%= @photo.position %> of <%= @session.photo_count %></span>
+                </div>
+              </div>
+            </div>
             <div class="flex">
               <a data-hero-navigation-target="prevLink"
                  data-action="click->hero-navigation#handleClick"
@@ -90,63 +124,33 @@
               <div class="animate-spin rounded-full h-16 w-16 border-4 border-yellow-500 border-t-transparent"></div>
             </div>
 
-            <!-- Swipe hints for mobile -->
-            <div class="sm:hidden absolute top-4 left-1/2 transform -translate-x-1/2 text-yellow-500/50 text-xs pointer-events-none animate-pulse">
-              ↓ Swipe down for all heroes
-            </div>
-            <% if @prev_hero_id %>
-              <div class="sm:hidden absolute left-2 top-1/2 transform -translate-y-1/2 text-yellow-500/30 pointer-events-none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                </svg>
-              </div>
-            <% end %>
-            <% if @next_hero_id %>
-              <div class="sm:hidden absolute right-2 top-1/2 transform -translate-y-1/2 text-yellow-500/30 pointer-events-none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </div>
-            <% end %>
           </div>
 
-          <!-- Metadata -->
-          <div class="bg-gray-900 border-t-2 border-red-600 px-3 sm:px-6 py-3 sm:py-4 flex justify-center items-center gap-2 sm:gap-6 text-xs sm:text-sm flex-wrap">
-            <div class="flex items-center gap-1 sm:gap-2">
-              <span class="text-red-400 hidden sm:inline">Day:</span>
-              <span class="text-yellow-500 font-semibold text-xs sm:text-sm">
-                <span class="hidden sm:inline"><%= @session.session_day.day_name %>, </span><%= @session.session_day.date.strftime('%b %d') %>
-              </span>
+          <!-- Footer with controls -->
+          <div class="bg-gray-900 border-t-2 border-red-600 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+            <!-- Download button -->
+            <div class="flex items-center">
+              <a href="<%= rails_blob_url(@photo.image) %>"
+                 download="hero_<%= @photo.id %>_<%= @photo.image.filename %>"
+                 class="inline-flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-500/40 rounded hover:bg-yellow-600/40 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                <span>Download Original</span>
+              </a>
             </div>
-            <span class="text-gray-600 hidden sm:inline">•</span>
-            <div class="flex items-center gap-1 sm:gap-2">
-              <span class="text-red-400 hidden sm:inline">Time:</span>
-              <span class="text-yellow-500 font-semibold">
-                <%
-                  # Use actual photo taken time from EXIF data, already in PST
-                  photo_time = @photo.photo_taken_at
-                  if photo_time
-                %>
-                  <%= photo_time.in_time_zone('America/Los_Angeles').strftime('%-l:%M:%S %p') %>
-                <% else %>
-                  <%= @session.started_at.in_time_zone('America/Los_Angeles').strftime('%-l:%M %p') %>
-                <% end %>
-              </span>
-            </div>
-            <span class="text-gray-600 hidden sm:inline">•</span>
-            <div class="flex items-center gap-1 sm:gap-2">
-              <span class="text-red-400 hidden sm:inline">Photo:</span>
-              <span class="text-yellow-500 font-semibold text-xs sm:text-sm">#<%= @photo.position %> of <%= @session.photo_count %></span>
-            </div>
-            <span class="text-gray-600 hidden sm:inline">•</span>
-            <label class="flex items-center gap-2 text-yellow-400 text-xs sm:text-sm">
+
+            <!-- Portrait mode toggle -->
+            <label class="flex items-center gap-2 text-yellow-400 text-xs sm:text-sm cursor-pointer">
               <input type="checkbox"
-                     class="h-4 w-4 rounded border border-yellow-500/60 bg-gray-800 text-yellow-500 focus:ring-yellow-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                     data-action="change->hero-image#togglePortraitMode click->hero-image#togglePortraitMode"
+                     checked
+                     class="h-4 w-4 rounded border border-yellow-500/60 bg-gray-800 text-yellow-500 focus:ring-yellow-500"
+                     data-action="change->hero-image#togglePortraitMode"
                      data-hero-image-target="portraitToggle">
               <span>Portrait mode</span>
             </label>
           </div>
+
           </div><!-- End photo container -->
 
           <% # Admin sidebar - only shown for admins and on sm+ screens %>
