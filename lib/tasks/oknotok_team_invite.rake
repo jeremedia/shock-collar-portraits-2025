@@ -15,14 +15,14 @@ namespace :oknotok do
 
     # Temporarily set production URL for these invitations
     original_host = Rails.application.config.action_mailer.default_url_options[:host]
-    Rails.application.config.action_mailer.default_url_options[:host] = 'scp-25-dev.oknotok.com'
+    Rails.application.config.action_mailer.default_url_options[:host] = 'scp-2025.oknotok.com'
     Rails.application.config.action_mailer.default_url_options[:protocol] = 'https'
 
     puts "\n==================================="
     puts "OKNOTOK TEAM TEST INVITATIONS"
     puts "==================================="
     puts "Sending to #{team_emails.count} team members"
-    puts "Using production URL: https://scp-25-dev.oknotok.com"
+    puts "Using production URL: https://scp-2025.oknotok.com"
     puts "===================================\n\n"
 
     # Get the superadmin to be the inviter
@@ -98,7 +98,7 @@ namespace :oknotok do
     puts "❌ Failed: #{failed}"
     puts "==================================="
     puts "\nTeam members should check their email for invitations."
-    puts "URLs will direct to: https://scp-25-dev.oknotok.com"
+    puts "URLs will direct to: https://scp-2025.oknotok.com"
   end
 
   desc "Check OKNOTOK team member account status"

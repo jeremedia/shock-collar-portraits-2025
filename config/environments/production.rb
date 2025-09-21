@@ -60,7 +60,7 @@ Rails.application.configure do
   config.action_mailer.perform_deliveries = true
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: ENV.fetch("RAILS_HOST", "scp-25.oknotok.com") }
+  config.action_mailer.default_url_options = { host: ENV.fetch("RAILS_HOST", "scp-2025.oknotok.com") }
 
   smtp_username = Rails.application.credentials.dig(:smtp, :username) || ENV['GMAIL_USERNAME'] || 'mrok@oknotok.com'
   smtp_password = Rails.application.credentials.dig(:smtp, :app_password) || ENV['GMAIL_APP_PASSWORD']
