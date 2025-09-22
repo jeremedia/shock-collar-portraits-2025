@@ -107,15 +107,25 @@
                 <% if sitter[:accepted] %>
                   <span class="text-gray-500 text-sm">Already joined</span>
                 <% else %>
-                  <%= form_with url: invite_sitter_admin_invites_path, method: :post, local: false,
-                                class: "inline", data: { turbo: false } do |f| %>
-                    <%= hidden_field_tag :email, sitter[:email] %>
-                    <button type="submit"
-                            class="px-3 py-1 rounded-lg text-sm font-medium transition
-                                   <%= sitter[:invited] ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-yellow-600 hover:bg-yellow-700 text-black' %>">
-                      <%= sitter[:invited] ? '🔄 Resend' : '📤 Send Invite' %>
-                    </button>
-                  <% end %>
+                  <div class="flex items-center justify-center gap-2">
+                    <%= form_with url: invite_sitter_admin_invites_path, method: :post, local: false,
+                                  class: "inline", data: { turbo: false } do |f| %>
+                      <%= hidden_field_tag :email, sitter[:email] %>
+                      <button type="submit"
+                              class="px-3 py-1 rounded-lg text-sm font-medium transition
+                                     <%= sitter[:invited] ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-yellow-600 hover:bg-yellow-700 text-black' %>">
+                        <%= sitter[:invited] ? '🔄 Resend' : '📤 Send Invite' %>
+                      </button>
+                    <% end %>
+
+                    <% if sitter[:user] && sitter[:user].invitation_token.present? %>
+                      <button onclick="copyInviteUrl('<%= sitter[:user].invitation_token %>')"
+                              class="px-3 py-1 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white transition"
+                              title="Copy invitation URL to clipboard">
+                        📋 Copy URL
+                      </button>
+                    <% end %>
+                  </div>
                 <% end %>
               </td>
             </tr>
@@ -149,6 +159,50 @@
 </div>
 
 <script>
+// Copy invite URL to clipboard
+function copyInviteUrl(token) {
+  const url = `${window.location.origin}/users/invitation/accept?invitation_token=${token}`;
+
+  // Create a temporary textarea to copy the URL
+  const textarea = document.createElement('textarea');
+  textarea.value = url;
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-999999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    document.execCommand('copy');
+    // Show success feedback
+    showNotification('Invitation URL copied to clipboard!');
+  } catch (err) {
+    // Fallback for modern browsers
+    navigator.clipboard.writeText(url).then(() => {
+      showNotification('Invitation URL copied to clipboard!');
+    }).catch(() => {
+      // If all else fails, show the URL in an alert
+      alert(`Copy this URL:\n${url}`);
+    });
+  }
+
+  document.body.removeChild(textarea);
+}
+
+// Show temporary notification
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-500';
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 500);
+  }, 3000);
+}
+
 // Filter functionality
 document.addEventListener('DOMContentLoaded', () => {
   const filterBtns = document.querySelectorAll('.filter-btn');
