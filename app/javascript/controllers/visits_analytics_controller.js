@@ -98,7 +98,8 @@ export default class extends Controller {
                     strokeStyle: data.datasets[0].borderColor,
                     lineWidth: data.datasets[0].borderWidth,
                     hidden: false,
-                    index: i
+                    index: i,
+                    fontColor: '#FACC15'  // Fix black text
                   }
                 })
               }
@@ -366,12 +367,20 @@ export default class extends Controller {
     if (!ctx) return
 
     const locations = data.top_locations || []
+
+    // Check if locations have data
+    if (locations.length === 0) {
+      // Show "No data" message
+      ctx.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-gray-500">No location data available</div>'
+      return
+    }
+
     const topLocations = locations.slice(0, 10)
 
     this.charts.geographic = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: topLocations.map(l => l[0]),
+        labels: topLocations.map(l => Array.isArray(l[0]) ? l[0].join(', ') : l[0]),
         datasets: [{
           label: 'Visits',
           data: topLocations.map(l => l[1]),
@@ -420,36 +429,30 @@ export default class extends Controller {
     if (!ctx) return
 
     const depths = data.session_depths || {}
-    const orderedKeys = [
-      '0 photos',
-      '1 photo',
-      '2-5 photos',
-      '6-10 photos',
-      '11-20 photos',
-      '21-50 photos',
-      '50+ photos'
-    ]
 
-    const chartData = orderedKeys.map(key => depths[key] || 0)
+    // Filter out keys with 0 values and show only meaningful data
+    const filteredDepths = Object.entries(depths).filter(([key, value]) => value > 0)
+    const labels = filteredDepths.map(([key, value]) => key)
+    const chartData = filteredDepths.map(([key, value]) => value)
 
     this.charts.depth = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: orderedKeys,
+        labels: labels,
         datasets: [{
           label: 'Sessions',
           data: chartData,
           backgroundColor: chartData.map((_, i) => {
             const colors = [
-              '#EF4444', // Red for 0
-              '#F97316', // Orange for 1
-              '#F59E0B', // Amber for 2-5
-              '#84CC16', // Lime for 6-10
-              '#22C55E', // Green for 11-20
-              '#10B981', // Emerald for 21-50
-              '#8B5CF6'  // Purple for 50+
+              '#EF4444', // Red
+              '#F97316', // Orange
+              '#F59E0B', // Amber
+              '#84CC16', // Lime
+              '#22C55E', // Green
+              '#10B981', // Emerald
+              '#8B5CF6'  // Purple
             ]
-            return colors[i]
+            return colors[i % colors.length]
           }),
           borderColor: '#000',
           borderWidth: 2

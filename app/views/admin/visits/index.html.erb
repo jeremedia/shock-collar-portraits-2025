@@ -241,13 +241,17 @@
       </div>
 
       <div class="bg-gray-900 border border-pink-600 rounded-lg p-6">
-        <h2 class="text-xl font-bold text-pink-400 mb-4">🌍 Top Locations</h2>
+        <h2 class="text-xl font-bold text-pink-400 mb-4">🌍 Geographic Summary</h2>
         <div class="space-y-2 max-h-64 overflow-y-auto">
-          <% @visitor_locations.first(10).each do |(location, count)| %>
-            <div class="flex justify-between items-center">
-              <span class="text-sm"><%= location.join(", ") %></span>
-              <span class="text-sm font-bold text-pink-400"><%= count %></span>
-            </div>
+          <% if @visitor_locations.any? %>
+            <% @visitor_locations.first(5).each do |(location, count)| %>
+              <div class="flex justify-between items-center">
+                <span class="text-sm"><%= location.join(", ") %></span>
+                <span class="text-sm font-bold text-pink-400"><%= count %></span>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="text-center text-gray-500 py-4">No location data available</div>
           <% end %>
         </div>
       </div>
@@ -428,9 +432,4 @@ document.getElementById('visitor-modal').addEventListener('click', function(e) {
     this.classList.add('hidden');
   }
 });
-
-// Auto-refresh live feed every 30 seconds
-setInterval(() => {
-  location.reload();
-}, 30000);
 </script>

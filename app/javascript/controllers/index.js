@@ -20,6 +20,7 @@ import QueueStatusController from "controllers/queue_status_controller"
 import StatsController from "controllers/stats_controller"
 import SwipeNavigationController from "controllers/swipe_navigation_controller"
 import ThumbnailSizeController from "controllers/thumbnail_size_controller"
+import VisitsAnalyticsController from "controllers/visits_analytics_controller"
 
 application.register("admin-editor", AdminEditorController)
 application.register("admin-tagger", AdminTaggerController)
@@ -40,3 +41,4 @@ application.register("queue-status", QueueStatusController)
 application.register("stats", StatsController)
 application.register("swipe-navigation", SwipeNavigationController)
 application.register("thumbnail-size", ThumbnailSizeController)
+application.register("visits-analytics", VisitsAnalyticsController)
