@@ -1,4 +1,4 @@
-require 'csv'
+require "csv"
 
 class Admin::DashboardController < ApplicationController
   before_action :require_admin!
@@ -11,7 +11,7 @@ class Admin::DashboardController < ApplicationController
       sessions_without_sittings: PhotoSession.without_sittings.count
     }
     @stats_version = StatsCache.version
-    @stats_last_updated = [Photo.maximum(:updated_at), PhotoSession.maximum(:updated_at), Sitting.maximum(:updated_at)].compact.max
+    @stats_last_updated = [ Photo.maximum(:updated_at), PhotoSession.maximum(:updated_at), Sitting.maximum(:updated_at) ].compact.max
 
     # Visitor stats
     @visitor_stats = {
@@ -40,24 +40,24 @@ class Admin::DashboardController < ApplicationController
     flash[:notice] = "Stats cache warm job enqueued"
     redirect_to admin_dashboard_path
   end
-  
+
   def sessions
     @sessions = PhotoSession.includes(:session_day, :sittings)
-                           .order('session_days.date ASC, photo_sessions.started_at ASC')
+                           .order("session_days.date ASC, photo_sessions.started_at ASC")
   end
-  
+
   def sittings
     @sittings = Sitting.includes(:photo_session, :hero_photo)
                        .order(created_at: :desc)
   end
-  
+
   def export_emails
     @sittings = Sitting.includes(:photo_session).order(:id)
-    
+
     respond_to do |format|
       format.csv do
         csv_data = CSV.generate(headers: true) do |csv|
-          csv << ['Session Number', 'Name', 'Email', 'Notes', 'Day', 'Created At']
+          csv << [ "Session Number", "Name", "Email", "Notes", "Day", "Created At" ]
           @sittings.each do |sitting|
             csv << [
               sitting.photo_session.session_number,
@@ -65,11 +65,11 @@ class Admin::DashboardController < ApplicationController
               sitting.email,
               sitting.notes,
               sitting.photo_session.session_day.day_name,
-              sitting.created_at.strftime('%Y-%m-%d %H:%M')
+              sitting.created_at.strftime("%Y-%m-%d %H:%M")
             ]
           end
         end
-        
+
         send_data csv_data, filename: "oknotok_emails_#{Date.today}.csv"
       end
     end

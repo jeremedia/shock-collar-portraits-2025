@@ -26,6 +26,7 @@ class Admin::VisitsController < ApplicationController
     @top_visitors = User.joins(:visits)
       .select("users.*, COUNT(DISTINCT ahoy_visits.id) as visit_count, MAX(ahoy_visits.started_at) as last_seen")
       .group("users.id")
+      .having("COUNT(DISTINCT ahoy_visits.id) > 0")
       .order("visit_count DESC")
       .limit(20)
 
@@ -127,6 +128,7 @@ class Admin::VisitsController < ApplicationController
     heatmap = Array.new(7) { Array.new(24, 0) }
 
     Ahoy::Event.where("time > ?", 7.days.ago).find_each do |event|
+      next unless event.time
       day = event.time.wday
       hour = event.time.hour
       heatmap[day][hour] += 1
