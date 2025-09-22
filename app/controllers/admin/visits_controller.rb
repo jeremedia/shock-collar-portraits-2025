@@ -125,13 +125,13 @@ class Admin::VisitsController < ApplicationController
   def get_popular_photos(since: nil, limit: 10)
     non_admin_user_ids = User.where(admin: false).pluck(:id)
     query = Ahoy::Event.joins(:visit)
-      .where(name: ["Viewed photo", "Photo view", "$view"])
+      .where(name: ["heroes#show", "gallery#show"])
       .where(ahoy_visits: { user_id: [nil] + non_admin_user_ids })
     query = query.where("ahoy_events.time > ?", since) if since
 
     photo_counts = {}
     query.find_each do |event|
-      photo_id = extract_photo_id(event.properties)
+      photo_id = extract_photo_id_from_url(event.properties)
       next unless photo_id
       photo_counts[photo_id] ||= 0
       photo_counts[photo_id] += 1
@@ -147,6 +147,24 @@ class Admin::VisitsController < ApplicationController
     return nil unless properties
     data = properties.is_a?(String) ? JSON.parse(properties) : properties
     data["photo_id"] || data["id"]
+  rescue
+    nil
+  end
+
+  def extract_photo_id_from_url(properties)
+    return nil unless properties
+    data = properties.is_a?(String) ? JSON.parse(properties) : properties
+
+    # Check for direct photo_id first
+    return data["photo_id"] if data["photo_id"]
+
+    # Extract from URL patterns like /heroes/123 or /gallery/123
+    url = data["url"] || data["path"] || ""
+    if match = url.match(/\/(?:heroes|gallery)\/(\d+)/)
+      return match[1].to_i
+    end
+
+    nil
   rescue
     nil
   end
@@ -188,7 +206,7 @@ class Admin::VisitsController < ApplicationController
 
     Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids)
       .includes(:events).find_each do |visit|
-      photo_events = visit.events.where(name: ["Viewed photo", "Photo view", "$view"]).count
+      photo_events = visit.events.where(name: ["heroes#show", "gallery#show"]).count
       bucket = case photo_events
         when 0 then "0 photos"
         when 1 then "1 photo"
@@ -217,12 +235,12 @@ class Admin::VisitsController < ApplicationController
 
     recent_visits.each do |visit|
       photo_events = visit.events
-        .where(name: ["Viewed photo", "Photo view", "$view"])
+        .where(name: ["heroes#show", "gallery#show"])
         .order(:time)
         .limit(5)
 
       if photo_events.count >= 3
-        path = photo_events.map { |e| extract_photo_id(e.properties) }.compact
+        path = photo_events.map { |e| extract_photo_id_from_url(e.properties) }.compact
         paths << path if path.length >= 3
       end
     end
@@ -280,7 +298,7 @@ class Admin::VisitsController < ApplicationController
   def calculate_pages_per_session(non_admin_user_ids)
     counts = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids)
       .joins(:events)
-      .where(events: { name: ["Viewed photo", "Photo view", "$view"] })
+      .where(events: { name: ["heroes#show", "gallery#show"] })
       .group("ahoy_visits.id")
       .count.values
 
@@ -291,8 +309,8 @@ class Admin::VisitsController < ApplicationController
   def calculate_favorite_session(user)
     session_views = {}
 
-    user.events.where(name: ["Viewed photo", "Photo view", "$view"]).find_each do |event|
-      photo_id = extract_photo_id(event.properties)
+    user.events.where(name: ["heroes#show", "gallery#show"]).find_each do |event|
+      photo_id = extract_photo_id_from_url(event.properties)
       next unless photo_id
 
       photo = Photo.find_by(id: photo_id)
