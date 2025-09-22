@@ -102,52 +102,94 @@
     <div class="grid lg:grid-cols-2 gap-6 mb-8">
       <div class="bg-gray-900 border border-orange-600 rounded-lg p-6">
         <h2 class="text-xl font-bold text-orange-400 mb-4">🔥 Hot Photos (24h)</h2>
-        <div class="space-y-2">
+        <div class="space-y-3">
           <% @popular_photos_today.each_with_index do |(photo, count), i| %>
-            <div class="flex items-center gap-3">
+            <%= link_to heroes_path(photo), class: "flex items-center gap-3 p-3 bg-gray-800 rounded hover:bg-gray-700 transition group" do %>
               <span class="text-2xl font-bold text-gray-600">#<%= i + 1 %></span>
+
+              <!-- Thumbnail -->
+              <div class="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-700">
+                <% if photo.image.attached? %>
+                  <%= image_tag photo.image.variant(resize_to_fill: [64, 64]),
+                      class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-200",
+                      loading: "lazy" %>
+                <% else %>
+                  <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                    📷
+                  </div>
+                <% end %>
+              </div>
+
               <div class="flex-1">
-                <div class="font-semibold">
+                <div class="font-semibold group-hover:text-orange-300 transition">
                   Session <%= photo.photo_session&.session_number || "?" %>
                   <% if photo.sitting %>
-                    - <%= photo.sitting.name || photo.sitting.email %>
+                    - <%= photo.sitting.name || photo.sitting.email.split('@').first %>
                   <% end %>
                 </div>
                 <div class="text-sm text-gray-400">
                   Photo #<%= photo.position %> • <%= photo.created_at.strftime("%b %d") %>
+                  <% if photo.photo_session&.session_day %>
+                    • <%= photo.photo_session.session_day.day_name.capitalize %>
+                  <% end %>
                 </div>
               </div>
-              <div class="text-right">
+
+              <div class="text-right flex-shrink-0">
                 <div class="text-xl font-bold text-orange-400"><%= count %></div>
                 <div class="text-xs text-gray-400">views</div>
               </div>
-            </div>
+            <% end %>
+          <% end %>
+          <% if @popular_photos_today.empty? %>
+            <div class="text-center text-gray-500 py-8">No photo views today</div>
           <% end %>
         </div>
       </div>
 
       <div class="bg-gray-900 border border-yellow-600 rounded-lg p-6">
         <h2 class="text-xl font-bold text-yellow-400 mb-4">👑 Hall of Fame (All Time)</h2>
-        <div class="space-y-2">
+        <div class="space-y-3">
           <% @popular_photos_all_time.each_with_index do |(photo, count), i| %>
-            <div class="flex items-center gap-3">
+            <%= link_to heroes_path(photo), class: "flex items-center gap-3 p-3 bg-gray-800 rounded hover:bg-gray-700 transition group" do %>
               <span class="text-2xl font-bold text-gray-600">#<%= i + 1 %></span>
+
+              <!-- Thumbnail -->
+              <div class="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-700">
+                <% if photo.image.attached? %>
+                  <%= image_tag photo.image.variant(resize_to_fill: [64, 64]),
+                      class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-200",
+                      loading: "lazy" %>
+                <% else %>
+                  <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                    📷
+                  </div>
+                <% end %>
+              </div>
+
               <div class="flex-1">
-                <div class="font-semibold">
+                <div class="font-semibold group-hover:text-yellow-300 transition">
                   Session <%= photo.photo_session&.session_number || "?" %>
                   <% if photo.sitting %>
-                    - <%= photo.sitting.name || photo.sitting.email %>
+                    - <%= photo.sitting.name || photo.sitting.email.split('@').first %>
                   <% end %>
                 </div>
                 <div class="text-sm text-gray-400">
                   Photo #<%= photo.position %> • <%= photo.created_at.strftime("%b %d") %>
+                  <% if photo.photo_session&.session_day %>
+                    • <%= photo.photo_session.session_day.day_name.capitalize %>
+                  <% end %>
                 </div>
               </div>
-              <div class="text-right">
+
+              <div class="text-right flex-shrink-0">
                 <div class="text-xl font-bold text-yellow-400"><%= count %></div>
                 <div class="text-xs text-gray-400">views</div>
               </div>
-            </div>
+            <% end %>
+          <% end %>
+          <% if @popular_photos_all_time.empty? %>
+            <div class="text-center text-gray-500 py-8">No photo data available</div>
           <% end %>
         </div>
       </div>
