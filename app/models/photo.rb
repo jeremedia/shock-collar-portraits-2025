@@ -328,6 +328,8 @@ class Photo < ApplicationRecord
 
   def update_portrait_crop!(rect_params)
     update!(portrait_crop_data: sanitize_portrait_crop(rect_params))
+    # Clear cached portrait crop variants so they regenerate with new crop
+    # purge_portrait_crop_variants
   end
 
   def default_portrait_crop_rect

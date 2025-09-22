@@ -464,6 +464,9 @@ export default class extends Controller {
       this.renderOverlay()
       this.showDetails('Reset to default')
       this.fadeOverlayIn()
+
+      // Trigger image refresh to clear browser cache of old variant
+      this.refreshPortraitVariant()
     } catch (error) {
       console.error('Failed to reset portrait crop', error)
       this.setStatus('Reset failed', true)
@@ -614,6 +617,9 @@ export default class extends Controller {
       }
       this.fadeOverlayIn()
       console.log('[portrait-crop] save complete')
+
+      // Trigger image refresh to clear browser cache of old variant
+      this.refreshPortraitVariant()
     } catch (error) {
       console.error('Failed to save portrait crop', error)
       this.setStatus('Save failed', true)
@@ -673,6 +679,20 @@ export default class extends Controller {
       console.log('[portrait-crop] detected portrait mode attribute')
     }
     return portrait
+  }
+
+  refreshPortraitVariant() {
+    // Dispatch an event to notify other components that the portrait crop has changed
+    // This allows any displayed portrait variants to refresh their cached images
+    const event = new CustomEvent('portrait-crop:updated', {
+      detail: {
+        photoId: this.photoIdValue,
+        timestamp: Date.now()
+      },
+      bubbles: true
+    })
+    this.element.dispatchEvent(event)
+    console.log('[portrait-crop] dispatched portrait-crop:updated event')
   }
 
   csrfToken() {

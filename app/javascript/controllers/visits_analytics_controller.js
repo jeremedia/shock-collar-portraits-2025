@@ -48,7 +48,6 @@ export default class extends Controller {
     this.createEngagementChart(data)
     this.createHourlyActivityChart(data)
     this.createVisitorFlowChart(data)
-    this.createGeographicChart(data)
     this.createSessionDepthChart(data)
     this.createRetentionChart(data)
     this.createLiveActivityChart(data)
@@ -372,67 +371,6 @@ export default class extends Controller {
     })
   }
 
-  createGeographicChart(data) {
-    const ctx = document.getElementById('geographicChart')
-    if (!ctx) return
-
-    const locations = data.top_locations || []
-
-    // Check if locations have data
-    if (locations.length === 0) {
-      // Show "No data" message
-      ctx.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-gray-500">No location data available</div>'
-      return
-    }
-
-    const topLocations = locations.slice(0, 10)
-
-    this.charts.geographic = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: topLocations.map(l => Array.isArray(l[0]) ? l[0].join(', ') : l[0]),
-        datasets: [{
-          label: 'Visits',
-          data: topLocations.map(l => l[1]),
-          backgroundColor: '#EC4899',
-          borderColor: '#BE185D',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            grid: {
-              color: '#374151'
-            },
-            ticks: {
-              color: '#9CA3AF'
-            }
-          },
-          y: {
-            grid: {
-              display: false
-            },
-            ticks: {
-              color: '#FACC15',
-              font: {
-                size: 11
-              }
-            }
-          }
-        }
-      }
-    })
-  }
 
   createSessionDepthChart(data) {
     const ctx = document.getElementById('sessionDepthChart')

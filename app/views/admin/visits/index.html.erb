@@ -266,7 +266,7 @@
     </div>
 
     <!-- Session Depth Analysis -->
-    <div class="grid lg:grid-cols-3 gap-6 mb-8">
+    <div class="grid lg:grid-cols-2 gap-6 mb-8">
       <div class="bg-gray-900 border border-purple-600 rounded-lg p-6">
         <h2 class="text-xl font-bold text-purple-400 mb-4">📸 Engagement Depth</h2>
         <div class="space-y-2">
@@ -282,21 +282,6 @@
         </div>
       </div>
 
-      <div class="bg-gray-900 border border-pink-600 rounded-lg p-6">
-        <h2 class="text-xl font-bold text-pink-400 mb-4">🌍 Geographic Summary</h2>
-        <div class="space-y-2 max-h-64 overflow-y-auto">
-          <% if @visitor_locations.any? %>
-            <% @visitor_locations.first(5).each do |(location, count)| %>
-              <div class="flex justify-between items-center">
-                <span class="text-sm"><%= location.join(", ") %></span>
-                <span class="text-sm font-bold text-pink-400"><%= count %></span>
-              </div>
-            <% end %>
-          <% else %>
-            <div class="text-center text-gray-500 py-4">No location data available</div>
-          <% end %>
-        </div>
-      </div>
 
       <div class="bg-gray-900 border border-teal-600 rounded-lg p-6">
         <h2 class="text-xl font-bold text-teal-400 mb-4">📱 Devices</h2>
@@ -389,7 +374,7 @@
       </div>
 
       <!-- Third Row of Charts -->
-      <div class="grid lg:grid-cols-3 gap-6 mb-6">
+      <div class="grid lg:grid-cols-2 gap-6 mb-6">
         <!-- Session Depth -->
         <div class="bg-gray-900 border border-orange-600 rounded-lg p-6">
           <h3 class="text-lg font-bold text-orange-400 mb-4">📸 Photos Viewed per Session</h3>
@@ -406,13 +391,6 @@
           </div>
         </div>
 
-        <!-- Geographic Distribution -->
-        <div class="bg-gray-900 border border-pink-600 rounded-lg p-6">
-          <h3 class="text-lg font-bold text-pink-400 mb-4">🌍 Top Locations</h3>
-          <div style="height: 250px;">
-            <canvas id="geographicChart"></canvas>
-          </div>
-        </div>
       </div>
 
       <!-- Fourth Row - Wide Charts -->

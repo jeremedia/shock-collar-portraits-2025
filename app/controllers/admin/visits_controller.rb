@@ -37,14 +37,6 @@ class Admin::VisitsController < ApplicationController
       .order("visit_count DESC")
       .limit(20)
 
-    # Geographic distribution (non-admins only)
-    @visitor_locations = Ahoy::Visit
-      .where(user_id: [nil] + non_admin_user_ids)
-      .where.not(city: [nil, ""])
-      .group(:city, :region, :country)
-      .count
-      .sort_by { |_, count| -count }
-      .first(20)
 
     # Device breakdown (non-admins only)
     @devices = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids).group(:device_type).count
@@ -85,7 +77,6 @@ class Admin::VisitsController < ApplicationController
       session_depths: @session_depths,
       engagement: @engagement,
       active_today: @active_visitors.count,
-      top_locations: @visitor_locations.first(10),
       top_photos_today: @popular_photos_today.map { |photo, count| [photo.id, count] },
       current_active: @active_visitors.count
     }.to_json

@@ -32,12 +32,17 @@ export default class extends Controller {
 
     this.loadFullImage()
     this.setupResizeHandler()
+    this.setupPortraitCropListener()
   }
 
   disconnect() {
     // Clean up resize handler
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler)
+    }
+    // Clean up portrait crop listener
+    if (this.portraitCropHandler) {
+      document.removeEventListener('portrait-crop:updated', this.portraitCropHandler)
     }
   }
 
@@ -286,8 +291,10 @@ export default class extends Controller {
 
   activeImageSrc() {
     if (this.showPortrait && this.hasPortraitVariant()) {
+      console.log('[hero-image] activeImageSrc returning portrait:', this.portraitSrcValue)
       return this.portraitSrcValue
     }
+    console.log('[hero-image] activeImageSrc returning full:', this.fullSrcValue)
     return this.fullSrcValue
   }
 
@@ -347,6 +354,79 @@ export default class extends Controller {
       } else {
         cropHost.removeAttribute('data-hero-image-mode')
       }
+    }
+  }
+
+  setupPortraitCropListener() {
+    this.portraitCropHandler = (event) => {
+      // When portrait crop is updated, force refresh the current image to clear browser cache
+      console.log('[hero-image] received portrait-crop:updated event', event.detail)
+      this.refreshCurrentImage()
+      // Also clear any cached portrait/full URLs by adding cache buster to stored values
+      this.bustUrlCache()
+    }
+    // Listen on document to catch bubbled events from anywhere
+    document.addEventListener('portrait-crop:updated', this.portraitCropHandler)
+  }
+
+  refreshCurrentImage() {
+    if (!this.hasImageTarget) return
+
+    const currentSrc = this.imageTarget.src
+    if (!currentSrc) return
+
+    // Add cache-busting timestamp to force browser to reload the image
+    const url = new URL(currentSrc)
+    url.searchParams.set('t', Date.now())
+
+    // Preload the new URL to avoid flickering
+    const preloadImg = new Image()
+    preloadImg.onload = () => {
+      // Update the displayed image once the new version is loaded
+      this.imageTarget.src = url.toString()
+      console.log('[hero-image] refreshed image with cache-buster')
+    }
+    preloadImg.src = url.toString()
+  }
+
+  bustUrlCache() {
+    // Add cache-busting timestamp to all image URLs that might show portrait crops
+    const timestamp = Date.now()
+
+    // Update stored URL values with cache buster
+    if (this.fullSrcValue) {
+      this.fullSrcValue = this.addCacheBuster(this.fullSrcValue, timestamp)
+    }
+    if (this.portraitSrcValue) {
+      this.portraitSrcValue = this.addCacheBuster(this.portraitSrcValue, timestamp)
+    }
+    if (this.nextSrcValue) {
+      this.nextSrcValue = this.addCacheBuster(this.nextSrcValue, timestamp)
+    }
+    if (this.nextPortraitSrcValue) {
+      this.nextPortraitSrcValue = this.addCacheBuster(this.nextPortraitSrcValue, timestamp)
+    }
+    if (this.prevSrcValue) {
+      this.prevSrcValue = this.addCacheBuster(this.prevSrcValue, timestamp)
+    }
+    if (this.prevPortraitSrcValue) {
+      this.prevPortraitSrcValue = this.addCacheBuster(this.prevPortraitSrcValue, timestamp)
+    }
+
+    console.log('[hero-image] busted URL cache for all image variants')
+  }
+
+  addCacheBuster(url, timestamp) {
+    if (!url) return url
+
+    try {
+      const urlObj = new URL(url)
+      urlObj.searchParams.set('t', timestamp)
+      return urlObj.toString()
+    } catch (e) {
+      // If URL parsing fails, append as query string
+      const separator = url.includes('?') ? '&' : '?'
+      return `${url}${separator}t=${timestamp}`
     }
   }
 }
