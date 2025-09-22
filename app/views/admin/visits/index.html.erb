@@ -104,7 +104,7 @@
         <h2 class="text-xl font-bold text-orange-400 mb-4">🔥 Hot Photos (24h)</h2>
         <div class="space-y-3">
           <% @popular_photos_today.each_with_index do |(photo, count), i| %>
-            <%= link_to heroes_path(photo), class: "flex items-center gap-3 p-3 bg-gray-800 rounded hover:bg-gray-700 transition group" do %>
+            <%= link_to hero_path(photo), class: "flex items-center gap-3 p-3 bg-gray-800 rounded hover:bg-gray-700 transition group" do %>
               <span class="text-2xl font-bold text-gray-600">#<%= i + 1 %></span>
 
               <!-- Thumbnail -->
@@ -151,7 +151,7 @@
         <h2 class="text-xl font-bold text-yellow-400 mb-4">👑 Hall of Fame (All Time)</h2>
         <div class="space-y-3">
           <% @popular_photos_all_time.each_with_index do |(photo, count), i| %>
-            <%= link_to heroes_path(photo), class: "flex items-center gap-3 p-3 bg-gray-800 rounded hover:bg-gray-700 transition group" do %>
+            <%= link_to hero_path(photo), class: "flex items-center gap-3 p-3 bg-gray-800 rounded hover:bg-gray-700 transition group" do %>
               <span class="text-2xl font-bold text-gray-600">#<%= i + 1 %></span>
 
               <!-- Thumbnail -->
