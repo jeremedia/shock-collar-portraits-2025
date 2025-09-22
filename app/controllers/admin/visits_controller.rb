@@ -155,8 +155,13 @@ class Admin::VisitsController < ApplicationController
     return nil unless properties
     data = properties.is_a?(String) ? JSON.parse(properties) : properties
 
-    # Check for direct photo_id first
-    return data["photo_id"] if data["photo_id"]
+    # Check for Rails controller params (most common)
+    if data["id"]
+      return data["id"].to_i
+    end
+
+    # Check for direct photo_id
+    return data["photo_id"].to_i if data["photo_id"]
 
     # Extract from URL patterns like /heroes/123 or /gallery/123
     url = data["url"] || data["path"] || ""
