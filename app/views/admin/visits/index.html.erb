@@ -110,7 +110,7 @@
               <!-- Thumbnail -->
               <div class="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-700">
                 <% if photo.image.attached? %>
-                  <%= image_tag photo.image.variant(:face),
+                  <%= image_tag photo.face_crop_url,
                       class: "w-16 h-16 object-cover group-hover:scale-105 transition-transform duration-200",
                       loading: "lazy" %>
                 <% else %>
@@ -157,7 +157,7 @@
               <!-- Thumbnail -->
               <div class="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-700">
                 <% if photo.image.attached? %>
-                  <%= image_tag photo.image.variant(:face),
+                  <%= image_tag photo.face_crop_url,
                       class: "w-16 h-16 object-cover group-hover:scale-105 transition-transform duration-200",
                       loading: "lazy" %>
                 <% else %>
