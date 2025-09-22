@@ -1,13 +1,13 @@
-require 'vips'
+require "vips"
 
 class VariantGenerationJob < ApplicationJob
   queue_as :attachments  # Use same queue as image attachments
-  
+
   retry_on StandardError, wait: :polynomially_longer, attempts: 3
-  
-  def perform(photo_id, variants = [:thumb, :large])
+
+  def perform(photo_id, variants = [ :thumb, :large ])
     photo = Photo.find(photo_id)
-    
+
     # Skip if no image attached
     return unless photo.image.attached?
     # p "Starting variant generation for Photo ##{photo.id}"
@@ -21,7 +21,7 @@ class VariantGenerationJob < ApplicationJob
             # This triggers processing of a dynamic variant via libvips extract_area
             photo.face_crop_url(size: 300)
           else
-            #p "Skipping face_thumb for Photo ##{photo.id} - no faces detected"
+            # p "Skipping face_thumb for Photo ##{photo.id} - no faces detected"
           end
         elsif variant_name.to_sym == :portrait_crop
           variant_params = photo.portrait_crop_variant
@@ -32,21 +32,21 @@ class VariantGenerationJob < ApplicationJob
           # Named Active Storage variant
           variant = photo.image.variant(variant_name)
           if variant.send(:record).present?
-            #p "#{variant_name} variant already exists for Photo ##{photo.id}"
+            # p "#{variant_name} variant already exists for Photo ##{photo.id}"
           else
             variant.processed
-            #p "Generated #{variant_name} variant for Photo ##{photo.id}"
+            # p "Generated #{variant_name} variant for Photo ##{photo.id}"
           end
         end
-        
+
 
       rescue => e
         Rails.logger.error "Failed to generate #{variant_name} variant for Photo ##{photo.id}: #{e.message}"
         # Continue with other variants even if one fails
       end
     end
-    
-    #Rails.logger.info "Variant generation completed for Photo ##{photo.id}"
+
+    # Rails.logger.info "Variant generation completed for Photo ##{photo.id}"
   rescue => e
     Rails.logger.error "Variant generation failed for Photo ##{photo_id}: #{e.message}"
     raise # Re-raise to trigger retry

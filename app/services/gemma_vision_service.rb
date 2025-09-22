@@ -1,10 +1,10 @@
-require 'net/http'
-require 'json'
-require 'base64'
+require "net/http"
+require "json"
+require "base64"
 
 class GemmaVisionService
-  OLLAMA_API_URL = ENV.fetch('OLLAMA_API_URL', 'http://localhost:11434')
-  MODEL_NAME = 'gemma3:4b'  # Gemma 3 4B with vision support
+  OLLAMA_API_URL = ENV.fetch("OLLAMA_API_URL", "http://localhost:11434")
+  MODEL_NAME = "gemma3:4b"  # Gemma 3 4B with vision support
 
   class << self
     def analyze_gender(photo)
@@ -39,7 +39,7 @@ class GemmaVisionService
           crop_params[:width],
           crop_params[:height]
         ],
-        resize_to_limit: [400, 400],
+        resize_to_limit: [ 400, 400 ],
         format: :jpg,
         saver: { quality: 85 }
       )
@@ -52,7 +52,6 @@ class GemmaVisionService
       data = processed.download
       p "Face crop downloaded and encoded for photo #{photo.id}"
       Base64.strict_encode64(data)
-
     end
 
     def query_gemma(image_base64)
@@ -75,7 +74,7 @@ class GemmaVisionService
       request_body = {
         model: MODEL_NAME,
         prompt: prompt,
-        images: [image_base64],
+        images: [ image_base64 ],
         stream: false,
         options: {
           temperature: 0.1,  # Low temperature for consistent results
@@ -87,13 +86,13 @@ class GemmaVisionService
       http.read_timeout = 30  # 30 second timeout
 
       request = Net::HTTP::Post.new(uri.path)
-      request.content_type = 'application/json'
+      request.content_type = "application/json"
       request.body = request_body.to_json
 
       response = http.request(request)
 
-      if response.code == '200'
-        JSON.parse(response.body)['response']
+      if response.code == "200"
+        JSON.parse(response.body)["response"]
       else
         Rails.logger.error "Ollama API error: #{response.code} - #{response.body}"
         nil
@@ -111,9 +110,9 @@ class GemmaVisionService
         result = JSON.parse(json_match[0])
 
         {
-          gender: result['gender'],
-          confidence: result['confidence'].to_f,
-          reasoning: result['reasoning'],
+          gender: result["gender"],
+          confidence: result["confidence"].to_f,
+          reasoning: result["reasoning"],
           model: MODEL_NAME,
           analyzed_at: Time.current
         }

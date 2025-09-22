@@ -1,4 +1,4 @@
-require 'digest'
+require "digest"
 
 class StatsCache
   DEFAULT_TTL = 12.hours
@@ -6,7 +6,7 @@ class StatsCache
   class << self
     def version
       # Compose a version from the most recently updated core records
-      times = [Photo.maximum(:updated_at), PhotoSession.maximum(:updated_at), Sitting.maximum(:updated_at)].compact
+      times = [ Photo.maximum(:updated_at), PhotoSession.maximum(:updated_at), Sitting.maximum(:updated_at) ].compact
       return "v0" if times.empty?
       Digest::MD5.hexdigest(times.map { |t| t.to_i }.join(":"))
     end
@@ -35,7 +35,7 @@ class StatsCache
 
     def daily_details(version:, force: false)
       fetch("daily_details", version:, force:) do
-        tz = ActiveSupport::TimeZone['Pacific Time (US & Canada)']
+        tz = ActiveSupport::TimeZone["Pacific Time (US & Canada)"]
         PhotoSession.visible
           .includes(:photos)
           .group_by { |s| s.started_at.in_time_zone(tz).to_date }
@@ -54,7 +54,7 @@ class StatsCache
 
     def daily_timelines(version:, force: false, dates: nil)
       dates ||= %w[2025-08-25 2025-08-26 2025-08-27 2025-08-28 2025-08-29].map { |d| Date.parse(d) }
-      tz = ActiveSupport::TimeZone['Pacific Time (US & Canada)']
+      tz = ActiveSupport::TimeZone["Pacific Time (US & Canada)"]
 
       fetch("daily_timelines", version:, force:) do
         sessions_by_day = PhotoSession.visible.includes(:photos).group_by { |s| s.started_at.in_time_zone(tz).to_date }
@@ -66,23 +66,23 @@ class StatsCache
             first_photo_utc = session.photos.map(&:photo_taken_at).compact.min
             pdt_time = (first_photo_utc || session.started_at).in_time_zone(tz)
             {
-              time: pdt_time.strftime('%H:%M'),
+              time: pdt_time.strftime("%H:%M"),
               hour: pdt_time.hour,
               minute: pdt_time.min,
               photo_count: session.photos.count,
               burst_id: session.burst_id
             }
-          end.sort_by { |s| [s[:hour], s[:minute]] }
+          end.sort_by { |s| [ s[:hour], s[:minute] ] }
 
           total_photos = sessions_data.sum { |s| s[:photo_count] }
           avg_photos = sessions_data.any? ? (total_photos.to_f / sessions_data.size).round(1) : 0
 
-          timelines[date.strftime('%Y-%m-%d')] = {
+          timelines[date.strftime("%Y-%m-%d")] = {
             sessions: sessions_data,
             average: avg_photos,
             total_sessions: sessions_data.size,
             total_photos: total_photos,
-            day_name: date.strftime('%A, %B %d')
+            day_name: date.strftime("%A, %B %d")
           }
         end
         timelines
@@ -98,12 +98,12 @@ class StatsCache
           .values
           .group_by do |count|
             case count
-            when 1..10 then '1-10'
-            when 11..20 then '11-20'
-            when 21..30 then '21-30'
-            when 31..40 then '31-40'
-            when 41..50 then '41-50'
-            else '50+'
+            when 1..10 then "1-10"
+            when 11..20 then "11-20"
+            when 21..30 then "21-30"
+            when 31..40 then "31-40"
+            when 41..50 then "41-50"
+            else "50+"
             end
           end
           .transform_values(&:count)
@@ -114,10 +114,10 @@ class StatsCache
       fetch("top_sessions", version:, force:) do
         PhotoSession.visible
           .left_joins(:photos)
-          .group('photo_sessions.id, photo_sessions.burst_id, photo_sessions.started_at')
-          .order('COUNT(photos.id) DESC')
+          .group("photo_sessions.id, photo_sessions.burst_id, photo_sessions.started_at")
+          .order("COUNT(photos.id) DESC")
           .limit(limit)
-          .pluck('photo_sessions.id', 'photo_sessions.burst_id', 'photo_sessions.started_at', 'COUNT(photos.id)')
+          .pluck("photo_sessions.id", "photo_sessions.burst_id", "photo_sessions.started_at", "COUNT(photos.id)")
           .map { |id, burst_id, started_at, count| { id:, burst_id:, started_at:, count: count.to_i } }
       end
     end
@@ -131,7 +131,7 @@ class StatsCache
         with_faces.find_each(batch_size: 1000) do |p|
           begin
             data = p.face_data.is_a?(String) ? JSON.parse(p.face_data) : p.face_data
-            count = data && data['face_count']
+            count = data && data["face_count"]
             case count
             when 1 then one += 1
             when 2 then two += 1
@@ -211,7 +211,7 @@ class StatsCache
         # Check if the session has gender analysis
         if session.respond_to?(:detected_gender) && session.detected_gender.present?
           gender = session.detected_gender.to_sym
-          gender_counts[gender] += 1 if [:male, :female].include?(gender)
+          gender_counts[gender] += 1 if [ :male, :female ].include?(gender)
         else
           gender_counts[:unknown] += 1
         end

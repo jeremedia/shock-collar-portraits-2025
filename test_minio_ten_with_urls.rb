@@ -50,7 +50,7 @@ blobs.each_with_index do |blob, index|
 
     # Handle both .jpg and .JPG extensions
     local_path = nil
-    [".JPG", ".jpg"].each do |ext|
+    [ ".JPG", ".jpg" ].each do |ext|
       test_path = Rails.root.join("session_originals", day, folder_name, "#{folder_name}#{ext}")
       if File.exist?(test_path)
         local_path = test_path

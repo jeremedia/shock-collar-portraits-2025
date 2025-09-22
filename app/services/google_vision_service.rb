@@ -10,13 +10,13 @@ class GoogleVisionService
     # Get the face crop URL or use the full image
     image_url = if photo.respond_to?(:face_crop_url) && photo.face_crop_url
                   photo.face_crop_url(size: 400)
-                else
+    else
                   # Fall back to using the medium variant
                   Rails.application.routes.url_helpers.rails_blob_url(
                     photo.image.variant(:medium),
                     host: Rails.application.config.action_mailer.default_url_options[:host]
                   )
-                end
+    end
 
     # Prepare the image for analysis
     image = { source: { image_uri: image_url } }

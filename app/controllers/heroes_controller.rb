@@ -29,7 +29,7 @@ class HeroesController < ApplicationController
     # Cache the page for 5 minutes to improve performance
     expires_in 5.minutes, public: true
   end
-  
+
   def show
     @photo = Photo.find(params[:id])
     @session = @photo.photo_session
@@ -87,10 +87,10 @@ class HeroesController < ApplicationController
         session_number: @session.session_number,
         photo_count: @session.photo_count,
         day_name: @session.session_day&.day_name,
-        date: @session.session_day&.date&.strftime('%b %d'),
+        date: @session.session_day&.date&.strftime("%b %d"),
         time: @photo.photo_taken_at ?
-          @photo.photo_taken_at.in_time_zone('America/Los_Angeles').strftime('%-l:%M:%S %p') :
-          @session.started_at.in_time_zone('America/Los_Angeles').strftime('%-l:%M %p')
+          @photo.photo_taken_at.in_time_zone("America/Los_Angeles").strftime("%-l:%M:%S %p") :
+          @session.started_at.in_time_zone("America/Los_Angeles").strftime("%-l:%M %p")
       },
       navigation: {
         prev_id: @prev_hero_id,

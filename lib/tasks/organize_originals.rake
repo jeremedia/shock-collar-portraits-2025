@@ -1,9 +1,9 @@
 namespace :photos do
   desc "Create directory structure for organizing original photos by day and filename"
   task organize_structure: :environment do
-    require 'fileutils'
+    require "fileutils"
 
-    base_dir = Rails.root.join('session_originals')
+    base_dir = Rails.root.join("session_originals")
 
     # Create day directories
     days = %w[monday tuesday wednesday thursday friday]
@@ -18,7 +18,7 @@ namespace :photos do
     Photo.includes(:photo_session).find_each do |photo|
       next unless photo.photo_session&.started_at
 
-      day_of_week = photo.photo_session.started_at.strftime('%A').downcase
+      day_of_week = photo.photo_session.started_at.strftime("%A").downcase
       next unless days.include?(day_of_week)
 
       photos_by_day[day_of_week] ||= []
@@ -33,7 +33,7 @@ namespace :photos do
 
       unique_filenames.each do |filename|
         # Remove extension for cleaner folder names
-        folder_name = File.basename(filename, '.*')
+        folder_name = File.basename(filename, ".*")
         folder_path = base_dir.join(day, folder_name)
 
         FileUtils.mkdir_p(folder_path)
@@ -50,12 +50,12 @@ namespace :photos do
     end
 
     # Save manifest for reference
-    manifest_path = base_dir.join('copy_manifest.json')
+    manifest_path = base_dir.join("copy_manifest.json")
     File.write(manifest_path, JSON.pretty_generate(manifest))
 
     # Generate scp helper script
-    scp_script_path = base_dir.join('scp_from_air.sh')
-    File.open(scp_script_path, 'w') do |f|
+    scp_script_path = base_dir.join("scp_from_air.sh")
+    File.open(scp_script_path, "w") do |f|
       f.puts "#!/bin/bash"
       f.puts "# SCP script to copy originals from MacBook Air"
       f.puts "# Usage: ./scp_from_air.sh <air_username>@<air_ip>:<source_path>"
@@ -63,7 +63,7 @@ namespace :photos do
       f.puts "if [ $# -eq 0 ]; then"
       f.puts '  echo "Usage: $0 <air_username>@<air_ip>:<source_path>"'
       f.puts '  echo "Example: $0 jeremy@192.168.1.100:/path/to/photos"'
-      f.puts '  exit 1'
+      f.puts "  exit 1"
       f.puts "fi"
       f.puts ""
       f.puts "SOURCE=$1"
@@ -98,16 +98,16 @@ namespace :photos do
     Photo.includes(:photo_session).find_each do |photo|
       next unless photo.photo_session&.started_at
 
-      day = photo.photo_session.started_at.strftime('%A').downcase
+      day = photo.photo_session.started_at.strftime("%A").downcase
       next unless %w[monday tuesday wednesday thursday friday].include?(day)
 
       # Group by potential source directories on the Air
-      source_hint = photo.filename&.start_with?('IMG_') ? 'iphone' : 'canon'
+      source_hint = photo.filename&.start_with?("IMG_") ? "iphone" : "canon"
       photos_by_source[source_hint] ||= []
       photos_by_source[source_hint] << {
         filename: photo.filename,
         day: day,
-        folder: File.basename(photo.filename, '.*'),
+        folder: File.basename(photo.filename, ".*"),
         session_id: photo.photo_session.id
       }
     end

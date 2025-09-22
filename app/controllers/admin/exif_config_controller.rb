@@ -5,12 +5,12 @@ class Admin::ExifConfigController < ApplicationController
   def index
     # Get a sample photo with comprehensive EXIF data for configuration
     @sample_photo = Photo.joins(:image_attachment)
-                         .where.not(exif_data: [nil, {}])
+                         .where.not(exif_data: [ nil, {} ])
                          .where("JSON_EXTRACT(exif_data, '$.Camera') IS NOT NULL")
                          .first
 
     if @sample_photo.nil?
-      redirect_to admin_dashboard_path, alert: 'No photos with EXIF data found. Please extract EXIF data first.'
+      redirect_to admin_dashboard_path, alert: "No photos with EXIF data found. Please extract EXIF data first."
       return
     end
 
@@ -29,7 +29,7 @@ class Admin::ExifConfigController < ApplicationController
       # Save the configuration
       AppSetting.set_exif_visible_fields(config)
 
-      redirect_to admin_exif_config_index_path, notice: 'EXIF field configuration saved successfully!'
+      redirect_to admin_exif_config_index_path, notice: "EXIF field configuration saved successfully!"
     rescue => e
       Rails.logger.error "Failed to save EXIF config: #{e.message}"
       redirect_to admin_exif_config_index_path, alert: "Failed to save configuration: #{e.message}"
@@ -39,7 +39,7 @@ class Admin::ExifConfigController < ApplicationController
   def reset
     # Reset to default configuration
     AppSetting.set_exif_visible_fields(AppSetting.default_exif_fields)
-    redirect_to admin_exif_config_index_path, notice: 'EXIF configuration reset to defaults!'
+    redirect_to admin_exif_config_index_path, notice: "EXIF configuration reset to defaults!"
   end
 
   private
@@ -67,7 +67,7 @@ class Admin::ExifConfigController < ApplicationController
 
     params.each do |key, value|
       # Look for parameters like "Camera_Make", "Exposure_ISO", etc.
-      if key.match(/^([^_]+)_(.+)$/) && value == '1'
+      if key.match(/^([^_]+)_(.+)$/) && value == "1"
         category = $1
         field = $2
 

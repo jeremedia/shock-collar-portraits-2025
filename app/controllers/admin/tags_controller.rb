@@ -1,6 +1,6 @@
 class Admin::TagsController < ApplicationController
   before_action :require_admin!
-  before_action :set_tag, only: [:show, :edit, :update, :destroy, :move_up, :move_down]
+  before_action :set_tag, only: [ :show, :edit, :update, :destroy, :move_up, :move_down ]
 
   def index
     @tags_by_category = TagDefinition::CATEGORIES.each_with_object({}) do |category, hash|
@@ -19,7 +19,7 @@ class Admin::TagsController < ApplicationController
     @tag = TagDefinition.new(tag_params)
 
     if @tag.save
-      redirect_to admin_tags_path, notice: 'Tag was successfully created.'
+      redirect_to admin_tags_path, notice: "Tag was successfully created."
     else
       render :new, status: :unprocessable_entity
     end
@@ -30,7 +30,7 @@ class Admin::TagsController < ApplicationController
 
   def update
     if @tag.update(tag_params)
-      redirect_to admin_tags_path, notice: 'Tag was successfully updated.'
+      redirect_to admin_tags_path, notice: "Tag was successfully updated."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -38,7 +38,7 @@ class Admin::TagsController < ApplicationController
 
   def destroy
     @tag.destroy
-    redirect_to admin_tags_path, notice: 'Tag was successfully deleted.'
+    redirect_to admin_tags_path, notice: "Tag was successfully deleted."
   end
 
   def move_up

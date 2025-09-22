@@ -13,15 +13,15 @@ class TagDefinition < ApplicationRecord
 
   # Class methods for easy access
   def self.expression_tags
-    active.by_category('expression').ordered
+    active.by_category("expression").ordered
   end
 
   def self.appearance_tags
-    active.by_category('appearance').ordered
+    active.by_category("appearance").ordered
   end
 
   def self.accessory_tags
-    active.by_category('accessory').ordered
+    active.by_category("accessory").ordered
   end
 
   def self.cached_tags_by_category(category)

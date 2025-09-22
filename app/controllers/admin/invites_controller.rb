@@ -1,18 +1,18 @@
 class Admin::InvitesController < ApplicationController
   before_action :authenticate_user!
   before_action :require_superadmin!
-  
+
   def index
     @admins = User.where(admin: true).order(:email)
     @pending_admin_invites = User.invitation_not_accepted.where(admin: true).order(invitation_sent_at: :desc)
     @pending_user_invites = User.invitation_not_accepted.where(admin: false).order(invitation_sent_at: :desc)
     @accepted_users = User.invitation_accepted.where(admin: false).order(:email)
   end
-  
+
   def new
     @user = User.new
   end
-  
+
   def create
     email = params[:email]&.strip&.downcase
     is_admin = params[:admin] == "1"
@@ -61,10 +61,10 @@ class Admin::InvitesController < ApplicationController
     end
     redirect_to admin_invites_path
   end
-  
+
   def destroy
     user = User.find(params[:id])
-    
+
     if user.superadmin?
       flash[:alert] = "Cannot revoke superadmin privileges"
     elsif user == current_user
@@ -73,10 +73,10 @@ class Admin::InvitesController < ApplicationController
       user.update!(admin: false)
       flash[:notice] = "Admin privileges revoked for #{user.email}"
     end
-    
+
     redirect_to admin_invites_path
   end
-  
+
   def resend
     user = User.find(params[:id])
 
@@ -129,7 +129,7 @@ class Admin::InvitesController < ApplicationController
     # Handle bulk operations
     if params[:bulk_action].present?
       case params[:bulk_action]
-      when 'not_invited'
+      when "not_invited"
         # Get all emails that haven't been invited
         emails = Sitting.select(:email).distinct.pluck(:email)
         existing_emails = User.pluck(:email)
@@ -145,7 +145,7 @@ class Admin::InvitesController < ApplicationController
 
         flash[:notice] = "Queued invitations for #{emails_to_invite.count} sitters"
 
-      when 'pending'
+      when "pending"
         # Resend to all pending invitations
         pending_users = User.invitation_not_accepted.where(email: Sitting.select(:email).distinct.pluck(:email))
 
@@ -182,9 +182,9 @@ class Admin::InvitesController < ApplicationController
 
     redirect_to sitters_admin_invites_path
   end
-  
+
   private
-  
+
   def require_superadmin!
     unless current_user.superadmin?
       flash[:alert] = "Only superadmins can manage admin invitations"

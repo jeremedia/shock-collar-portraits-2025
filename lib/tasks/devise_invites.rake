@@ -17,7 +17,7 @@ namespace :devise do
     puts "===================================\n\n"
 
     # Get all unique emails from sittings
-    sitting_emails = Sitting.where.not(email: [nil, ''])
+    sitting_emails = Sitting.where.not(email: [ nil, "" ])
                             .distinct
                             .pluck(:email, :name)
                             .map { |email, name| { email: email.downcase.strip, name: name } }
@@ -41,14 +41,14 @@ namespace :devise do
     response = STDIN.gets.chomp.downcase
 
     case response
-    when 'test'
+    when "test"
       puts "\nTEST MODE - First 5 recipients:"
       new_emails.first(5).each_with_index do |sitting, i|
         puts "  #{i+1}. #{sitting[:email]} (#{sitting[:name] || 'no name'})"
       end
       puts "\nTest complete. Run with 'yes' to send invitations."
       return
-    when 'yes'
+    when "yes"
       puts "\nStarting invitation send...\n"
     else
       puts "Cancelled."
@@ -63,7 +63,7 @@ namespace :devise do
     # Ask if resuming
     print "Start from email # (1-#{new_emails.count}) or Enter to start from beginning: "
     start_from = STDIN.gets.chomp
-    start_index = start_from.empty? ? 0 : [start_from.to_i - 1, 0].max
+    start_index = start_from.empty? ? 0 : [ start_from.to_i - 1, 0 ].max
 
     # Get the superadmin to be the inviter
     inviter = User.find_by(superadmin: true) || User.find_by(admin: true)
@@ -107,7 +107,7 @@ namespace :devise do
           puts "[#{index + 1}/#{new_emails.count}] ✅ INVITED: #{email} (#{name || 'no name'})"
         else
           failed += 1
-          error_msg = user.errors.full_messages.join(', ')
+          error_msg = user.errors.full_messages.join(", ")
           errors << { email: email, error: error_msg }
           puts "[#{index + 1}/#{new_emails.count}] ❌ FAILED: #{email} - #{error_msg}"
         end
@@ -160,7 +160,7 @@ namespace :devise do
     puts "==================================="
 
     # Get all sitting emails
-    sitting_emails = Sitting.where.not(email: [nil, ''])
+    sitting_emails = Sitting.where.not(email: [ nil, "" ])
                             .distinct
                             .pluck(:email)
                             .map(&:downcase)

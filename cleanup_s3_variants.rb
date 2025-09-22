@@ -30,7 +30,7 @@ minio_blobs = ActiveStorage::Blob.where(service_name: "minio").count
 # Variants to delete (WebP + small JPEGs on S3)
 webp_variants = ActiveStorage::Blob.where(content_type: "image/webp")
 small_jpegs = ActiveStorage::Blob
-  .where(service_name: "amazon", content_type: ["image/jpeg"])
+  .where(service_name: "amazon", content_type: [ "image/jpeg" ])
   .where("byte_size < ?", 1_000_000)
 
 variants_to_delete = webp_variants.or(small_jpegs)
@@ -38,7 +38,7 @@ variant_count = variants_to_delete.count
 
 # Originals to keep
 originals_on_s3 = ActiveStorage::Blob
-  .where(service_name: "amazon", content_type: ["image/jpeg", "image/heic"])
+  .where(service_name: "amazon", content_type: [ "image/jpeg", "image/heic" ])
   .where("byte_size >= ?", 1_000_000)
   .count
 

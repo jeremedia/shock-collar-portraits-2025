@@ -14,7 +14,7 @@ minio_client = Aws::S3::Client.new(
 bucket_name = "shock-collar-portraits-2025"
 
 # Test with 10 image blobs
-blobs = ActiveStorage::Blob.where(content_type: ["image/jpeg", "image/heic"], service_name: "amazon").limit(10)
+blobs = ActiveStorage::Blob.where(content_type: [ "image/jpeg", "image/heic" ], service_name: "amazon").limit(10)
 
 puts "Testing migration with #{blobs.count} photos..."
 puts "=" * 60

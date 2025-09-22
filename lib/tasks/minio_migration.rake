@@ -1,8 +1,8 @@
 namespace :storage do
   desc "Migrate from AWS S3 to MinIO using local files (zero S3 egress)"
   task migrate_to_minio: :environment do
-    require 'aws-sdk-s3'
-    require 'digest'
+    require "aws-sdk-s3"
+    require "digest"
 
     # MinIO client configuration
     minio_client = Aws::S3::Client.new(
@@ -42,11 +42,11 @@ namespace :storage do
         end
 
         # Determine local file path
-        day = photo.photo_session&.started_at&.strftime('%A')&.downcase
+        day = photo.photo_session&.started_at&.strftime("%A")&.downcase
         next unless %w[monday tuesday wednesday thursday friday].include?(day)
 
-        folder_name = File.basename(blob.filename.to_s, '.*')
-        local_path = Rails.root.join('session_originals', day, folder_name, blob.filename.to_s)
+        folder_name = File.basename(blob.filename.to_s, ".*")
+        local_path = Rails.root.join("session_originals", day, folder_name, blob.filename.to_s)
 
         unless File.exist?(local_path)
           puts "❌ Local file not found: #{local_path}"
@@ -66,7 +66,7 @@ namespace :storage do
         end
 
         # Upload to MinIO with the same key
-        File.open(local_path, 'rb') do |file|
+        File.open(local_path, "rb") do |file|
           minio_client.put_object(
             bucket: bucket_name,
             key: blob.key,
@@ -74,7 +74,7 @@ namespace :storage do
             content_type: blob.content_type,
             metadata: {
               filename: blob.filename.to_s,
-              content_type: blob.content_type || 'image/jpeg',
+              content_type: blob.content_type || "image/jpeg",
               byte_size: blob.byte_size.to_s,
               checksum: blob.checksum
             }
@@ -134,7 +134,7 @@ namespace :storage do
 
   desc "Verify MinIO migration status"
   task verify_minio: :environment do
-    require 'aws-sdk-s3'
+    require "aws-sdk-s3"
 
     minio_client = Aws::S3::Client.new(
       endpoint: "https://s3-api.zice.app",
@@ -180,7 +180,7 @@ namespace :storage do
       begin
         # This will trigger variant generation on MinIO
         variant_url = Rails.application.routes.url_helpers.rails_blob_path(
-          photo.file.variant(resize_to_limit: [100, 100]),
+          photo.file.variant(resize_to_limit: [ 100, 100 ]),
           only_path: true
         )
         puts "\n✅ Variant generation test: PASSED"
@@ -203,7 +203,7 @@ namespace :storage do
     puts "This should only be used if MinIO fails. Continue? (y/n)"
 
     response = STDIN.gets.chomp.downcase
-    unless response == 'y'
+    unless response == "y"
       puts "Rollback cancelled."
       exit
     end

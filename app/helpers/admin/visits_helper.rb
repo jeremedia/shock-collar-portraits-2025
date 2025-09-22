@@ -24,7 +24,7 @@ module Admin::VisitsHelper
     when "Ran action"
       event.properties["action"] || "performed action"
     else
-      event.name.downcase.gsub('#', ' ').gsub('_', ' ')
+      event.name.downcase.gsub("#", " ").gsub("_", " ")
     end
   end
 

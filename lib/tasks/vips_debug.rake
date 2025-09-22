@@ -1,6 +1,6 @@
 namespace :vips do
   desc "Debug libvips loader and Active Storage variant processing for a blob key"
-  task :debug_loader, [:key] => :environment do |_t, args|
+  task :debug_loader, [ :key ] => :environment do |_t, args|
     key = args[:key]
     abort "Usage: bin/rails vips:debug_loader[<blob_key>]" unless key
 
@@ -12,7 +12,7 @@ namespace :vips do
     photo = Photo.joins(image_attachment: :blob).where(active_storage_blobs: { id: blob.id }).first
     puts "Owning Photo id: #{photo&.id || 'none'}"
 
-    require 'vips'
+    require "vips"
     puts "libvips=#{Vips.version_string} concurrency=#{Vips.concurrency}"
 
     # Download the original to a tempfile and try various libvips load paths.
@@ -40,14 +40,14 @@ namespace :vips do
 
       # 3) Try explicit loaders based on content type
       loader_methods = {
-        'image/jpeg' => :jpegload,
-        'image/jpg'  => :jpegload,
-        'image/png'  => :pngload,
-        'image/webp' => :webpload,
-        'image/tiff' => :tiffload,
-        'image/heic' => :heifload,
-        'image/heif' => :heifload,
-        'image/avif' => :heifload
+        "image/jpeg" => :jpegload,
+        "image/jpg"  => :jpegload,
+        "image/png"  => :pngload,
+        "image/webp" => :webpload,
+        "image/tiff" => :tiffload,
+        "image/heic" => :heifload,
+        "image/heif" => :heifload,
+        "image/avif" => :heifload
       }
       meth = loader_methods[blob.content_type]
       if meth && Vips::Image.respond_to?(meth)
@@ -64,7 +64,7 @@ namespace :vips do
 
     # 4) Try Active Storage variant processing similar to app usage
     begin
-      variation = { resize_to_limit: [1600, 1600], format: :webp, saver: { quality: 90 } }
+      variation = { resize_to_limit: [ 1600, 1600 ], format: :webp, saver: { quality: 90 } }
       puts "Processing ActiveStorage variant: #{variation.inspect}"
       variant = blob.variant(variation)
       variant.processed
@@ -92,4 +92,3 @@ namespace :vips do
     puts "Done. Note: if the process segfaults, re-run with VIPS_CONCURRENCY=1 and try again."
   end
 end
-

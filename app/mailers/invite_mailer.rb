@@ -1,7 +1,7 @@
 class InviteMailer < ApplicationMailer
   # Set from address to your oknotok.com email
-  default from: 'jeremy@oknotok.com',
-          reply_to: 'jeremy@oknotok.com'
+  default from: "jeremy@oknotok.com",
+          reply_to: "jeremy@oknotok.com"
 
   def portrait_ready(sitting)
     @sitting = sitting
@@ -15,7 +15,7 @@ class InviteMailer < ApplicationMailer
     subject = "#{@playa_name}, your Shock Collar Portrait from OKNOTOK 2025 is ready!"
 
     # Track opens with a pixel (if using Postmark or SendGrid)
-    headers['X-PM-Tag'] = 'portrait-invite'
+    headers["X-PM-Tag"] = "portrait-invite"
 
     mail(
       to: sitting.email,
@@ -25,7 +25,7 @@ class InviteMailer < ApplicationMailer
 
   # Batch send method with rate limiting
   def self.send_all_invites(test_mode: false, limit: nil)
-    sittings = Sitting.where.not(email: [nil, ''])
+    sittings = Sitting.where.not(email: [ nil, "" ])
                       .joins(:photo_session)
                       .distinct
 
@@ -41,7 +41,7 @@ class InviteMailer < ApplicationMailer
       begin
         # Skip if no photos in session
         if sitting.photo_session.photos.empty?
-          results[:skipped] << { email: sitting.email, reason: 'No photos in session' }
+          results[:skipped] << { email: sitting.email, reason: "No photos in session" }
           next
         end
 

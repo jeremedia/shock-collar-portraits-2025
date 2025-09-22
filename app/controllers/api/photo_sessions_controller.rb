@@ -12,22 +12,22 @@ class Api::PhotoSessionsController < ApplicationController
     tag_action = params[:tag_action]
 
     unless tag.present?
-      return render json: { error: 'Tag is required' }, status: 422
+      return render json: { error: "Tag is required" }, status: 422
     end
 
     # Map context to the correct tagging method
     tag_list_method = case context
-                      when "appearance" then :appearance_tag_list
-                      when "expression" then :expression_tag_list
-                      when "accessory" then :accessory_tag_list
-                      else :tag_list
-                      end
+    when "appearance" then :appearance_tag_list
+    when "expression" then :expression_tag_list
+    when "accessory" then :accessory_tag_list
+    else :tag_list
+    end
 
     # Get current tags for the context
     current_tags = @photo_session.send(tag_list_method)
 
     # Add or remove the tag
-    if tag_action == 'remove'
+    if tag_action == "remove"
       # For acts-as-taggable-on, we need to reassign the entire list
       new_tags = current_tags.to_a.reject { |t| t == tag }
       @photo_session.send("#{tag_list_method}=", new_tags)
@@ -39,7 +39,7 @@ class Api::PhotoSessionsController < ApplicationController
     @photo_session.save!
 
     render json: {
-      status: 'success',
+      status: "success",
       gender: @photo_session.detected_gender || "not-set",
       quality: @photo_session.quality || "ok",
       all_tags: @photo_session.tag_list,
@@ -57,7 +57,7 @@ class Api::PhotoSessionsController < ApplicationController
     gender = params[:gender]
 
     unless %w[male female non-binary not-set].include?(gender)
-      return render json: { error: 'Invalid gender value' }, status: 422
+      return render json: { error: "Invalid gender value" }, status: 422
     end
 
     # Update gender_analysis JSON field with human-set values
@@ -84,7 +84,7 @@ class Api::PhotoSessionsController < ApplicationController
     end
 
     render json: {
-      status: 'success',
+      status: "success",
       gender: @photo_session.detected_gender || "not-set",
       quality: @photo_session.quality || "ok",
       all_tags: @photo_session.tag_list,
@@ -102,13 +102,13 @@ class Api::PhotoSessionsController < ApplicationController
     quality = params[:quality]
 
     unless %w[ok not-ok awesome].include?(quality)
-      return render json: { error: 'Invalid quality value' }, status: 422
+      return render json: { error: "Invalid quality value" }, status: 422
     end
 
     @photo_session.update!(quality: quality)
 
     render json: {
-      status: 'success',
+      status: "success",
       gender: @photo_session.detected_gender || "not-set",
       quality: @photo_session.quality || "ok",
       all_tags: @photo_session.tag_list,
@@ -131,7 +131,7 @@ class Api::PhotoSessionsController < ApplicationController
     @photo_session.save!
 
     render json: {
-      status: 'success',
+      status: "success",
       gender: @photo_session.detected_gender || "not-set",
       quality: @photo_session.quality || "ok",
       all_tags: [],
@@ -149,12 +149,12 @@ class Api::PhotoSessionsController < ApplicationController
   def set_photo_session
     @photo_session = PhotoSession.find(params[:id])
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'PhotoSession not found' }, status: 404
+    render json: { error: "PhotoSession not found" }, status: 404
   end
 
   def require_admin
     unless current_user&.admin?
-      render json: { error: 'Admin access required' }, status: 403
+      render json: { error: "Admin access required" }, status: 403
     end
   end
 end

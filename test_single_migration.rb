@@ -15,7 +15,7 @@ minio_client = Aws::S3::Client.new(
 bucket_name = "shock-collar-portraits-2025"
 
 # Find first photo blob
-blob = ActiveStorage::Blob.where(content_type: ["image/jpeg", "image/heic"]).first
+blob = ActiveStorage::Blob.where(content_type: [ "image/jpeg", "image/heic" ]).first
 puts "Testing with blob:"
 puts "  ID: #{blob.id}"
 puts "  Key: #{blob.key}"

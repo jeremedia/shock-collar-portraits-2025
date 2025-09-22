@@ -47,4 +47,3 @@ class GalleryControllerTest < ActionDispatch::IntegrationTest
     assert_includes entries, "002_#{File.basename(@file2)}"
   end
 end
-

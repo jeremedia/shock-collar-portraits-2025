@@ -2,7 +2,7 @@
 
 require_relative 'config/environment'
 
-photos = Photo.where("filename LIKE ?", "%.HEIC").where(id: [3511, 3512, 3513, 3514, 3515, 3516, 3517, 3518, 3519])
+photos = Photo.where("filename LIKE ?", "%.HEIC").where(id: [ 3511, 3512, 3513, 3514, 3515, 3516, 3517, 3518, 3519 ])
 
 puts "Updating #{photos.count} Photo records from HEIC to JPG:"
 puts "=" * 60
@@ -51,6 +51,6 @@ puts "Total photos: #{Photo.count}"
 
 puts "\nChecking blob consistency:"
 heic_blobs = ActiveStorage::Blob.where(content_type: "image/heic").count
-jpeg_blobs = ActiveStorage::Blob.where(content_type: ["image/jpeg"]).where("byte_size > ?", 1_000_000).count
+jpeg_blobs = ActiveStorage::Blob.where(content_type: [ "image/jpeg" ]).where("byte_size > ?", 1_000_000).count
 puts "HEIC blobs: #{heic_blobs}"
 puts "JPEG blobs (>1MB): #{jpeg_blobs}"

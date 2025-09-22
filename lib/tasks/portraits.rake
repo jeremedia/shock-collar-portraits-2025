@@ -16,7 +16,7 @@ namespace :portraits do
     puts "===================================\n\n"
 
     # Get all sittings with emails (no need to join photo_session anymore)
-    sittings = Sitting.where.not(email: [nil, ''])
+    sittings = Sitting.where.not(email: [ nil, "" ])
                       .distinct
 
     total = sittings.count
@@ -27,14 +27,14 @@ namespace :portraits do
     response = STDIN.gets.chomp.downcase
 
     case response
-    when 'test'
+    when "test"
       puts "\nTEST MODE - Showing first 5 recipients:\n"
       sittings.limit(5).each_with_index do |sitting, i|
         puts "  #{i+1}. #{sitting.email} (#{sitting.name || 'no name'})"
       end
       puts "\nTest complete. Run again with 'yes' to send emails."
       return
-    when 'yes'
+    when "yes"
       puts "\nStarting email send...\n"
     else
       puts "Cancelled."
@@ -50,7 +50,7 @@ namespace :portraits do
     # Add ability to resume from a specific email
     print "Start from email # (1-#{total}) or press Enter to start from beginning: "
     start_from = STDIN.gets.chomp
-    start_index = start_from.empty? ? 0 : [start_from.to_i - 1, 0].max
+    start_index = start_from.empty? ? 0 : [ start_from.to_i - 1, 0 ].max
 
     # Process in batches with rate limiting
     sittings.each_with_index do |sitting, index|
@@ -138,7 +138,7 @@ namespace :portraits do
 
   desc "Show email statistics"
   task email_stats: :environment do
-    total = Sitting.where.not(email: [nil, '']).distinct.count(:email)
+    total = Sitting.where.not(email: [ nil, "" ]).distinct.count(:email)
 
     puts "\n==================================="
     puts "EMAIL STATISTICS"
@@ -146,11 +146,11 @@ namespace :portraits do
     puts "Total unique emails: #{total}"
 
     # Domain breakdown
-    emails = Sitting.where.not(email: [nil, '']).distinct.pluck(:email)
-    domains = emails.map { |e| e.split('@').last.downcase rescue nil }.compact.tally
+    emails = Sitting.where.not(email: [ nil, "" ]).distinct.pluck(:email)
+    domains = emails.map { |e| e.split("@").last.downcase rescue nil }.compact.tally
 
     puts "\nTop email domains:"
-    domains.sort_by { |k,v| -v }.first(10).each do |domain, count|
+    domains.sort_by { |k, v| -v }.first(10).each do |domain, count|
       percentage = (count * 100.0 / total).round(1)
       puts "  #{domain}: #{count} (#{percentage}%)"
     end

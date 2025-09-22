@@ -1,7 +1,7 @@
 Rails.application.routes.draw do
-  devise_for :users, controllers: { invitations: 'users/invitations' }
+  devise_for :users, controllers: { invitations: "users/invitations" }
   # Gallery routes (main UI)
-  resources :gallery, only: [:index, :show] do
+  resources :gallery, only: [ :index, :show ] do
     collection do
       get :day_sessions
       post :toggle_hide_heroes
@@ -19,23 +19,23 @@ Rails.application.routes.draw do
   end
 
   # User-friendly session/photo URLs
-  get 'session/:id', to: 'gallery#show', as: :session
-  get 'session/:session_id/photo/:photo_position', to: 'gallery#show', as: :session_photo
-  
+  get "session/:id", to: "gallery#show", as: :session
+  get "session/:session_id/photo/:photo_position", to: "gallery#show", as: :session_photo
+
   # API routes for Vue frontend (keeping for compatibility)
   namespace :api do
-    resources :sessions, only: [:index, :show] do
+    resources :sessions, only: [ :index, :show ] do
       member do
         put :update_hero
       end
     end
-    resources :sittings, only: [:create, :show, :update]
+    resources :sittings, only: [ :create, :show, :update ]
     resources :photos, only: [] do
       member do
         post :extract_exif
         get :portrait_crop
-        patch :portrait_crop, to: 'photos#update_portrait_crop'
-        delete :portrait_crop, to: 'photos#reset_portrait_crop'
+        patch :portrait_crop, to: "photos#update_portrait_crop"
+        delete :portrait_crop, to: "photos#reset_portrait_crop"
       end
       collection do
         get :exif_config
@@ -44,22 +44,22 @@ Rails.application.routes.draw do
     end
     resources :photo_sessions, only: [] do
       member do
-        patch :tags, to: 'photo_sessions#update_tags'
-        patch :gender, to: 'photo_sessions#update_gender'
-        patch :quality, to: 'photo_sessions#update_quality'
-        delete 'tags/clear', to: 'photo_sessions#clear_tags'
+        patch :tags, to: "photo_sessions#update_tags"
+        patch :gender, to: "photo_sessions#update_gender"
+        patch :quality, to: "photo_sessions#update_quality"
+        delete "tags/clear", to: "photo_sessions#clear_tags"
       end
     end
   end
-  
+
   # Admin routes
   namespace :admin do
-    get 'dashboard', to: 'dashboard#index'
-    post 'warm_stats_cache', to: 'dashboard#warm_stats_cache'
-    get 'export_emails', to: 'dashboard#export_emails'
-    get 'thumbnails', to: 'thumbnails#index'
-    get 'help', to: 'help#show'
-    resources :invites, only: [:index, :new, :create, :destroy] do
+    get "dashboard", to: "dashboard#index"
+    post "warm_stats_cache", to: "dashboard#warm_stats_cache"
+    get "export_emails", to: "dashboard#export_emails"
+    get "thumbnails", to: "thumbnails#index"
+    get "help", to: "help#show"
+    resources :invites, only: [ :index, :new, :create, :destroy ] do
       member do
         post :resend
       end
@@ -68,14 +68,14 @@ Rails.application.routes.draw do
         post :invite_sitter
       end
     end
-    resources :visits, only: [:index] do
+    resources :visits, only: [ :index ] do
       member do
         get :visitor_detail
       end
     end
-    resources :sessions, only: [:index]
-    resources :sittings, only: [:index]
-    resources :exif_config, only: [:index, :update] do
+    resources :sessions, only: [ :index ]
+    resources :sittings, only: [ :index ]
+    resources :exif_config, only: [ :index, :update ] do
       collection do
         post :reset
       end
@@ -90,41 +90,41 @@ Rails.application.routes.draw do
       end
     end
   end
-  
+
   # Face detection admin
-  get 'admin', to: 'admin#index'
-  get 'admin/face_detection', to: 'admin#face_detection'
-  get 'admin/queue_status', to: 'admin#queue_status'
-  post 'admin/enqueue_all', to: 'admin#enqueue_all'
-  post 'admin/enqueue_session/:session_id', to: 'admin#enqueue_session', as: 'admin_enqueue_session'
-  post 'admin/retry_failed', to: 'admin#retry_failed'
-  post 'admin/clear_completed_jobs', to: 'admin#clear_completed_jobs'
-  post 'admin/pause_queue', to: 'admin#pause_queue'
-  
+  get "admin", to: "admin#index"
+  get "admin/face_detection", to: "admin#face_detection"
+  get "admin/queue_status", to: "admin#queue_status"
+  post "admin/enqueue_all", to: "admin#enqueue_all"
+  post "admin/enqueue_session/:session_id", to: "admin#enqueue_session", as: "admin_enqueue_session"
+  post "admin/retry_failed", to: "admin#retry_failed"
+  post "admin/clear_completed_jobs", to: "admin#clear_completed_jobs"
+  post "admin/pause_queue", to: "admin#pause_queue"
+
   # Mobile email collection
   namespace :mobile do
-    resources :sittings, only: [:new, :create]
+    resources :sittings, only: [ :new, :create ]
   end
-  
+
   # Static photo serving
-  get '/photos/*path', to: 'photos#serve', format: false, as: :photo
-  
+  get "/photos/*path", to: "photos#serve", format: false, as: :photo
+
   # Stats page
-  get 'stats', to: 'stats#index', as: :stats
-  
+  get "stats", to: "stats#index", as: :stats
+
   # Heroes page (public)
-  resources :heroes, only: [:index, :show]
-  
+  resources :heroes, only: [ :index, :show ]
+
   # Preloader for offline caching
-  get 'preloader', to: 'preloader#index'
-  post 'preloader/complete', to: 'preloader#complete'
-  post 'preloader/skip', to: 'preloader#skip'
-  get 'preloader/variant_urls', to: 'preloader#variant_urls'
-  get 'preloader/all_photo_metadata', to: 'preloader#all_photo_metadata'
-  
+  get "preloader", to: "preloader#index"
+  post "preloader/complete", to: "preloader#complete"
+  post "preloader/skip", to: "preloader#skip"
+  get "preloader/variant_urls", to: "preloader#variant_urls"
+  get "preloader/all_photo_metadata", to: "preloader#all_photo_metadata"
+
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check
-  
+
   # Root path - points to heroes (main landing page for users)
-  root to: 'heroes#index'
+  root to: "heroes#index"
 end

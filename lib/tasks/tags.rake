@@ -49,7 +49,7 @@ namespace :tags do
     expression_tags.each do |tag_data|
       tag = TagDefinition.find_or_initialize_by(name: tag_data[:name])
       tag.assign_attributes(
-        category: 'expression',
+        category: "expression",
         emoji: tag_data[:emoji],
         display_name: tag_data[:display_name],
         display_order: tag_data[:order],
@@ -66,7 +66,7 @@ namespace :tags do
     appearance_tags.each do |tag_data|
       tag = TagDefinition.find_or_initialize_by(name: tag_data[:name])
       tag.assign_attributes(
-        category: 'appearance',
+        category: "appearance",
         emoji: tag_data[:emoji],
         display_name: tag_data[:display_name],
         display_order: tag_data[:order],
@@ -83,7 +83,7 @@ namespace :tags do
     accessory_tags.each do |tag_data|
       tag = TagDefinition.find_or_initialize_by(name: tag_data[:name])
       tag.assign_attributes(
-        category: 'accessory',
+        category: "accessory",
         emoji: tag_data[:emoji],
         display_name: tag_data[:display_name],
         display_order: tag_data[:order],
@@ -110,5 +110,5 @@ namespace :tags do
   end
 
   desc "Reset tags (clear and reseed)"
-  task reset: [:clear, :seed]
+  task reset: [ :clear, :seed ]
 end

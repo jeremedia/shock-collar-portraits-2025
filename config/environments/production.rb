@@ -62,23 +62,23 @@ Rails.application.configure do
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV.fetch("RAILS_HOST", "scp-2025.oknotok.com") }
 
-  smtp_username = Rails.application.credentials.dig(:smtp, :username) || ENV['GMAIL_USERNAME'] || 'mrok@oknotok.com'
-  smtp_password = Rails.application.credentials.dig(:smtp, :app_password) || ENV['GMAIL_APP_PASSWORD']
+  smtp_username = Rails.application.credentials.dig(:smtp, :username) || ENV["GMAIL_USERNAME"] || "mrok@oknotok.com"
+  smtp_password = Rails.application.credentials.dig(:smtp, :app_password) || ENV["GMAIL_APP_PASSWORD"]
   from_address  = Rails.application.credentials.dig(:smtp, :from) || smtp_username
 
   # Google Apps SMTP configuration for oknotok.com
   config.action_mailer.smtp_settings = {
-    address:              'smtp.gmail.com',
+    address:              "smtp.gmail.com",
     port:                 587,
-    domain:               'oknotok.com',
+    domain:               "oknotok.com",
     user_name:            smtp_username,
     password:             smtp_password,
-    authentication:       'plain',
+    authentication:       "plain",
     enable_starttls_auto: true,
     open_timeout:         5,
     read_timeout:         5
   }
-  
+
   # Set the from address for Devise emails
   config.action_mailer.default_options = {
     from: "OKNOTOK Shock Collar Portraits <#{from_address}>"

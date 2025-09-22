@@ -24,5 +24,5 @@ Ahoy.track_bots = false
 
 # Exclude admin paths from tracking to reduce noise
 Ahoy.exclude_method = lambda do |controller, request|
-  request.path.start_with?('/admin/') && !request.path.include?('/admin/dashboard')
+  request.path.start_with?("/admin/") && !request.path.include?("/admin/dashboard")
 end

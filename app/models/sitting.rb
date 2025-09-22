@@ -5,7 +5,7 @@
 # Hero photo selection has been moved to PhotoSession.hero_photo_id
 class Sitting < ApplicationRecord
   belongs_to :photo_session
-  belongs_to :hero_photo, class_name: 'Photo', optional: true  # DEPRECATED - use PhotoSession.hero_photo_id
+  belongs_to :hero_photo, class_name: "Photo", optional: true  # DEPRECATED - use PhotoSession.hero_photo_id
   has_many :photos, dependent: :destroy
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }

@@ -1,8 +1,8 @@
 namespace :emails do
   desc "Import recovered emails from Safari local storage JSON"
-  task :import_recovered => :environment do
+  task import_recovered: :environment do
     # Paste the JSON data here
-    json_data = ENV['JSON_DATA'] || File.read('tmp/recovered_emails.json') rescue nil
+    json_data = ENV["JSON_DATA"] || File.read("tmp/recovered_emails.json") rescue nil
 
     if json_data.nil?
       puts "Please provide JSON_DATA environment variable or create tmp/recovered_emails.json"
@@ -16,13 +16,13 @@ namespace :emails do
 
     # Try to extract emails from various possible storage keys
     possible_keys = [
-      'emails', 'sittings', 'formData', 'sitting_email',
-      'mobile_sittings', 'form_autosave', 'autosave'
+      "emails", "sittings", "formData", "sitting_email",
+      "mobile_sittings", "form_autosave", "autosave"
     ]
 
     # Check localStorage
-    if data['localStorage']
-      data['localStorage'].each do |key, value|
+    if data["localStorage"]
+      data["localStorage"].each do |key, value|
         next unless possible_keys.any? { |k| key.include?(k) }
 
         begin
@@ -32,9 +32,9 @@ namespace :emails do
           # Extract emails based on structure
           emails = case parsed
           when Array
-            parsed.map { |item| item['email'] || item }.compact
+            parsed.map { |item| item["email"] || item }.compact
           when Hash
-            [parsed['email'], parsed['sitting_email']].compact
+            [ parsed["email"], parsed["sitting_email"] ].compact
           when String
             parsed.scan(/[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}/)
           else
@@ -70,9 +70,9 @@ namespace :emails do
     end
 
     # Also check sessionStorage
-    if data['sessionStorage']
+    if data["sessionStorage"]
       # Same logic as above for sessionStorage
-      data['sessionStorage'].each do |key, value|
+      data["sessionStorage"].each do |key, value|
         # ... same extraction logic
       end
     end
@@ -85,8 +85,8 @@ namespace :emails do
   end
 
   desc "Import emails from CSV format"
-  task :import_csv => :environment do
-    csv_data = ENV['CSV'] || File.read('tmp/emails.csv') rescue nil
+  task import_csv: :environment do
+    csv_data = ENV["CSV"] || File.read("tmp/emails.csv") rescue nil
 
     if csv_data.nil?
       puts "Please provide CSV environment variable or create tmp/emails.csv"
@@ -100,7 +100,7 @@ namespace :emails do
     csv_data.each_line do |line|
       next if line.strip.empty?
 
-      parts = line.strip.split(',').map(&:strip)
+      parts = line.strip.split(",").map(&:strip)
       email = parts[0]
       name = parts[1]
       notes = parts[2]

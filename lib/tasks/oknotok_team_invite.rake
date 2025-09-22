@@ -3,20 +3,20 @@ namespace :oknotok do
   task team_invite: :environment do
     # OKNOTOK team emails
     team_emails = [
-      'lightningcarpentry@gmail.com',
-      'abby.hinote@gmail.com',
-      'ejnote@gmail.com',
-      'mack@mackreed.co',
-      'mzanti123@gmail.com',
-      'mo@oknotok.com',
-      'paychyi@gmail.com',
-      'susannahtace@yahoo.com'
+      "lightningcarpentry@gmail.com",
+      "abby.hinote@gmail.com",
+      "ejnote@gmail.com",
+      "mack@mackreed.co",
+      "mzanti123@gmail.com",
+      "mo@oknotok.com",
+      "paychyi@gmail.com",
+      "susannahtace@yahoo.com"
     ]
 
     # Temporarily set production URL for these invitations
     original_host = Rails.application.config.action_mailer.default_url_options[:host]
-    Rails.application.config.action_mailer.default_url_options[:host] = 'scp-2025.oknotok.com'
-    Rails.application.config.action_mailer.default_url_options[:protocol] = 'https'
+    Rails.application.config.action_mailer.default_url_options[:host] = "scp-2025.oknotok.com"
+    Rails.application.config.action_mailer.default_url_options[:protocol] = "https"
 
     puts "\n==================================="
     puts "OKNOTOK TEAM TEST INVITATIONS"
@@ -104,14 +104,14 @@ namespace :oknotok do
   desc "Check OKNOTOK team member account status"
   task team_status: :environment do
     team_emails = [
-      'lightningcarpentry@gmail.com',
-      'abby.hinote@gmail.com',
-      'ejnote@gmail.com',
-      'mack@mackreed.co',
-      'mzanti123@gmail.com',
-      'mo@oknotok.com',
-      'paychyi@gmail.com',
-      'susannahtace@yahoo.com'
+      "lightningcarpentry@gmail.com",
+      "abby.hinote@gmail.com",
+      "ejnote@gmail.com",
+      "mack@mackreed.co",
+      "mzanti123@gmail.com",
+      "mo@oknotok.com",
+      "paychyi@gmail.com",
+      "susannahtace@yahoo.com"
     ]
 
     puts "\n==================================="

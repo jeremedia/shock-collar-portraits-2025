@@ -1,8 +1,8 @@
 class StatsController < ApplicationController
   skip_before_action :authenticate_user!
-  
+
   def index
-    force = params[:refresh] == '1'
+    force = params[:refresh] == "1"
     @stats_version = StatsCache.version
 
     # Summary counters (+ derived rates)
@@ -34,9 +34,9 @@ class StatsController < ApplicationController
     @stats_json = StatsCache.stats_json(version: @stats_version, force: force)
 
     # HTTP caching for the page shell
-    fresh_when(etag: @stats_version, last_modified: [Photo.maximum(:updated_at), PhotoSession.maximum(:updated_at), Sitting.maximum(:updated_at)].compact.max, public: false)
+    fresh_when(etag: @stats_version, last_modified: [ Photo.maximum(:updated_at), PhotoSession.maximum(:updated_at), Sitting.maximum(:updated_at) ].compact.max, public: false)
   end
-  
+
   private
   # All heavy computations are cached via StatsCache
 end

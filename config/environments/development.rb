@@ -2,7 +2,7 @@ require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
-  
+
   # Allow requests from custom domains
   config.hosts << "scp-25-dev.oknotok.com"
   config.hosts << "scp-25.oknotok.com"
@@ -39,14 +39,14 @@ Rails.application.configure do
 
   # Store uploaded files on MinIO (self-hosted S3 alternative)
   config.active_storage.service = :minio
-  
+
   # Set default URL options for Active Storage
   # Use the domain if accessed via domain, otherwise localhost
-  host = ENV['HOST'] || 'scp-25-dev.oknotok.com'
-  port = ENV['PORT']
+  host = ENV["HOST"] || "scp-25-dev.oknotok.com"
+  port = ENV["PORT"]
 
   Rails.application.routes.default_url_options[:host] = host
-  if host.include?('localhost') || host.include?('.local')
+  if host.include?("localhost") || host.include?(".local")
     Rails.application.routes.default_url_options[:port] = port || 4000
   else
     Rails.application.routes.default_url_options[:port] = nil
@@ -59,7 +59,7 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
 
   # Set localhost to be used by links generated in mailer templates.
-  mailer_defaults = { protocol: host.include?('localhost') ? 'http' : 'https', host: host }
+  mailer_defaults = { protocol: host.include?("localhost") ? "http" : "https", host: host }
   if Rails.application.routes.default_url_options[:port]
     mailer_defaults[:port] = Rails.application.routes.default_url_options[:port]
   end
@@ -95,10 +95,10 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
-  
 
-  smtp_username = Rails.application.credentials.dig(:smtp, :username) || ENV['GMAIL_USERNAME'] || 'mrok@oknotok.com'
-  smtp_password = Rails.application.credentials.dig(:smtp, :app_password) || ENV['GMAIL_APP_PASSWORD']
+
+  smtp_username = Rails.application.credentials.dig(:smtp, :username) || ENV["GMAIL_USERNAME"] || "mrok@oknotok.com"
+  smtp_password = Rails.application.credentials.dig(:smtp, :app_password) || ENV["GMAIL_APP_PASSWORD"]
   from_address  = Rails.application.credentials.dig(:smtp, :from) || smtp_username
 
   # For development, you can use letter_opener to preview emails
@@ -106,12 +106,12 @@ Rails.application.configure do
   # config.action_mailer.delivery_method = :letter_opener
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    address:              'smtp.gmail.com',
+    address:              "smtp.gmail.com",
     port:                 587,
-    domain:               'oknotok.com',
+    domain:               "oknotok.com",
     user_name:            smtp_username,
     password:             smtp_password,
-    authentication:       'plain',
+    authentication:       "plain",
     enable_starttls_auto: true
   }
 

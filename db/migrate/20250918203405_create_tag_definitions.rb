@@ -15,7 +15,7 @@ class CreateTagDefinitions < ActiveRecord::Migration[8.0]
 
     add_index :tag_definitions, :name, unique: true
     add_index :tag_definitions, :category
-    add_index :tag_definitions, [:category, :display_order]
+    add_index :tag_definitions, [ :category, :display_order ]
     add_index :tag_definitions, :active
   end
 end

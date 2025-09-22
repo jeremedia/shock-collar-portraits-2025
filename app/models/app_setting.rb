@@ -19,21 +19,21 @@ class AppSetting < ApplicationRecord
 
   # EXIF-specific methods
   def self.exif_visible_fields
-    get('exif_visible_fields', default_exif_fields)
+    get("exif_visible_fields", default_exif_fields)
   end
 
   def self.set_exif_visible_fields(fields)
-    set('exif_visible_fields', fields)
+    set("exif_visible_fields", fields)
   end
 
   # Default EXIF fields to show (sensible defaults for photo selection)
   def self.default_exif_fields
     {
-      'Camera' => %w[Make Model LensModel SerialNumber],
-      'Exposure' => %w[ExposureTime FNumber ISO ExposureCompensation Flash WhiteBalance],
-      'Image' => %w[ImageWidth ImageHeight DateTimeOriginal Orientation],
-      'GPS' => %w[GPSLatitude GPSLongitude],
-      'Other' => %w[FocalLength OwnerName]
+      "Camera" => %w[Make Model LensModel SerialNumber],
+      "Exposure" => %w[ExposureTime FNumber ISO ExposureCompensation Flash WhiteBalance],
+      "Image" => %w[ImageWidth ImageHeight DateTimeOriginal Orientation],
+      "GPS" => %w[GPSLatitude GPSLongitude],
+      "Other" => %w[FocalLength OwnerName]
     }
   end
 end

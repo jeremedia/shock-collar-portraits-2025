@@ -8,7 +8,7 @@ puts "🔍 Testing MinIO Active Storage Integration"
 puts "=" * 60
 
 # Find a photo that's already migrated to MinIO
-blob = ActiveStorage::Blob.where(service_name: "minio", content_type: ["image/jpeg", "image/heic"]).first
+blob = ActiveStorage::Blob.where(service_name: "minio", content_type: [ "image/jpeg", "image/heic" ]).first
 
 unless blob
   puts "❌ No blobs found on MinIO service. Please run migration first."
@@ -96,7 +96,7 @@ puts "=" * 60
 
 begin
   # Try to create a thumbnail variant
-  variant = photo.file.variant(resize_to_limit: [300, 300])
+  variant = photo.file.variant(resize_to_limit: [ 300, 300 ])
 
   # This will trigger processing if not already done
   variant_key = variant.key
@@ -141,7 +141,7 @@ begin
   puts "✅ Blob path: #{blob_path}"
 
   representation_path = Rails.application.routes.url_helpers.rails_representation_path(
-    photo.file.variant(resize_to_limit: [500, 500])
+    photo.file.variant(resize_to_limit: [ 500, 500 ])
   )
   puts "✅ Representation path: #{representation_path}"
 

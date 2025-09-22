@@ -24,28 +24,28 @@
 # Any libraries that use a connection pool or another resource pool should
 # be configured to provide at least as many connections as the number of
 # threads. This includes Active Record's `pool` parameter in `database.yml`.
-require 'etc'
+require "etc"
 
-env = ENV.fetch('RACK_ENV', ENV['RAILS_ENV'] || 'development')
+env = ENV.fetch("RACK_ENV", ENV["RAILS_ENV"] || "development")
 
 # Stability-first defaults on macOS dev; can be overridden via env
-threads_count = ENV.fetch("RAILS_MAX_THREADS") { env == 'development' ? 3 : 8 }
+threads_count = ENV.fetch("RAILS_MAX_THREADS") { env == "development" ? 3 : 8 }
 threads threads_count, threads_count
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 port ENV.fetch("PORT", 3000)
 
 # Use multiple workers and preload for better CPU utilization
-default_workers = if env == 'development'
+default_workers = if env == "development"
   2
 else
-  [2, (Etc.respond_to?(:nprocessors) ? Etc.nprocessors - 1 : 2)].max
+  [ 2, (Etc.respond_to?(:nprocessors) ? Etc.nprocessors - 1 : 2) ].max
 end
-#workers ENV.fetch("WEB_CONCURRENCY") { default_workers }
+# workers ENV.fetch("WEB_CONCURRENCY") { default_workers }
 workers default_workers
 # Avoid preloading in development to keep native libraries (e.g., libvips) fork-safe.
 # You can force preload by setting PUMA_PRELOAD=1.
-if env != 'development' || ENV['PUMA_PRELOAD'] == '1'
+if env != "development" || ENV["PUMA_PRELOAD"] == "1"
   preload_app!
 end
 
@@ -66,5 +66,5 @@ on_worker_boot do
 #
 #   https://github.com/libvips/ruby-vips/issues/417
 #
-require 'vips' if RUBY_PLATFORM.include?('darwin')
+require "vips" if RUBY_PLATFORM.include?("darwin")
 end

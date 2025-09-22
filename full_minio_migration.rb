@@ -43,7 +43,7 @@ puts "=" * 80
 
 # Get all original photo blobs still on S3
 blobs_to_migrate = ActiveStorage::Blob
-  .where(service_name: "amazon", content_type: ["image/jpeg", "image/heic"])
+  .where(service_name: "amazon", content_type: [ "image/jpeg", "image/heic" ])
   .where("byte_size > ?", 1_000_000)
   .order(:id)
 
@@ -114,7 +114,7 @@ blobs_to_migrate.find_in_batches(batch_size: batch_size) do |batch|
       local_path = nil
 
       # Try different extensions and cases
-      [".JPG", ".jpg", ".jpeg", ".JPEG"].each do |ext|
+      [ ".JPG", ".jpg", ".jpeg", ".JPEG" ].each do |ext|
         test_path = Rails.root.join("session_originals", day, folder_name, "#{folder_name}#{ext}")
         if File.exist?(test_path)
           local_path = test_path
@@ -208,7 +208,7 @@ end
 
 # Database verification
 s3_remaining = ActiveStorage::Blob
-  .where(service_name: "amazon", content_type: ["image/jpeg", "image/heic"])
+  .where(service_name: "amazon", content_type: [ "image/jpeg", "image/heic" ])
   .where("byte_size > ?", 1_000_000)
   .count
 

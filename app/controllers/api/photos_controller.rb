@@ -1,11 +1,11 @@
 class Api::PhotosController < ApplicationController
-  before_action :authenticate_user!, except: [:random_hero_faces]
-  before_action :require_admin, only: [:extract_exif, :portrait_crop, :update_portrait_crop, :reset_portrait_crop]
-  before_action :set_photo, only: [:extract_exif, :portrait_crop, :update_portrait_crop, :reset_portrait_crop]
+  before_action :authenticate_user!, except: [ :random_hero_faces ]
+  before_action :require_admin, only: [ :extract_exif, :portrait_crop, :update_portrait_crop, :reset_portrait_crop ]
+  before_action :set_photo, only: [ :extract_exif, :portrait_crop, :update_portrait_crop, :reset_portrait_crop ]
 
   def exif_config
     render json: {
-      status: 'success',
+      status: "success",
       visible_fields: AppSetting.exif_visible_fields
     }
   end
@@ -16,7 +16,7 @@ class Api::PhotosController < ApplicationController
     hero_photo_ids = Sitting.where.not(hero_photo_id: nil).pluck(:hero_photo_id)
     hero_photos = Photo.where(id: hero_photo_ids)
                        .where.not(face_data: nil)
-                       .order('RANDOM()')
+                       .order("RANDOM()")
                        .limit(30)
 
     # Return URLs for face crops
@@ -28,7 +28,7 @@ class Api::PhotosController < ApplicationController
     end.compact
 
     render json: {
-      status: 'success',
+      status: "success",
       faces: faces
     }
   end
@@ -44,7 +44,7 @@ class Api::PhotosController < ApplicationController
     render_portrait_crop(@photo)
   rescue => e
     Rails.logger.error "Failed to update portrait crop for photo #{@photo.id}: #{e.message}"
-    render json: { status: 'error', message: e.message }, status: 422
+    render json: { status: "error", message: e.message }, status: 422
   end
 
   def reset_portrait_crop
@@ -53,7 +53,7 @@ class Api::PhotosController < ApplicationController
     render_portrait_crop(@photo)
   rescue => e
     Rails.logger.error "Failed to reset portrait crop for photo #{@photo.id}: #{e.message}"
-    render json: { status: 'error', message: e.message }, status: 500
+    render json: { status: "error", message: e.message }, status: 500
   end
 
   def extract_exif
@@ -64,8 +64,8 @@ class Api::PhotosController < ApplicationController
     unless @photo.image.attached?
       Rails.logger.warn "Photo #{@photo.id} has no image attachment"
       return render json: {
-        status: 'error',
-        message: 'Photo has no image attachment'
+        status: "error",
+        message: "Photo has no image attachment"
       }, status: 422
     end
 
@@ -80,28 +80,28 @@ class Api::PhotosController < ApplicationController
       Rails.logger.info "Successfully extracted EXIF data for photo #{@photo.id}: #{exif_data.keys.join(', ')}"
 
       render json: {
-        status: 'success',
+        status: "success",
         exif_data: exif_data,
-        message: 'EXIF data extracted successfully'
+        message: "EXIF data extracted successfully"
       }
     else
       Rails.logger.warn "No EXIF data extracted for photo #{@photo.id}"
       render json: {
-        status: 'error',
-        message: 'No EXIF data could be extracted from this file'
+        status: "error",
+        message: "No EXIF data could be extracted from this file"
       }, status: 422
     end
 
   rescue ActiveRecord::RecordNotFound
     render json: {
-      status: 'error',
-      message: 'Photo not found'
+      status: "error",
+      message: "Photo not found"
     }, status: 404
   rescue => e
     Rails.logger.error "EXIF extraction failed for photo #{params[:id]}: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
     render json: {
-      status: 'error',
+      status: "error",
       message: "Internal server error: #{e.message}"
     }, status: 500
   end
@@ -115,7 +115,7 @@ class Api::PhotosController < ApplicationController
     temp_file = nil
     begin
       # Download the blob to a temporary file
-      temp_file = Tempfile.new(['photo_exif_', File.extname(photo.image.filename.to_s)])
+      temp_file = Tempfile.new([ "photo_exif_", File.extname(photo.image.filename.to_s) ])
       temp_file.binmode
 
       Rails.logger.debug "Downloading image attachment to temp file: #{temp_file.path}"
@@ -128,7 +128,7 @@ class Api::PhotosController < ApplicationController
       # -j flag outputs JSON format for easy parsing
       # -n flag outputs numerical values where possible
       # -G1 flag adds group names to organize data
-      command = %{exiftool -j -n -G1 "#{temp_file.path}" 2>&1}
+      command = %(exiftool -j -n -G1 "#{temp_file.path}" 2>&1)
       Rails.logger.debug "Running command: #{command}"
 
       result = `#{command}`
@@ -145,7 +145,7 @@ class Api::PhotosController < ApplicationController
       if result.present? && result.strip.length > 0
         begin
           # Remove any stderr output that might be mixed with JSON
-          json_start = result.index('[')
+          json_start = result.index("[")
           if json_start
             json_content = result[json_start..-1]
             parsed_data = JSON.parse(json_content)
@@ -184,34 +184,34 @@ class Api::PhotosController < ApplicationController
   def organize_exif_data(raw_exif)
     # Organize EXIF data into logical groups for display
     organized = {
-      'Camera' => {},
-      'Exposure' => {},
-      'Image' => {},
-      'GPS' => {},
-      'Other' => {}
+      "Camera" => {},
+      "Exposure" => {},
+      "Image" => {},
+      "GPS" => {},
+      "Other" => {}
     }
 
     raw_exif.each do |key, value|
-      next if value.nil? || value == '' || value == 'undef'
+      next if value.nil? || value == "" || value == "undef"
 
       # Skip very long binary data fields
       next if value.is_a?(String) && value.length > 200
 
       # Clean up the key name by removing EXIF group prefixes
       # Handle both "IFD0:Make" and "ExifIFD:SerialNumber" formats
-      clean_key = key.gsub(/^[A-Za-z]+[0-9]*:/, '').strip
+      clean_key = key.gsub(/^[A-Za-z]+[0-9]*:/, "").strip
 
       case key
       when /Make|Model|SerialNumber|FirmwareVersion|LensModel|LensSerialNumber/i
-        organized['Camera'][clean_key] = value
+        organized["Camera"][clean_key] = value
       when /ExposureTime|FNumber|ISO|ExposureProgram|MeteringMode|Flash|WhiteBalance|ExposureCompensation/i
-        organized['Exposure'][clean_key] = value
+        organized["Exposure"][clean_key] = value
       when /ImageWidth|ImageHeight|Orientation|ColorSpace|Resolution|DateTime/i
-        organized['Image'][clean_key] = value
+        organized["Image"][clean_key] = value
       when /GPS/i
-        organized['GPS'][clean_key] = value
+        organized["GPS"][clean_key] = value
       else
-        organized['Other'][clean_key] = value
+        organized["Other"][clean_key] = value
       end
     end
 
@@ -222,12 +222,12 @@ class Api::PhotosController < ApplicationController
   def set_photo
     @photo = Photo.find(params[:id])
   rescue ActiveRecord::RecordNotFound
-    render json: { status: 'error', message: 'Photo not found' }, status: 404
+    render json: { status: "error", message: "Photo not found" }, status: 404
   end
 
   def require_admin
     unless current_user&.admin?
-      render json: { status: 'error', message: 'Admin access required' }, status: 403
+      render json: { status: "error", message: "Admin access required" }, status: 403
     end
   end
 
@@ -238,11 +238,11 @@ class Api::PhotosController < ApplicationController
   def render_portrait_crop(photo)
     rect = photo.portrait_crop_rect
     blob_metadata = photo.image&.blob&.metadata || {}
-    image_width = blob_metadata['width'] || rect&.[](:width)
-    image_height = blob_metadata['height'] || rect&.[](:height)
+    image_width = blob_metadata["width"] || rect&.[](:width)
+    image_height = blob_metadata["height"] || rect&.[](:height)
 
     render json: {
-      status: 'success',
+      status: "success",
       photo_id: photo.id,
       rect: rect,
       image_width: image_width,

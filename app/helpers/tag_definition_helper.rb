@@ -1,18 +1,18 @@
 module TagDefinitionHelper
   def expression_tag_options
-    TagDefinition.cached_tags_by_category('expression').map do |tag|
+    TagDefinition.cached_tags_by_category("expression").map do |tag|
       { value: tag.name, label: tag.tag_with_emoji, display: tag.display_text }
     end
   end
 
   def appearance_tag_options
-    TagDefinition.cached_tags_by_category('appearance').map do |tag|
+    TagDefinition.cached_tags_by_category("appearance").map do |tag|
       { value: tag.name, label: tag.tag_with_emoji, display: tag.display_text }
     end
   end
 
   def accessory_tag_options
-    TagDefinition.cached_tags_by_category('accessory').map do |tag|
+    TagDefinition.cached_tags_by_category("accessory").map do |tag|
       { value: tag.name, label: tag.tag_with_emoji, display: tag.display_text }
     end
   end

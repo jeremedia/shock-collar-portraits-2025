@@ -1,4 +1,4 @@
-require 'digest'
+require "digest"
 
 class GalleryCache
   DEFAULT_TTL = 12.hours
@@ -12,9 +12,9 @@ class GalleryCache
         SessionDay.maximum(:updated_at)
       ].compact
 
-      return 'v0' if timestamps.empty?
+      return "v0" if timestamps.empty?
 
-      Digest::MD5.hexdigest(timestamps.map { |timestamp| timestamp.to_i }.join(':'))
+      Digest::MD5.hexdigest(timestamps.map { |timestamp| timestamp.to_i }.join(":"))
     end
 
     def last_modified
@@ -26,11 +26,11 @@ class GalleryCache
     end
 
     def index_payload(version:, hide_heroes:, force: false)
-      fetch('index_payload', version:, hide_heroes:, force:) do
+      fetch("index_payload", version:, hide_heroes:, force:) do
         sessions_scope = PhotoSession.visible
                                      .joins(:session_day)
                                      .includes(:session_day)
-                                     .order('session_days.date ASC, photo_sessions.started_at ASC')
+                                     .order("session_days.date ASC, photo_sessions.started_at ASC")
         sessions_scope = sessions_scope.where(hero_photo_id: nil) if hide_heroes
 
         sessions = sessions_scope.to_a
@@ -44,12 +44,12 @@ class GalleryCache
 
         face_counts = if session_ids.empty?
                         {}
-                      else
+        else
                         Photo.where(photo_session_id: session_ids)
                              .where.not(face_data: nil)
                              .group(:photo_session_id)
                              .count
-                      end
+        end
 
         sessions_without_heroes = sessions.select { |session| session.hero_photo_id.nil? }
         middle_photo_ids = build_middle_photo_ids(sessions_without_heroes)
@@ -75,7 +75,7 @@ class GalleryCache
     end
 
     def cache_key(name, version, hide_heroes)
-      hero_segment = hide_heroes ? 'hide' : 'all'
+      hero_segment = hide_heroes ? "hide" : "all"
       "gallery:v#{version}:#{name}:#{hero_segment}"
     end
 

@@ -1,12 +1,12 @@
 namespace :photos do
   desc "Transfer original photos from MacBook Air to organized structure"
   task transfer_from_air: :environment do
-    require 'open3'
-    require 'json'
+    require "open3"
+    require "json"
 
     air_host = "jeremy@jer-air"
     air_base_path = "/Users/jeremy/Desktop/OKNOTOK/OK-SHOCK-25"
-    local_base_path = Rails.root.join('session_originals')
+    local_base_path = Rails.root.join("session_originals")
 
     # Create a mapping of filenames to their destination folders
     puts "Building transfer map..."
@@ -16,10 +16,10 @@ namespace :photos do
     Photo.includes(:photo_session).find_each do |photo|
       next unless photo.photo_session&.started_at && photo.filename
 
-      day = photo.photo_session.started_at.strftime('%A').downcase
+      day = photo.photo_session.started_at.strftime("%A").downcase
       next unless %w[monday tuesday wednesday thursday friday].include?(day)
 
-      folder_name = File.basename(photo.filename, '.*')
+      folder_name = File.basename(photo.filename, ".*")
       destination = local_base_path.join(day, folder_name)
 
       transfer_map[photo.filename] = {
@@ -150,9 +150,9 @@ namespace :photos do
 
     # Check each directory
     directories = [
-      'card_download_1',
-      'thursday_friday_temp',
-      'iphone_day_one_shots'
+      "card_download_1",
+      "thursday_friday_temp",
+      "iphone_day_one_shots"
     ]
 
     directories.each do |dir|
@@ -171,7 +171,7 @@ namespace :photos do
   task fast_transfer: :environment do
     air_host = "jeremy@jer-air"
     air_base_path = "/Users/jeremy/Desktop/OKNOTOK/OK-SHOCK-25"
-    local_base_path = Rails.root.join('session_originals')
+    local_base_path = Rails.root.join("session_originals")
 
     # Generate transfer list
     transfer_list = []
@@ -179,21 +179,21 @@ namespace :photos do
     Photo.includes(:photo_session).find_each do |photo|
       next unless photo.photo_session&.started_at && photo.filename
 
-      day = photo.photo_session.started_at.strftime('%A').downcase
+      day = photo.photo_session.started_at.strftime("%A").downcase
       next unless %w[monday tuesday wednesday thursday friday].include?(day)
 
-      folder_name = File.basename(photo.filename, '.*')
+      folder_name = File.basename(photo.filename, ".*")
       destination = local_base_path.join(day, folder_name)
 
       transfer_list << "#{photo.filename}:#{destination}"
     end
 
     # Write transfer list to file
-    list_file = local_base_path.join('transfer_list.txt')
+    list_file = local_base_path.join("transfer_list.txt")
     File.write(list_file, transfer_list.join("\n"))
 
     # Create parallel transfer script
-    script_path = local_base_path.join('parallel_transfer.sh')
+    script_path = local_base_path.join("parallel_transfer.sh")
 
     script_content = <<~BASH
       #!/bin/bash

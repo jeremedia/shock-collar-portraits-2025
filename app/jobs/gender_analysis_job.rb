@@ -1,4 +1,4 @@
-require 'vips'
+require "vips"
 
 class GenderAnalysisJob < ApplicationJob
   queue_as :default

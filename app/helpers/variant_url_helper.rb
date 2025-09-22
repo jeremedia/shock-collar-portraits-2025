@@ -3,15 +3,15 @@ module VariantUrlHelper
   # This avoids proxying through Rails which can be slow
   def smart_variant_url(attachment, variant_name)
     return nil unless attachment.attached?
-    
+
     variant = attachment.variant(variant_name)
-    
+
     # Check if this variant has already been processed
     variant_record = ActiveStorage::VariantRecord.find_by(
       blob_id: attachment.blob.id,
       variation_digest: variant.variation.digest
     )
-    
+
     if variant_record&.image&.blob
       # Variant exists and has been uploaded - use direct URL
       # This serves directly from storage service (disk/S3) for best performance

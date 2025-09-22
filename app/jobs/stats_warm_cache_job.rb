@@ -21,4 +21,3 @@ class StatsWarmCacheJob < ApplicationJob
     dates.map { |d| d.is_a?(Date) ? d : Date.parse(d.to_s) }
   end
 end
-
