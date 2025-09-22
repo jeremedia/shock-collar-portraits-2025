@@ -42,7 +42,11 @@
 
   <!-- Visitor Stats -->
   <div class="oknotok-card mb-8">
-    <h2 class="text-2xl font-bold text-yellow-500 mb-6">👁️ Visitor Analytics</h2>
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-yellow-500">👁️ Visitor Analytics</h2>
+      <%= link_to "View Detailed Analytics →", admin_visits_path,
+          class: "px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition text-sm font-semibold" %>
+    </div>
 
     <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
       <div class="bg-gray-800 rounded-lg p-4">

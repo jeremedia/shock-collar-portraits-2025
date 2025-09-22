@@ -68,6 +68,11 @@ Rails.application.routes.draw do
         post :invite_sitter
       end
     end
+    resources :visits, only: [:index] do
+      member do
+        get :visitor_detail
+      end
+    end
     resources :sessions, only: [:index]
     resources :sittings, only: [:index]
     resources :exif_config, only: [:index, :update] do

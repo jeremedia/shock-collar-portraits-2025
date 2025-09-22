@@ -199,6 +199,29 @@ export default class extends Controller {
     // Update current ID for next navigation
     this.currentIdValue = data.photo.id
 
+    // Update portrait crop controller if present (admin only)
+    const portraitCropController = document.querySelector('[data-controller="portrait-crop"]')
+    if (portraitCropController) {
+      // Dispatch will-change event
+      portraitCropController.dispatchEvent(new CustomEvent('hero-image:will-change'))
+
+      // Update the photo ID value
+      portraitCropController.dataset.portraitCropPhotoIdValue = data.photo.id
+
+      // Get the controller instance and reinitialize it
+      const cropController = this.application.getControllerForElementAndIdentifier(portraitCropController, 'portrait-crop')
+      if (cropController) {
+        // Update the photo ID value and fetch new crop data
+        cropController.photoIdValue = data.photo.id
+        if (cropController.imageElement) {
+          // If image is already loaded, fetch crop immediately
+          if (cropController.imageElement.complete && cropController.imageElement.naturalWidth > 0) {
+            cropController.fetchCrop()
+          }
+        }
+      }
+    }
+
     // Update hero image controller data attributes
     const heroController = document.querySelector('[data-controller="hero-image"]')
     if (heroController) {
@@ -208,6 +231,18 @@ export default class extends Controller {
       heroController.dataset.heroImageNextPortraitSrcValue = data.navigation.next_portrait_url || ''
       heroController.dataset.heroImagePrevSrcValue = data.navigation.prev_full_url || ''
       heroController.dataset.heroImagePrevPortraitSrcValue = data.navigation.prev_portrait_url || ''
+
+      // Set up listener for image load completion
+      if (portraitCropController) {
+        // Listen for the hero-image:did-change event from the hero-image controller
+        const handleImageDidChange = (event) => {
+          heroController.removeEventListener('hero-image:did-change', handleImageDidChange)
+          // Now that image has loaded, notify portrait crop controller
+          portraitCropController.dispatchEvent(new CustomEvent('hero-image:did-change'))
+        }
+
+        heroController.addEventListener('hero-image:did-change', handleImageDidChange)
+      }
 
       // Trigger image load
       const imageController = this.application.getControllerForElementAndIdentifier(heroController, 'hero-image')
