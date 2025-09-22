@@ -39,6 +39,9 @@ export default class extends Controller {
   initializeCharts(data) {
     this.charts = {}
 
+    // Debug: log the data to see what we're working with
+    console.log('Analytics data:', data)
+
     // Create all the visualizations
     this.createDeviceChart(data)
     this.createBrowserChart(data)
@@ -308,6 +311,18 @@ export default class extends Controller {
     if (!ctx) return
 
     const stats = data.visitor_stats || {}
+    const chartData = [
+      stats.total || 0,
+      stats.returning || 0,
+      stats.new || 0,
+      data.active_today || 0
+    ]
+
+    // Check if we have any data
+    if (chartData.every(val => val === 0)) {
+      ctx.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-gray-500">No visitor data available</div>'
+      return
+    }
 
     this.charts.flow = new Chart(ctx, {
       type: 'bar',
@@ -315,12 +330,7 @@ export default class extends Controller {
         labels: ['Total Visitors', 'Returning', 'New', 'Active Today'],
         datasets: [{
           label: 'Visitors',
-          data: [
-            stats.total || 0,
-            stats.returning || 0,
-            stats.new || 0,
-            data.active_today || 0
-          ],
+          data: chartData,
           backgroundColor: [
             '#FACC15', // Yellow for total
             '#10B981', // Green for returning
@@ -611,6 +621,13 @@ export default class extends Controller {
     if (!ctx) return
 
     const topPhotos = data.top_photos_today || []
+
+    // Check if we have any photo data
+    if (topPhotos.length === 0) {
+      ctx.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-gray-500">No photo views today</div>'
+      return
+    }
+
     const labels = topPhotos.map((p, i) => `Photo #${i + 1}`)
     const values = topPhotos.map(p => p[1])
 
