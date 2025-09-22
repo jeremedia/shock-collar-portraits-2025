@@ -110,8 +110,8 @@
               <!-- Thumbnail -->
               <div class="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-700">
                 <% if photo.image.attached? %>
-                  <%= image_tag photo.image.variant(resize_to_fill: [64, 64]),
-                      class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-200",
+                  <%= image_tag photo.image.variant(:face),
+                      class: "w-16 h-16 object-cover group-hover:scale-105 transition-transform duration-200",
                       loading: "lazy" %>
                 <% else %>
                   <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs">
@@ -157,8 +157,8 @@
               <!-- Thumbnail -->
               <div class="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-700">
                 <% if photo.image.attached? %>
-                  <%= image_tag photo.image.variant(resize_to_fill: [64, 64]),
-                      class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-200",
+                  <%= image_tag photo.image.variant(:face),
+                      class: "w-16 h-16 object-cover group-hover:scale-105 transition-transform duration-200",
                       loading: "lazy" %>
                 <% else %>
                   <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs">
