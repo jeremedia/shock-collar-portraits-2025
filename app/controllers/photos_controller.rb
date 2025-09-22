@@ -16,15 +16,8 @@ class PhotosController < ApplicationController
         redirect_to rails_blob_url(photo.image, disposition: "inline"), allow_other_host: true
       end
     else
-      # Fallback to serving from local filesystem
-      path += ".JPG" unless path.match?(/\.(jpg|jpeg|png|heic|webp)$/i)
-      full_path = File.join("/Users/jeremy/Desktop/OK-SHOCK-25", path)
-
-      if File.exist?(full_path)
-        send_file full_path, disposition: "inline", type: "image/jpeg"
-      else
-        render plain: "Photo not found", status: 404
-      end
+      # Photo not found in database or doesn't have attachment
+      render plain: "Photo not found", status: 404
     end
   end
 end
