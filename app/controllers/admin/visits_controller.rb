@@ -5,14 +5,20 @@ class Admin::VisitsController < ApplicationController
   def index
     @current_time = Time.current
 
-    # Current visitors (active in last 5 minutes)
+    # Get non-admin user IDs for filtering
+    non_admin_user_ids = User.where(admin: false).pluck(:id)
+
+    # Current visitors (active in last 5 minutes) - exclude admins
     @active_visitors = Ahoy::Visit.includes(:user, :events)
       .where("started_at > ?", 5.minutes.ago)
+      .where(user_id: [nil] + non_admin_user_ids)
       .order(started_at: :desc)
 
-    # Recent activity feed (last 100 events)
+    # Recent activity feed (last 100 events) - exclude admin events
     @recent_events = Ahoy::Event.includes(:visit, :user)
-      .where("time > ?", 24.hours.ago)
+      .joins(:visit)
+      .where("ahoy_events.time > ?", 24.hours.ago)
+      .where(ahoy_visits: { user_id: [nil] + non_admin_user_ids })
       .order(time: :desc)
       .limit(100)
 
@@ -22,48 +28,67 @@ class Admin::VisitsController < ApplicationController
     # Most viewed photos all time
     @popular_photos_all_time = get_popular_photos(limit: 10)
 
-    # Most active visitors
-    @top_visitors = User.joins(:visits)
+    # Most active visitors (non-admins only)
+    @top_visitors = User.where(admin: false)
+      .joins(:visits)
       .select("users.*, COUNT(DISTINCT ahoy_visits.id) as visit_count, MAX(ahoy_visits.started_at) as last_seen")
       .group("users.id")
       .having("COUNT(DISTINCT ahoy_visits.id) > 0")
       .order("visit_count DESC")
       .limit(20)
 
-    # Geographic distribution
+    # Geographic distribution (non-admins only)
     @visitor_locations = Ahoy::Visit
+      .where(user_id: [nil] + non_admin_user_ids)
       .where.not(city: [nil, ""])
       .group(:city, :region, :country)
       .count
       .sort_by { |_, count| -count }
       .first(20)
 
-    # Device breakdown
-    @devices = Ahoy::Visit.group(:device_type).count
-    @browsers = Ahoy::Visit.group(:browser).count
-    @operating_systems = Ahoy::Visit.group(:os).count
+    # Device breakdown (non-admins only)
+    @devices = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids).group(:device_type).count
+    @browsers = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids).group(:browser).count
+    @operating_systems = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids).group(:os).count
 
     # Activity heatmap data (by hour and day of week)
-    @activity_heatmap = build_activity_heatmap
+    @activity_heatmap = build_activity_heatmap(non_admin_user_ids)
 
     # Return visitor stats
-    @visitor_stats = calculate_visitor_stats
+    @visitor_stats = calculate_visitor_stats(non_admin_user_ids)
 
     # Session depth analysis
-    @session_depths = analyze_session_depths
+    @session_depths = analyze_session_depths(non_admin_user_ids)
 
     # Photo journey paths
-    @common_paths = analyze_common_paths
+    @common_paths = analyze_common_paths(non_admin_user_ids)
 
     # Engagement metrics
-    @engagement = calculate_engagement_metrics
+    @engagement = calculate_engagement_metrics(non_admin_user_ids)
 
-    # Real-time ticker of events
+    # Real-time ticker of events (non-admins only)
     @live_events = Ahoy::Event
       .includes(:visit, :user)
-      .where("time > ?", 1.hour.ago)
+      .joins(:visit)
+      .where("ahoy_events.time > ?", 1.hour.ago)
+      .where(ahoy_visits: { user_id: [nil] + non_admin_user_ids })
       .order(time: :desc)
       .limit(50)
+
+    # Prepare data for JavaScript charts
+    @analytics_json = {
+      devices: @devices,
+      browsers: @browsers,
+      operating_systems: @operating_systems,
+      activity_heatmap: @activity_heatmap,
+      visitor_stats: @visitor_stats,
+      session_depths: @session_depths,
+      engagement: @engagement,
+      active_today: @active_visitors.count,
+      top_locations: @visitor_locations.first(10),
+      top_photos_today: @popular_photos_today.map { |photo, count| [photo.id, count] },
+      current_active: @active_visitors.count
+    }.to_json
   end
 
   def visitor_detail
@@ -98,8 +123,11 @@ class Admin::VisitsController < ApplicationController
   private
 
   def get_popular_photos(since: nil, limit: 10)
-    query = Ahoy::Event.where(name: ["Viewed photo", "Photo view", "$view"])
-    query = query.where("time > ?", since) if since
+    non_admin_user_ids = User.where(admin: false).pluck(:id)
+    query = Ahoy::Event.joins(:visit)
+      .where(name: ["Viewed photo", "Photo view", "$view"])
+      .where(ahoy_visits: { user_id: [nil] + non_admin_user_ids })
+    query = query.where("ahoy_events.time > ?", since) if since
 
     photo_counts = {}
     query.find_each do |event|
@@ -123,11 +151,14 @@ class Admin::VisitsController < ApplicationController
     nil
   end
 
-  def build_activity_heatmap
+  def build_activity_heatmap(non_admin_user_ids)
     # Build a 7x24 grid of activity (days x hours)
     heatmap = Array.new(7) { Array.new(24, 0) }
 
-    Ahoy::Event.where("time > ?", 7.days.ago).find_each do |event|
+    Ahoy::Event.joins(:visit)
+      .where("ahoy_events.time > ?", 7.days.ago)
+      .where(ahoy_visits: { user_id: [nil] + non_admin_user_ids })
+      .find_each do |event|
       next unless event.time
       day = event.time.wday
       hour = event.time.hour
@@ -137,9 +168,9 @@ class Admin::VisitsController < ApplicationController
     heatmap
   end
 
-  def calculate_visitor_stats
-    total_visitors = User.joins(:visits).distinct.count
-    returning_visitors = User.joins(:visits)
+  def calculate_visitor_stats(non_admin_user_ids)
+    total_visitors = User.where(admin: false).joins(:visits).distinct.count
+    returning_visitors = User.where(admin: false).joins(:visits)
       .group("users.id")
       .having("COUNT(DISTINCT ahoy_visits.id) > 1")
       .count.keys.count
@@ -152,10 +183,11 @@ class Admin::VisitsController < ApplicationController
     }
   end
 
-  def analyze_session_depths
+  def analyze_session_depths(non_admin_user_ids)
     depths = {}
 
-    Ahoy::Visit.includes(:events).find_each do |visit|
+    Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids)
+      .includes(:events).find_each do |visit|
       photo_events = visit.events.where(name: ["Viewed photo", "Photo view", "$view"]).count
       bucket = case photo_events
         when 0 then "0 photos"
@@ -173,11 +205,12 @@ class Admin::VisitsController < ApplicationController
     depths
   end
 
-  def analyze_common_paths
+  def analyze_common_paths(non_admin_user_ids)
     paths = []
 
     # Sample recent visits with enough events
-    recent_visits = Ahoy::Visit.includes(:events)
+    recent_visits = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids)
+      .includes(:events)
       .where("started_at > ?", 7.days.ago)
       .select { |v| v.events.count > 3 }
       .first(50)
@@ -205,21 +238,23 @@ class Admin::VisitsController < ApplicationController
     path_counts.sort_by { |_, count| -count }.first(5)
   end
 
-  def calculate_engagement_metrics
-    total_events = Ahoy::Event.count
-    total_visits = Ahoy::Visit.count
+  def calculate_engagement_metrics(non_admin_user_ids)
+    total_events = Ahoy::Event.joins(:visit)
+      .where(ahoy_visits: { user_id: [nil] + non_admin_user_ids }).count
+    total_visits = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids).count
 
     {
       avg_events_per_visit: total_visits > 0 ? (total_events.to_f / total_visits).round(1) : 0,
-      bounce_rate: calculate_bounce_rate,
-      avg_time_on_site: calculate_avg_time_on_site,
-      pages_per_session: calculate_pages_per_session
+      bounce_rate: calculate_bounce_rate(non_admin_user_ids),
+      avg_time_on_site: calculate_avg_time_on_site(non_admin_user_ids),
+      pages_per_session: calculate_pages_per_session(non_admin_user_ids)
     }
   end
 
-  def calculate_bounce_rate
-    total = Ahoy::Visit.count
-    bounced = Ahoy::Visit.joins(:events)
+  def calculate_bounce_rate(non_admin_user_ids)
+    total = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids).count
+    bounced = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids)
+      .joins(:events)
       .group("ahoy_visits.id")
       .having("COUNT(ahoy_events.id) <= 1")
       .count.keys.count
@@ -227,10 +262,11 @@ class Admin::VisitsController < ApplicationController
     total > 0 ? (bounced * 100.0 / total).round(1) : 0
   end
 
-  def calculate_avg_time_on_site
+  def calculate_avg_time_on_site(non_admin_user_ids)
     durations = []
 
-    Ahoy::Visit.includes(:events).find_each do |visit|
+    Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids)
+      .includes(:events).find_each do |visit|
       if visit.events.any?
         duration = visit.events.maximum(:time) - visit.started_at
         durations << duration if duration > 0 && duration < 1.day
@@ -241,8 +277,9 @@ class Admin::VisitsController < ApplicationController
     (durations.sum / durations.count).round
   end
 
-  def calculate_pages_per_session
-    counts = Ahoy::Visit.joins(:events)
+  def calculate_pages_per_session(non_admin_user_ids)
+    counts = Ahoy::Visit.where(user_id: [nil] + non_admin_user_ids)
+      .joins(:events)
       .where(events: { name: ["Viewed photo", "Photo view", "$view"] })
       .group("ahoy_visits.id")
       .count.values
