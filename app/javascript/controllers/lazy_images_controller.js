@@ -82,8 +82,7 @@ export default class extends Controller {
     }
     this.element.removeEventListener('thumbnail:loading', this.startLoadingListener)
     this.element.removeEventListener('thumbnail:loaded', this.finishLoadingListener)
-    this.clearLoaderDelay()
-    this.clearCompletionTimeout()
+    this.clearTimeouts()
   }
   
   observeImages() {
@@ -300,5 +299,30 @@ export default class extends Controller {
     loader.completeTimeout = setTimeout(() => {
       this.resetLoaderElement(loader)
     }, 900)
+  }
+
+  clearTimeouts() {
+    // Clear controller-level timeouts
+    if (this.completeTimeout) {
+      clearTimeout(this.completeTimeout)
+      this.completeTimeout = null
+    }
+    if (this.loaderDelayTimeout) {
+      clearTimeout(this.loaderDelayTimeout)
+      this.loaderDelayTimeout = null
+    }
+
+    // Clear all element-level timeouts
+    const loaders = this.element.querySelectorAll('[data-lazy-images-target="loader"]')
+    loaders.forEach(loader => {
+      if (loader.delayTimeout) {
+        clearTimeout(loader.delayTimeout)
+        loader.delayTimeout = null
+      }
+      if (loader.completeTimeout) {
+        clearTimeout(loader.completeTimeout)
+        loader.completeTimeout = null
+      }
+    })
   }
 }
