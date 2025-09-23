@@ -1,7 +1,12 @@
 class InvitationMailerJob < ApplicationJob
   queue_as :default
 
+  # Add rate limiting to prevent Gmail authentication lockout
+  # Gmail limits: ~20 emails/minute, 500/day for regular accounts
   def perform(email, invited_by_id, options = {})
+    # Add a 5-second delay between emails to stay under rate limits
+    # This gives us ~12 emails/minute, well under Gmail's limit
+    sleep(5) if Rails.env.production?
     invited_by = User.find(invited_by_id)
 
     # Check if user already exists

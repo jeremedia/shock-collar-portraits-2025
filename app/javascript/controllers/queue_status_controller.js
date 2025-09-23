@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = [
-    "rate", "totalPending", "completion", "queues", "progressBar", 
+    "rate", "totalPending", "pendingInvitations", "completion", "queues", "progressBar",
     "lastUpdated", "indicator"
   ]
   static values = { url: String }
@@ -48,7 +48,11 @@ export default class extends Controller {
         const totalPending = Object.values(data.queues).reduce((sum, queue) => sum + queue.pending, 0)
         this.totalPendingTarget.textContent = totalPending
       }
-      
+
+      if (this.hasPendingInvitationsTarget && data.pending_invitations !== undefined) {
+        this.pendingInvitationsTarget.textContent = data.pending_invitations
+      }
+
       if (this.hasCompletionTarget && data.completion) {
         const completionTime = new Date(data.completion)
         const now = new Date()

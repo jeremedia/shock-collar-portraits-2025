@@ -27,6 +27,7 @@ class AdminController < ApplicationController
         queues: @queue_stats,
         rate: @processing_rate,
         completion: @estimated_completion,
+        pending_invitations: SolidQueue::Job.where(class_name: "InvitationMailerJob", finished_at: nil).count,
         invitation_jobs: {
           recent: @recent_invitation_jobs.map { |job| {
             id: job.id,
