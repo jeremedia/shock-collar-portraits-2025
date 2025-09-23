@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - name: Deploy Release to Production
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.2
       with:
         # Target server (jer-serve via Tailscale)
         host: 100.74.87.20
