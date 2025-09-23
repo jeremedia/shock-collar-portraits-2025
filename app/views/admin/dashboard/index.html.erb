@@ -251,7 +251,7 @@
     <div class="mt-8 p-6 bg-gradient-to-r from-red-900 to-yellow-900 border border-red-600 rounded-lg">
       <h3 class="text-xl font-bold text-yellow-500 mb-4">🔧 Superadmin Tools</h3>
       <div class="flex flex-wrap gap-4">
-        <%= link_to "Manage Admins", admin_invites_path, 
+        <%= link_to "Manage Users", admin_invites_path,
             class: "px-4 py-2 bg-black text-yellow-500 hover:bg-gray-900 rounded transition" %>
         <%= link_to "Bulk Invite Users", "#", 
             onclick: "if(confirm('Run rails emails:bulk_invite to send invitations to all collected emails')) { alert('Run this command in terminal'); } return false;",

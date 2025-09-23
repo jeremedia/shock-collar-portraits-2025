@@ -1,6 +1,12 @@
 class InvitationMailerJob < ApplicationJob
   queue_as :default
 
+  # Retry on SMTP errors with exponential backoff
+  # wait: :polynomially_longer means 1s, 4s, 9s, 16s, 25s between retries
+  retry_on Net::SMTPAuthenticationError, wait: :polynomially_longer, attempts: 5
+  retry_on Net::SMTPServerBusy, wait: :polynomially_longer, attempts: 5
+  retry_on StandardError, wait: :polynomially_longer, attempts: 3
+
   # Add rate limiting to prevent Gmail authentication lockout
   # Gmail limits: ~20 emails/minute, 500/day for regular accounts
   def perform(email, invited_by_id, options = {})

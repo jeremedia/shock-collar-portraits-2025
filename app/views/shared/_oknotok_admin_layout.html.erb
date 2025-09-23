@@ -41,7 +41,7 @@
         <% if current_user&.superadmin? %>
           <%= link_to admin_invites_path,
               class: "px-4 py-2 rounded transition #{controller_name == 'invites' ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-500 hover:bg-gray-700'}" do %>
-            <span class="font-semibold">👥 Manage Admins</span>
+            <span class="font-semibold">👥 Manage Users</span>
           <% end %>
         <% end %>
         

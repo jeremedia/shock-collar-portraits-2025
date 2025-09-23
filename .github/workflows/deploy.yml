@@ -79,14 +79,22 @@ jobs:
           # Clear Rails cache
           RAILS_ENV=production bundle exec rails tmp:clear
 
-          # Restart the service
+          # Restart BOTH services (web and queue)
+          echo "🔄 Restarting web service..."
           sudo systemctl restart shock-collar-portraits.service
 
-          # Wait for service to start
+          echo "🔄 Restarting queue service..."
+          sudo systemctl restart shock-collar-portraits-queue.service
+
+          # Wait for services to start
           sleep 5
 
-          # Check service status
+          # Check both services status
+          echo "📊 Web service status:"
           sudo systemctl status shock-collar-portraits.service --no-pager
+
+          echo "📊 Queue service status:"
+          sudo systemctl status shock-collar-portraits-queue.service --no-pager
 
           echo "✅ Shock Collar Portraits 2025 release $DEPLOY_TAG deployed successfully!"
           echo "🌐 Live at: https://scp-2025.oknotok.com"
