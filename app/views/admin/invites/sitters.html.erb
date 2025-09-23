@@ -47,7 +47,10 @@
         Not Invited (<%= @total_emails - @invited_count %>)
       </button>
       <button data-filter="pending" class="filter-btn px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700">
-        Pending (<%= @pending_count %>)
+        Pending (<%= @sitters_data.count { |s| s[:invited] && !s[:accepted] && !s[:has_errors] } %>)
+      </button>
+      <button data-filter="failed" class="filter-btn px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700">
+        Failed (<%= @sitters_data.count { |s| s[:has_errors] } %>)
       </button>
       <button data-filter="accepted" class="filter-btn px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700">
         Accepted (<%= @accepted_count %>)
@@ -69,7 +72,7 @@
         <tbody>
           <% @sitters_data.each do |sitter| %>
             <tr class="border-t border-gray-800 hover:bg-gray-800/50 transition sitter-row"
-                data-status="<%= sitter[:accepted] ? 'accepted' : (sitter[:invited] ? 'pending' : 'not-invited') %>">
+                data-status="<%= sitter[:accepted] ? 'accepted' : (sitter[:has_errors] ? 'failed' : (sitter[:invited] ? 'pending' : 'not-invited')) %>">
               <td class="px-4 py-3">
                 <div class="font-mono text-sm"><%= sitter[:email] %></div>
               </td>
@@ -77,19 +80,35 @@
                 <span class="text-gray-400"><%= sitter[:sessions_count] %></span>
               </td>
               <td class="px-4 py-3 text-center">
-                <% if sitter[:accepted] %>
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/50 text-green-400">
-                    ✅ Accepted
-                  </span>
-                <% elsif sitter[:invited] %>
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-900/50 text-orange-400">
-                    ⏳ Pending
-                  </span>
-                <% else %>
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-400">
-                    📧 Not Invited
-                  </span>
-                <% end %>
+                <div class="flex items-center justify-center gap-2">
+                  <% if sitter[:accepted] %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/50 text-green-400">
+                      ✅ Accepted
+                    </span>
+                  <% elsif sitter[:invited] %>
+                    <% if sitter[:has_errors] %>
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-900/50 text-red-400">
+                        ❌ Failed to Send
+                      </span>
+                    <% else %>
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-900/50 text-orange-400">
+                        ⏳ Pending
+                      </span>
+                    <% end %>
+                  <% else %>
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-400">
+                      📧 Not Invited
+                    </span>
+                  <% end %>
+
+                  <% if sitter[:has_errors] %>
+                    <button onclick="showErrorDetails('<%= sitter[:email] %>')"
+                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-600 hover:bg-red-700 text-white transition"
+                            title="View error details">
+                      🚨 <%= sitter[:failed_attempts].count %>
+                    </button>
+                  <% end %>
+                </div>
               </td>
               <td class="px-4 py-3 text-center">
                 <% if sitter[:invitation_sent_at] %>
@@ -158,7 +177,90 @@
   </div>
 </div>
 
+<!-- Error Details Modal -->
+<div id="errorModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+  <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-semibold text-white">Invitation Error Details</h3>
+      <button onclick="hideErrorDetails()" class="text-gray-400 hover:text-white">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div id="errorContent" class="space-y-4">
+      <!-- Error details will be populated here -->
+    </div>
+  </div>
+</div>
+
 <script>
+// Error details data for JavaScript access
+const errorData = {
+  <% @sitters_data.each do |sitter| %>
+    <% if sitter[:has_errors] %>
+      "<%= sitter[:email] %>": <%= raw sitter[:failed_attempts].to_json %>,
+    <% end %>
+  <% end %>
+};
+
+// Show error details modal
+function showErrorDetails(email) {
+  const errors = errorData[email] || [];
+  const modal = document.getElementById('errorModal');
+  const content = document.getElementById('errorContent');
+
+  if (errors.length === 0) {
+    content.innerHTML = '<div class="text-gray-400">No error details available</div>';
+  } else {
+    content.innerHTML = `
+      <div class="text-white font-mono text-sm mb-4">${email}</div>
+      <div class="space-y-3">
+        ${errors.map((error, index) => `
+          <div class="bg-red-900/20 border border-red-700/30 rounded p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-red-400 font-semibold">Error #${index + 1}</span>
+              <span class="text-gray-400 text-xs">
+                ${new Date(error.failed_at).toLocaleString()}
+              </span>
+            </div>
+            <div class="text-red-300 font-semibold mb-1">
+              ${error.error_class || 'Unknown Error'}
+            </div>
+            <div class="text-gray-300 text-sm">
+              ${error.error_message || 'No error message available'}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="mt-4 p-3 bg-blue-900/20 border border-blue-700/30 rounded">
+        <div class="text-blue-400 font-semibold mb-1">💡 Common Solutions:</div>
+        <ul class="text-gray-300 text-sm space-y-1">
+          <li>• Gmail rate limiting - Use bulk resend with delays</li>
+          <li>• Check SMTP credentials in production</li>
+          <li>• Verify email address is valid</li>
+          <li>• Try manual invite using "Copy URL" button</li>
+        </ul>
+      </div>
+    `;
+  }
+
+  modal.classList.remove('hidden');
+}
+
+// Hide error details modal
+function hideErrorDetails() {
+  const modal = document.getElementById('errorModal');
+  modal.classList.add('hidden');
+}
+
+// Close modal when clicking outside
+document.getElementById('errorModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    hideErrorDetails();
+  }
+});
+
 // Copy invite URL to clipboard
 function copyInviteUrl(token) {
   const url = `${window.location.origin}/users/invitation/accept?invitation_token=${token}`;

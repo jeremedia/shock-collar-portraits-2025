@@ -18,13 +18,29 @@ class AdminController < ApplicationController
     @queue_stats = get_detailed_queue_statistics
     @processing_rate = get_processing_rate
     @estimated_completion = calculate_estimated_completion
+    @recent_invitation_jobs = recent_invitation_jobs(20)
+    @failed_invitation_jobs = failed_invitation_jobs(10)
 
     respond_to do |format|
       format.html
       format.json { render json: {
         queues: @queue_stats,
         rate: @processing_rate,
-        completion: @estimated_completion
+        completion: @estimated_completion,
+        invitation_jobs: {
+          recent: @recent_invitation_jobs.map { |job| {
+            id: job.id,
+            created_at: job.created_at,
+            finished_at: job.finished_at,
+            arguments: job.arguments
+          } },
+          failed: @failed_invitation_jobs.map { |failed| {
+            id: failed.id,
+            created_at: failed.created_at,
+            error: failed.error,
+            job_arguments: failed.job&.arguments
+          } }
+        }
       }}
     end
   end
@@ -160,14 +176,21 @@ class AdminController < ApplicationController
     face_detection_jobs = SolidQueue::Job.where(class_name: "FaceDetectionJob").count
     pending_face_jobs = SolidQueue::Job.where(class_name: "FaceDetectionJob", finished_at: nil).count
 
+    invitation_jobs = SolidQueue::Job.where(class_name: "InvitationMailerJob").count
+    pending_invitation_jobs = SolidQueue::Job.where(class_name: "InvitationMailerJob", finished_at: nil).count
+
     failed_jobs = 0
     failed_face_jobs = 0
+    failed_invitation_jobs = 0
 
     if defined?(SolidQueue::FailedExecution)
       failed_jobs = SolidQueue::FailedExecution.count
       failed_face_jobs = SolidQueue::FailedExecution.joins(:job)
                                                     .where(solid_queue_jobs: { class_name: "FaceDetectionJob" })
                                                     .count
+      failed_invitation_jobs = SolidQueue::FailedExecution.joins(:job)
+                                                           .where(solid_queue_jobs: { class_name: "InvitationMailerJob" })
+                                                           .count
     end
 
     {
@@ -177,7 +200,10 @@ class AdminController < ApplicationController
       failed_jobs: failed_jobs,
       face_detection_jobs: face_detection_jobs,
       pending_face_jobs: pending_face_jobs,
-      failed_face_jobs: failed_face_jobs
+      failed_face_jobs: failed_face_jobs,
+      invitation_jobs: invitation_jobs,
+      pending_invitation_jobs: pending_invitation_jobs,
+      failed_invitation_jobs: failed_invitation_jobs
     }
   end
 
@@ -208,6 +234,24 @@ class AdminController < ApplicationController
 
     SolidQueue::FailedExecution.joins(:job)
                                 .where(solid_queue_jobs: { class_name: "FaceDetectionJob" })
+                                .includes(:job)
+                                .order(created_at: :desc)
+                                .limit(limit)
+  end
+
+  def recent_invitation_jobs(limit = 10)
+    return [] unless defined?(SolidQueue::Job)
+
+    SolidQueue::Job.where(class_name: "InvitationMailerJob")
+                   .order(created_at: :desc)
+                   .limit(limit)
+  end
+
+  def failed_invitation_jobs(limit = 10)
+    return [] unless defined?(SolidQueue::FailedExecution)
+
+    SolidQueue::FailedExecution.joins(:job)
+                                .where(solid_queue_jobs: { class_name: "InvitationMailerJob" })
                                 .includes(:job)
                                 .order(created_at: :desc)
                                 .limit(limit)

@@ -105,16 +105,43 @@ class Admin::InvitesController < ApplicationController
     # Get all existing users to check their invitation status
     @users_by_email = User.all.index_by(&:email)
 
+    # Get failed invitation jobs for error visibility
+    @failed_invitations_by_email = {}
+    if defined?(SolidQueue::FailedExecution)
+      SolidQueue::FailedExecution.joins(:job)
+                                 .where(solid_queue_jobs: { class_name: "InvitationMailerJob" })
+                                 .includes(:job)
+                                 .each do |failed|
+        begin
+          email = JSON.parse(failed.job.arguments).dig("arguments", 0)
+          if email
+            @failed_invitations_by_email[email] ||= []
+            @failed_invitations_by_email[email] << {
+              error_message: failed.error&.dig("message"),
+              error_class: failed.error&.dig("exception_class"),
+              failed_at: failed.created_at
+            }
+          end
+        rescue => e
+          Rails.logger.error "Error parsing failed invitation job: #{e.message}"
+        end
+      end
+    end
+
     # Build data structure for the view
     @sitters_data = @sitter_emails.map do |email|
       user = @users_by_email[email]
+      failed_attempts = @failed_invitations_by_email[email] || []
+
       {
         email: email,
         user: user,
         invited: user.present?,
         accepted: user&.invitation_accepted? || false,
         invitation_sent_at: user&.invitation_sent_at,
-        sessions_count: Sitting.where(email: email).count
+        sessions_count: Sitting.where(email: email).count,
+        failed_attempts: failed_attempts,
+        has_errors: failed_attempts.any?
       }
     end
 
@@ -146,19 +173,47 @@ class Admin::InvitesController < ApplicationController
         flash[:notice] = "Queued invitations for #{emails_to_invite.count} sitters"
 
       when "pending"
-        # Resend to all pending invitations
+        # Resend to all pending invitations with delays to avoid rate limiting
         pending_users = User.invitation_not_accepted.where(email: Sitting.select(:email).distinct.pluck(:email))
 
-        pending_users.each do |user|
-          InvitationMailerJob.perform_later(
-            user.email,
-            current_user.id,
-            admin: false,
-            name: user.name
-          )
-        end
+        if pending_users.count == 0
+          flash[:alert] = "No pending invitations to resend"
+        else
+          # Calculate delay strategy based on count
+          total_count = pending_users.count
+          if total_count < 30
+            seconds_between = 30 # Small batch - 30 seconds apart
+          elsif total_count < 60
+            seconds_between = 45 # Medium batch - 45 seconds apart
+          elsif total_count < 150
+            seconds_between = 60 # Large batch - 60 seconds apart
+          else
+            seconds_between = 90 # Very large batch - 90 seconds apart
+          end
 
-        flash[:notice] = "Re-queued invitations for #{pending_users.count} pending sitters"
+          # Schedule jobs with delays
+          pending_users.each_with_index do |user, index|
+            delay = index * seconds_between
+
+            InvitationMailerJob.set(wait: delay.seconds).perform_later(
+              user.email,
+              current_user.id,
+              admin: false,
+              name: user.name
+            )
+          end
+
+          # Calculate completion time
+          completion_minutes = (total_count * seconds_between / 60.0).round(1)
+
+          flash[:notice] = "✅ Scheduled #{pending_users.count} invitation resends with #{seconds_between}s delays. " \
+                          "Completion time: ~#{completion_minutes} minutes. " \
+                          "<a href='#{admin_queue_status_path}' target='_blank' class='underline'>Monitor progress</a>".html_safe
+
+          # Log the bulk operation
+          Rails.logger.info "[BULK RESEND] Scheduled #{total_count} invitation resends by #{current_user.email} " \
+                           "with #{seconds_between}s delays (completion: #{completion_minutes} min)"
+        end
       end
     else
       # Handle individual invitation
