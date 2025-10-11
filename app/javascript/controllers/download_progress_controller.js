@@ -10,7 +10,8 @@ export default class extends Controller {
     "downloadButton",
     "downloadButtonText",
     "statusIndicator",
-    "statusText"
+    "statusText",
+    "preparationStatus"
   ]
 
   static values = {
@@ -86,6 +87,11 @@ export default class extends Controller {
   handlePhotoStart(data) {
     console.log(`Starting photo ${data.photo_id} (${data.index + 1}/${data.total})`)
 
+    // Update preparation status
+    if (this.hasPreparationStatusTarget) {
+      this.preparationStatusTarget.textContent = `Processing photo ${data.index + 1} of ${data.total}...`
+    }
+
     // Show progress bar for this photo
     const progressBarContainers = this.progressBarContainerTargets.filter(
       el => el.dataset.photoId === data.photo_id.toString()
@@ -144,6 +150,11 @@ export default class extends Controller {
   handleZipStart(data) {
     console.log("Starting ZIP creation...")
 
+    // Update preparation status
+    if (this.hasPreparationStatusTarget) {
+      this.preparationStatusTarget.textContent = "Creating ZIP archive..."
+    }
+
     if (this.hasZipSectionTarget) {
       this.zipSectionTarget.classList.remove('hidden')
     }
@@ -160,6 +171,12 @@ export default class extends Controller {
     this.zipId = data.zip_id
 
     const formattedSize = this.formatBytes(data.size)
+
+    // Update preparation status - session ready!
+    if (this.hasPreparationStatusTarget) {
+      this.preparationStatusTarget.textContent = "Session package ready!"
+      this.preparationStatusTarget.classList.add('text-green-400', 'font-semibold')
+    }
 
     if (this.hasDownloadButtonTarget) {
       this.downloadButtonTarget.disabled = false

@@ -310,31 +310,23 @@ class GalleryController < ApplicationController
     end
     @photo = @session.photos.find(params[:photo_id])
 
-    # Get the original file path
-    file_path = @photo.original_path
-
-    unless File.exist?(file_path)
+    # Check if image is attached via Active Storage
+    unless @photo.image.attached?
       redirect_to gallery_path(@session.burst_id), alert: "Photo file not found"
       return
     end
 
-    # Determine MIME type based on file extension
-    extension = File.extname(file_path).downcase
-    content_type = case extension
-    when ".jpg", ".jpeg"
-                     "image/jpeg"
-    when ".heic"
-                     "image/heic"
-    when ".png"
-                     "image/png"
-    else
-                     "application/octet-stream"
-    end
+    # Download from Active Storage (MinIO/S3)
+    blob = @photo.image.blob
 
-    # Send the original file with proper filename
-    send_file file_path,
-              filename: File.basename(file_path),
-              type: content_type,
+    # Determine filename - use original filename if available, otherwise blob filename
+    original_filename = @photo.filename || blob.filename.to_s
+    filename = "oknotok_scp_2025_#{original_filename}"
+
+    # Send the file from Active Storage
+    send_data blob.download,
+              filename: filename,
+              type: blob.content_type,
               disposition: "attachment"
   rescue ActiveRecord::RecordNotFound
     redirect_to gallery_path(@session.burst_id), alert: "Photo not found"

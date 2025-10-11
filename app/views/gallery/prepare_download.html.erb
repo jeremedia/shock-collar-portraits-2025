@@ -39,12 +39,22 @@
   <main class="flex-1 min-h-0 overflow-y-auto bg-black">
     <div class="max-w-6xl mx-auto px-6 py-8">
 
-      <!-- Instructions -->
-      <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-8">
-        <h3 class="text-xl font-bold text-yellow-500 mb-2">📦 Download Preparation</h3>
-        <p class="text-gray-300">
-          Preparing <%= @photos.length %> photos for download. Please wait while we package your photos...
-        </p>
+      <!-- Instructions with Download Button -->
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-8 flex items-center justify-between gap-6">
+        <div class="flex-1">
+          <h3 class="text-xl font-bold text-yellow-500 mb-2">📦 Download Preparation</h3>
+          <p class="text-gray-300" data-download-progress-target="preparationStatus">
+            Preparing <%= @photos.length %> photos for download...
+          </p>
+        </div>
+
+        <!-- Download Button (right side, vertically centered, disabled initially) -->
+        <button data-download-progress-target="downloadButton"
+                data-action="click->download-progress#startDownload"
+                disabled
+                class="px-6 py-2 bg-gray-700 text-gray-500 font-bold text-sm rounded-lg cursor-not-allowed transition-all disabled:opacity-50 flex-shrink-0">
+          <span data-download-progress-target="downloadButtonText">Preparing...</span>
+        </button>
       </div>
 
       <!-- Photo Grid -->
@@ -111,15 +121,6 @@
         </p>
       </div>
 
-      <!-- Download Button (disabled initially) -->
-      <div class="flex justify-center">
-        <button data-download-progress-target="downloadButton"
-                data-action="click->download-progress#startDownload"
-                disabled
-                class="px-8 py-4 bg-gray-700 text-gray-500 font-bold text-lg rounded-lg cursor-not-allowed transition-all disabled:opacity-50">
-          <span data-download-progress-target="downloadButtonText">Preparing download...</span>
-        </button>
-      </div>
 
     </div>
   </main>
