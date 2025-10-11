@@ -1,0 +1,100 @@
+<%
+  # This partial runs the download process and streams updates via Turbo Stream
+  # It's rendered as a response to the initial Turbo Stream request from prepare_download
+%>
+
+<script>
+(async function() {
+  const photos = <%= photos.map { |p| { id: p.id, size: p.image.attached? ? p.image.blob.byte_size : 0 } }.to_json.html_safe %>;
+  const photoCount = photos.length;
+  let completed = 0;
+  let totalSize = 0;
+
+  // Simulate downloading each photo with progress updates
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i];
+
+    // Show progress bar for this photo
+    const progressBarContainer = document.querySelector(`[data-download-progress-target="progressBarContainer"][data-photo-id="${photo.id}"]`);
+    const progressBar = document.querySelector(`[data-download-progress-target="progressBar"][data-photo-id="${photo.id}"]`);
+
+    if (progressBarContainer) {
+      progressBarContainer.classList.remove('hidden');
+    }
+
+    // Simulate progress (in production, this would be real progress from server)
+    // For now, we'll just show the progress bar filling
+    if (progressBar) {
+      await new Promise(resolve => {
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 10;
+          progressBar.style.width = `${progress}%`;
+
+          if (progress >= 100) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, 100); // 10 steps of 100ms = 1 second per photo visual
+      });
+    }
+
+    // Mark photo as complete
+    const checkmark = document.querySelector(`[data-download-progress-target="checkmark"][data-photo-id="${photo.id}"]`);
+    if (checkmark) {
+      checkmark.classList.remove('hidden');
+      checkmark.classList.add('flex');
+    }
+
+    completed++;
+    totalSize += photo.size;
+
+    // Small delay to show progress visually
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  // All photos done, show ZIP progress
+  const zipSection = document.querySelector('[data-download-progress-target="zipSection"]');
+  if (zipSection) {
+    zipSection.classList.remove('hidden');
+  }
+
+  const statusText = document.querySelector('[data-download-progress-target="statusText"]');
+  if (statusText) {
+    statusText.textContent = 'Creating ZIP...';
+  }
+
+  // Simulate ZIP creation time (2 seconds)
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Hide ZIP section
+  if (zipSection) {
+    zipSection.classList.add('hidden');
+  }
+
+  // Enable download button
+  const downloadButton = document.querySelector('[data-download-progress-target="downloadButton"]');
+  const downloadButtonText = document.querySelector('[data-download-progress-target="downloadButtonText"]');
+  const statusIndicator = document.querySelector('[data-download-progress-target="statusIndicator"]');
+
+  if (downloadButton) {
+    downloadButton.disabled = false;
+    downloadButton.classList.remove('bg-gray-700', 'text-gray-500', 'cursor-not-allowed');
+    downloadButton.classList.add('bg-yellow-500', 'text-black', 'hover:bg-yellow-400', 'cursor-pointer');
+  }
+
+  if (downloadButtonText) {
+    const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+    downloadButtonText.textContent = `Download ${photoCount} photos (${sizeMB} MB)`;
+  }
+
+  if (statusText) {
+    statusText.textContent = 'Ready to download!';
+  }
+
+  if (statusIndicator) {
+    statusIndicator.classList.remove('bg-yellow-500', 'animate-pulse');
+    statusIndicator.classList.add('bg-green-500');
+  }
+})();
+</script>

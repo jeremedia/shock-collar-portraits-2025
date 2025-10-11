@@ -1,0 +1,169 @@
+<%
+  session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
+  day_name = @session.session_day.day_name if @session.session_day
+  page_title = "Download Session #{session_number}"
+%>
+
+<% content_for :title, page_title %>
+
+<div class="fixed inset-0 z-50 bg-black text-white flex flex-col overflow-hidden"
+     data-controller="download-progress"
+     data-download-progress-session-id-value="<%= @session.id %>"
+     data-download-progress-photo-count-value="<%= @photos.length %>"
+     data-download-progress-download-url-value="<%= download_all_gallery_path(@session.id) %>">
+
+  <!-- Fixed Header -->
+  <header class="flex-shrink-0 bg-black/90 backdrop-blur-sm border-b border-red-700/50">
+    <div class="px-6 py-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <%= link_to "← Back to Session", gallery_path(@session.id), class: "text-yellow-500 hover:text-yellow-400 font-medium" %>
+          <div class="text-gray-400">|</div>
+          <h2 class="text-lg font-bold text-yellow-500">
+            <%= day_name&.capitalize %><%= ", " if day_name %>Sitting <%= session_number %> - Download Preparation
+          </h2>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Status indicator -->
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse" data-download-progress-target="statusIndicator"></div>
+            <span class="text-sm text-gray-400" data-download-progress-target="statusText">Preparing...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 min-h-0 overflow-y-auto bg-black">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+
+      <!-- Instructions -->
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-8">
+        <h3 class="text-xl font-bold text-yellow-500 mb-2">📦 Download Preparation</h3>
+        <p class="text-gray-300">
+          Preparing <%= @photos.length %> photos for download. Please wait while we package your photos...
+        </p>
+      </div>
+
+      <!-- Photo Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+        <% @photos.each_with_index do |photo, index| %>
+          <div class="relative bg-gray-900 border border-gray-700 rounded-lg overflow-hidden"
+               data-download-progress-target="photoCard"
+               data-photo-id="<%= photo.id %>"
+               data-photo-index="<%= index %>"
+               id="photo-card-<%= photo.id %>">
+
+            <!-- Thumbnail -->
+            <div class="relative aspect-square">
+              <% if photo.image.attached? %>
+                <%= image_tag rails_blob_url(photo.image.variant(:thumb)),
+                              alt: "Photo #{index + 1}",
+                              class: "w-full h-full object-cover" %>
+              <% else %>
+                <div class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-600 text-xs">
+                  No preview
+                </div>
+              <% end %>
+
+              <!-- Checkmark Overlay (hidden initially) -->
+              <div class="absolute inset-0 bg-black/50 backdrop-blur-sm items-center justify-center hidden"
+                   data-download-progress-target="checkmark"
+                   data-photo-id="<%= photo.id %>">
+                <div class="text-6xl animate-bounce-in">✓</div>
+              </div>
+            </div>
+
+            <!-- Progress Bar (hidden initially) -->
+            <div class="h-2 bg-gray-800 hidden"
+                 data-download-progress-target="progressBarContainer"
+                 data-photo-id="<%= photo.id %>">
+              <div class="h-full bg-yellow-500 transition-all duration-300"
+                   style="width: 0%"
+                   data-download-progress-target="progressBar"
+                   data-photo-id="<%= photo.id %>">
+              </div>
+            </div>
+
+            <!-- Photo Number -->
+            <div class="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+              <%= index + 1 %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- ZIP Progress Section (hidden initially) -->
+      <div class="hidden bg-gray-900 border border-gray-700 rounded-lg p-6 mb-8"
+           data-download-progress-target="zipSection"
+           id="zip-progress-section">
+        <h3 class="text-xl font-bold text-yellow-500 mb-4">📦 Creating ZIP Archive...</h3>
+
+        <!-- Barber Shop Progress Bar -->
+        <div class="w-full h-8 bg-gray-800 rounded-lg overflow-hidden relative">
+          <div class="barber-shop-stripes absolute inset-0"></div>
+        </div>
+
+        <p class="text-gray-400 text-sm mt-2 text-center">
+          Packaging <%= @photos.length %> photos into a ZIP file...
+        </p>
+      </div>
+
+      <!-- Download Button (disabled initially) -->
+      <div class="flex justify-center">
+        <button data-download-progress-target="downloadButton"
+                data-action="click->download-progress#startDownload"
+                disabled
+                class="px-8 py-4 bg-gray-700 text-gray-500 font-bold text-lg rounded-lg cursor-not-allowed transition-all disabled:opacity-50">
+          <span data-download-progress-target="downloadButtonText">Preparing download...</span>
+        </button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<style>
+/* Barber shop stripes animation */
+@keyframes barber-shop {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 40px;
+  }
+}
+
+.barber-shop-stripes {
+  background: repeating-linear-gradient(
+    45deg,
+    #dc2626 0,
+    #dc2626 10px,
+    #fef3c7 10px,
+    #fef3c7 20px
+  );
+  background-size: 40px 40px;
+  animation: barber-shop 1s linear infinite;
+}
+
+/* Checkmark bounce-in animation */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+</style>

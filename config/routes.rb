@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       patch :reject_photo
       post :split_session
       patch :hide_session
+      get :prepare_download
       get :download_all
       get :download_photo
       get :download_test

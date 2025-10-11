@@ -338,6 +338,28 @@ class GalleryController < ApplicationController
     redirect_to gallery_path(@session.burst_id), alert: "Photo not found"
   end
 
+  def prepare_download
+    # Support both burst_id and session ID
+    if params[:id]&.start_with?("burst_")
+      @session = PhotoSession.find_by!(burst_id: params[:id])
+    else
+      @session = PhotoSession.find(params[:id])
+    end
+
+    # Eager load image attachments for thumbnails
+    @photos = @session.photos.accepted.includes(image_attachment: :blob).order(:position)
+
+    if @photos.empty?
+      redirect_to gallery_path(@session.burst_id), alert: "No photos found in this session"
+      return
+    end
+
+    # Calculate estimated file size (rough estimate from blob sizes)
+    @estimated_size = @photos.sum { |p| p.image.attached? ? (p.image.blob.byte_size || 0) : 0 }
+  rescue ActiveRecord::RecordNotFound
+    redirect_to root_path, alert: "Session not found"
+  end
+
   def download_all
     # Support both burst_id and session ID
     if params[:id]&.start_with?("burst_")
@@ -360,6 +382,18 @@ class GalleryController < ApplicationController
     require "fileutils"
     require "zip"
 
+    # Check if this is a Turbo Stream request (from prepare_download page)
+    if request.format.turbo_stream?
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.action(:append, "body", partial: "gallery/download_stream",
+                                                   locals: { session: @session, photos: photos })
+        end
+      end
+      return
+    end
+
+    # Regular download (direct link or after preparation)
     temp_zip = nil
 
     begin

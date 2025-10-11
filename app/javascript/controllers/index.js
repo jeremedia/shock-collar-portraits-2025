@@ -5,6 +5,7 @@ import AdminEditorController from "controllers/admin_editor_controller"
 import AdminTaggerController from "controllers/admin_tagger_controller"
 import CollapsibleController from "controllers/collapsible_controller"
 import DayAccordionController from "controllers/day_accordion_controller"
+import DownloadProgressController from "controllers/download_progress_controller"
 import FaceGridBackgroundController from "controllers/face_grid_background_controller"
 import FlashController from "controllers/flash_controller"
 import HelloController from "controllers/hello_controller"
@@ -26,6 +27,7 @@ application.register("admin-editor", AdminEditorController)
 application.register("admin-tagger", AdminTaggerController)
 application.register("collapsible", CollapsibleController)
 application.register("day-accordion", DayAccordionController)
+application.register("download-progress", DownloadProgressController)
 application.register("face-grid-background", FaceGridBackgroundController)
 application.register("flash", FlashController)
 application.register("hello", HelloController)
