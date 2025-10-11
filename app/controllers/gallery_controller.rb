@@ -504,8 +504,11 @@ class GalleryController < ApplicationController
       session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
       zip_filename = "oknotok_scp_2025_session_#{session_number}.zip"
 
-      # Send the pre-built zip file
-      send_file zip_path,
+      # Read and send the pre-built zip file
+      # Note: Using send_data instead of send_file because ActionController::Live can conflict with send_file
+      zip_data = File.binread(zip_path)
+
+      send_data zip_data,
                 filename: zip_filename,
                 type: "application/zip",
                 disposition: "attachment"
