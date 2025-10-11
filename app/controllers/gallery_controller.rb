@@ -346,7 +346,8 @@ class GalleryController < ApplicationController
       @session = PhotoSession.find(params[:id])
     end
 
-    photos = @session.photos.accepted.order(:position)
+    # Eager load image attachments to avoid N+1 queries
+    photos = @session.photos.accepted.includes(image_attachment: :blob).order(:position)
 
     if photos.empty?
       redirect_to gallery_path(@session.burst_id), alert: "No photos found in this session"
@@ -368,15 +369,41 @@ class GalleryController < ApplicationController
 
       Zip::OutputStream.open(temp_zip.path) do |zos|
         photos.each do |photo|
-          src = photo.original_path
-          unless src && File.exist?(src)
-            Rails.logger.warn "Photo file not found: #{src}"
+          # Use Active Storage attachment instead of original_path
+          # This works with both local disk and remote storage (MinIO/S3)
+          unless photo.image.attached?
+            Rails.logger.warn "Photo #{photo.id} has no attachment"
             next
           end
-          filename = "#{photo.position.to_s.rjust(3, '0')}_#{File.basename(src)}"
-          zos.put_next_entry(filename)
-          File.open(src, "rb") { |f| IO.copy_stream(f, zos) }
-          copied_count += 1
+
+          begin
+            # Get the blob and download it
+            blob = photo.image.blob
+
+            # Determine file extension from blob content_type or filename
+            extension = case blob.content_type
+                       when "image/jpeg"
+                         ".jpg"
+                       when "image/heic"
+                         ".heic"
+                       when "image/png"
+                         ".png"
+                       else
+                         File.extname(blob.filename.to_s)
+                       end
+
+            filename = "#{photo.position.to_s.rjust(3, '0')}_#{blob.filename}"
+
+            # Write blob data to ZIP
+            zos.put_next_entry(filename)
+            blob.download { |chunk| zos.write(chunk) }
+            copied_count += 1
+
+            Rails.logger.debug "Added photo #{photo.id} (#{blob.byte_size} bytes) to ZIP"
+          rescue => e
+            Rails.logger.error "Failed to add photo #{photo.id} to ZIP: #{e.message}"
+            next
+          end
         end
       end
 
@@ -392,7 +419,7 @@ class GalleryController < ApplicationController
         return
       end
 
-      Rails.logger.info "ZIP file created successfully, size: #{File.size(temp_zip.path)} bytes"
+      Rails.logger.info "ZIP file created successfully with #{copied_count} photos, size: #{File.size(temp_zip.path)} bytes"
 
       # Get session info for filename
       session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
