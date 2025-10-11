@@ -348,8 +348,16 @@ class GalleryController < ApplicationController
       return
     end
 
-    # Calculate estimated file size (rough estimate from blob sizes)
-    @estimated_size = @photos.sum { |p| p.image.attached? ? (p.image.blob.byte_size || 0) : 0 }
+    # Check if ZIP is already cached
+    if @session.session_zip.attached?
+      @zip_ready = true
+      @zip_size = @session.session_zip.blob.byte_size
+      @photo_count = @photos.count
+    else
+      @zip_ready = false
+      # Calculate estimated file size (rough estimate from blob sizes)
+      @estimated_size = @photos.sum { |p| p.image.attached? ? (p.image.blob.byte_size || 0) : 0 }
+    end
   rescue ActiveRecord::RecordNotFound
     redirect_to root_path, alert: "Session not found"
   end
@@ -360,6 +368,21 @@ class GalleryController < ApplicationController
       @session = PhotoSession.find_by!(burst_id: params[:id])
     else
       @session = PhotoSession.find(params[:id])
+    end
+
+    # If session ZIP is cached and this is a direct download (no stream or zip_id params),
+    # serve the cached version immediately
+    if @session.session_zip.attached? && !params[:stream] && !params[:zip_id]
+      Rails.logger.info "Serving cached session ZIP for #{@session.burst_id}"
+
+      session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
+      zip_filename = "oknotok_scp_2025_session_#{session_number}.zip"
+
+      send_data @session.session_zip.download,
+                filename: zip_filename,
+                type: "application/zip",
+                disposition: "attachment"
+      return
     end
 
     # Eager load image attachments to avoid N+1 queries
@@ -465,16 +488,27 @@ class GalleryController < ApplicationController
           photo_count: copied_count
         })}\n\n")
 
-        # Small delay to show the barber shop animation
-        sleep 1
+        # Attach the ZIP to the session for future downloads
+        Rails.logger.info "Attaching ZIP to session #{@session.burst_id}"
+        session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
+        zip_filename = "oknotok_scp_2025_session_#{session_number}.zip"
 
-        # Send completion update with ZIP ID
+        @session.session_zip.attach(
+          io: File.open(temp_zip_path),
+          filename: zip_filename,
+          content_type: "application/zip"
+        )
+
+        # Send completion update with ZIP ID (for backwards compatibility)
         response.stream.write("data: #{JSON.generate({
           type: "complete",
           photo_count: copied_count,
           size: File.size(temp_zip_path),
           zip_id: zip_id
         })}\n\n")
+
+        # Clean up temp file after attaching
+        File.delete(temp_zip_path) if File.exist?(temp_zip_path)
 
       rescue => e
         Rails.logger.error "Error in download_all stream: #{e.message}"
@@ -492,7 +526,23 @@ class GalleryController < ApplicationController
     end
 
     # Check if this is a ZIP download request (after preparation)
+    # Note: With caching, this path should rarely be used as ZIP is now attached to session
     if params[:zip_id].present?
+      # First check if session ZIP is attached (it should be after SSE completion)
+      if @session.session_zip.attached?
+        Rails.logger.info "Using attached ZIP instead of tmp file for zip_id #{params[:zip_id]}"
+
+        session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
+        zip_filename = "oknotok_scp_2025_session_#{session_number}.zip"
+
+        send_data @session.session_zip.download,
+                  filename: zip_filename,
+                  type: "application/zip",
+                  disposition: "attachment"
+        return
+      end
+
+      # Fallback: check for tmp file (shouldn't happen but handles edge cases)
       zip_path = Rails.root.join("tmp", "downloads", "#{params[:zip_id]}.zip")
 
       unless File.exist?(zip_path)
@@ -505,7 +555,6 @@ class GalleryController < ApplicationController
       zip_filename = "oknotok_scp_2025_session_#{session_number}.zip"
 
       # Read and send the pre-built zip file
-      # Note: Using send_data instead of send_file because ActionController::Live can conflict with send_file
       zip_data = File.binread(zip_path)
 
       send_data zip_data,

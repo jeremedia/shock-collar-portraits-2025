@@ -10,7 +10,8 @@
      data-controller="download-progress"
      data-download-progress-session-id-value="<%= @session.id %>"
      data-download-progress-photo-count-value="<%= @photos.length %>"
-     data-download-progress-download-url-value="<%= download_all_gallery_path(@session.id) %>">
+     data-download-progress-download-url-value="<%= download_all_gallery_path(@session.id) %>"
+     data-download-progress-zip-ready-value="<%= @zip_ready ? 'true' : 'false' %>">
 
   <!-- Fixed Header -->
   <header class="flex-shrink-0 bg-black/90 backdrop-blur-sm border-b border-red-700/50">
@@ -43,17 +44,27 @@
       <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-8 flex items-center justify-between gap-6">
         <div class="flex-1">
           <h3 class="text-xl font-bold text-yellow-500 mb-2">📦 Download Preparation</h3>
-          <p class="text-gray-300" data-download-progress-target="preparationStatus">
-            Preparing <%= @photos.length %> photos for download...
+          <p class="text-gray-300 <%= @zip_ready ? 'text-green-400 font-semibold' : '' %>" data-download-progress-target="preparationStatus">
+            <% if @zip_ready %>
+              Session package ready! (<%= @photo_count %> photos)
+            <% else %>
+              Preparing <%= @photos.length %> photos for download...
+            <% end %>
           </p>
         </div>
 
-        <!-- Download Button (right side, vertically centered, disabled initially) -->
+        <!-- Download Button (right side, vertically centered) -->
         <button data-download-progress-target="downloadButton"
                 data-action="click->download-progress#startDownload"
-                disabled
-                class="px-6 py-2 bg-gray-700 text-gray-500 font-bold text-sm rounded-lg cursor-not-allowed transition-all disabled:opacity-50 flex-shrink-0">
-          <span data-download-progress-target="downloadButtonText">Preparing...</span>
+                <%= 'disabled' unless @zip_ready %>
+                class="px-6 py-2 <%= @zip_ready ? 'bg-yellow-500 text-black hover:bg-yellow-400 cursor-pointer' : 'bg-gray-700 text-gray-500 cursor-not-allowed' %> font-bold text-sm rounded-lg transition-all disabled:opacity-50 flex-shrink-0">
+          <span data-download-progress-target="downloadButtonText">
+            <% if @zip_ready %>
+              Download <%= @photo_count %> photos (<%= number_to_human_size(@zip_size) %>)
+            <% else %>
+              Preparing...
+            <% end %>
+          </span>
         </button>
       </div>
 

@@ -9,6 +9,7 @@ class PhotoSession < ApplicationRecord
   belongs_to :hero_photo, class_name: "Photo", optional: true
   has_many :sittings, dependent: :destroy  # WARNING: Sittings are unreliable - incomplete data from failed burn attempt
   has_many :photos, dependent: :destroy
+  has_one_attached :session_zip  # Cached ZIP file of all session photos
 
   scope :with_sittings, -> { joins(:sittings).distinct }
   scope :without_sittings, -> { left_joins(:sittings).where(sittings: { id: nil }) }
@@ -71,6 +72,9 @@ class PhotoSession < ApplicationRecord
 
       # Now safe to destroy the empty session
       other_session.destroy!
+
+      # Clear cached ZIP since photos changed
+      clear_session_zip_cache!
 
       photos_moved
     end
@@ -158,6 +162,9 @@ class PhotoSession < ApplicationRecord
           sitting.update!(photo_session: new_session)
         end
       end
+
+      # Clear cached ZIP since photos changed in both sessions
+      clear_session_zip_cache!
 
       new_session
     end
@@ -288,5 +295,10 @@ class PhotoSession < ApplicationRecord
   def self.common_general_tags
     %w[couple group-shot with-pet holding-prop peace-sign middle-finger thumbs-up
        dancing posing candid]
+  end
+
+  # Clear cached session ZIP when photos change
+  def clear_session_zip_cache!
+    session_zip.purge if session_zip.attached?
   end
 end

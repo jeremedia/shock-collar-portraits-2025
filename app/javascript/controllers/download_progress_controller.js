@@ -17,7 +17,8 @@ export default class extends Controller {
   static values = {
     sessionId: String,
     photoCount: Number,
-    downloadUrl: String
+    downloadUrl: String,
+    zipReady: String
   }
 
   zipId = null
@@ -26,6 +27,13 @@ export default class extends Controller {
     console.log("Download progress controller connected")
     console.log("Session ID:", this.sessionIdValue)
     console.log("Photo count:", this.photoCountValue)
+    console.log("ZIP ready:", this.zipReadyValue)
+
+    // If ZIP is already ready, don't start the SSE process
+    if (this.zipReadyValue === "true") {
+      console.log("ZIP already cached, skipping preparation")
+      return
+    }
 
     // Auto-start the download process when page loads
     this.startDownloadProcess()
@@ -221,6 +229,13 @@ export default class extends Controller {
   // Handle the final download button click
   async startDownload() {
     try {
+      // If ZIP is already cached on session, download directly
+      if (this.zipReadyValue === "true") {
+        window.location.href = this.downloadUrlValue
+        return
+      }
+
+      // Otherwise, use the zip_id from SSE preparation
       if (!this.zipId) {
         this.showError("Download not ready. Please wait for preparation to complete.")
         return
