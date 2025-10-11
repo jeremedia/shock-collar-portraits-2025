@@ -24,6 +24,9 @@ minio:
   bucket: <%= Rails.application.credentials.dig(:minio, :bucket) %>
   force_path_style: true
   public: true
+  http_open_timeout: 10
+  http_read_timeout: 30
+  ssl_verify_peer: <%= Rails.env.production? %>
 
 
 # Remember not to checkin your GCS keyfile to a repository

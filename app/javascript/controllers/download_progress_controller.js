@@ -19,6 +19,8 @@ export default class extends Controller {
     downloadUrl: String
   }
 
+  zipId = null
+
   connect() {
     console.log("Download progress controller connected")
     console.log("Session ID:", this.sessionIdValue)
@@ -28,24 +30,52 @@ export default class extends Controller {
     this.startDownloadProcess()
   }
 
+  disconnect() {
+    // Clean up EventSource if it exists
+    if (this.eventSource) {
+      this.eventSource.close()
+    }
+  }
+
   async startDownloadProcess() {
     try {
-      // Start the download_all process which will stream updates
-      const response = await fetch(this.downloadUrlValue, {
-        method: 'GET',
-        headers: {
-          'Accept': 'text/vnd.turbo-stream.html',
-          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
-        }
-      })
+      // Connect to Server-Sent Events stream
+      const streamUrl = `${this.downloadUrlValue}?stream=true`
+      console.log("Connecting to SSE stream:", streamUrl)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      this.eventSource = new EventSource(streamUrl)
+
+      this.eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data)
+        console.log("SSE event:", data)
+
+        switch (data.type) {
+          case 'photo_start':
+            this.handlePhotoStart(data)
+            break
+          case 'photo_progress':
+            this.handlePhotoProgress(data)
+            break
+          case 'photo_complete':
+            this.handlePhotoComplete(data)
+            break
+          case 'zip_start':
+            this.handleZipStart(data)
+            break
+          case 'complete':
+            this.handleComplete(data)
+            break
+          case 'error':
+            this.handleError(data)
+            break
+        }
       }
 
-      // The response will be turbo stream updates that will be processed automatically
-      // We just need to handle the final download redirect
-      console.log("Download process started, watching for Turbo Stream updates...")
+      this.eventSource.onerror = (error) => {
+        console.error("SSE error:", error)
+        this.eventSource.close()
+        this.showError("Connection lost. Please refresh and try again.")
+      }
 
     } catch (error) {
       console.error("Failed to start download:", error)
@@ -53,39 +83,56 @@ export default class extends Controller {
     }
   }
 
-  // Called by Turbo Stream to show progress for a specific photo
-  updatePhotoProgress(event) {
-    const photoId = event.detail.photoId
-    const progress = event.detail.progress
+  handlePhotoStart(data) {
+    console.log(`Starting photo ${data.photo_id} (${data.index + 1}/${data.total})`)
 
-    console.log(`Photo ${photoId} progress: ${progress}%`)
-
-    // Find the progress bar for this photo
+    // Show progress bar for this photo
     const progressBarContainers = this.progressBarContainerTargets.filter(
-      el => el.dataset.photoId === photoId.toString()
-    )
-    const progressBars = this.progressBarTargets.filter(
-      el => el.dataset.photoId === photoId.toString()
+      el => el.dataset.photoId === data.photo_id.toString()
     )
 
     if (progressBarContainers.length > 0) {
       progressBarContainers[0].classList.remove('hidden')
     }
 
+    // Set progress to 0% initially
+    const progressBars = this.progressBarTargets.filter(
+      el => el.dataset.photoId === data.photo_id.toString()
+    )
+
     if (progressBars.length > 0) {
-      progressBars[0].style.width = `${progress}%`
+      progressBars[0].style.width = '0%'
     }
   }
 
-  // Called by Turbo Stream when a photo download completes
-  markPhotoComplete(event) {
-    const photoId = event.detail.photoId
+  handlePhotoProgress(data) {
+    console.log(`Photo ${data.photo_id} progress: ${data.progress}%`)
 
-    console.log(`Photo ${photoId} complete!`)
+    // Update progress bar
+    const progressBars = this.progressBarTargets.filter(
+      el => el.dataset.photoId === data.photo_id.toString()
+    )
 
-    // Find and show the checkmark for this photo
+    if (progressBars.length > 0) {
+      progressBars[0].style.width = `${data.progress}%`
+    }
+  }
+
+  handlePhotoComplete(data) {
+    console.log(`Completed photo ${data.photo_id} (${data.index + 1}/${data.total})`)
+
+    // Set progress to 100%
+    const progressBars = this.progressBarTargets.filter(
+      el => el.dataset.photoId === data.photo_id.toString()
+    )
+
+    if (progressBars.length > 0) {
+      progressBars[0].style.width = '100%'
+    }
+
+    // Show checkmark
     const checkmarks = this.checkmarkTargets.filter(
-      el => el.dataset.photoId === photoId.toString()
+      el => el.dataset.photoId === data.photo_id.toString()
     )
 
     if (checkmarks.length > 0) {
@@ -94,9 +141,8 @@ export default class extends Controller {
     }
   }
 
-  // Called by Turbo Stream when ZIP creation starts
-  showZipProgress() {
-    console.log("Showing ZIP progress...")
+  handleZipStart(data) {
+    console.log("Starting ZIP creation...")
 
     if (this.hasZipSectionTarget) {
       this.zipSectionTarget.classList.remove('hidden')
@@ -107,15 +153,13 @@ export default class extends Controller {
     }
   }
 
-  // Called by Turbo Stream when download is ready
-  enableDownload(event) {
-    const size = event.detail.size
-    const count = event.detail.count
+  handleComplete(data) {
+    console.log(`Download complete! ${data.photo_count} photos, ${data.size} bytes`)
 
-    console.log(`Download ready! ${count} photos, ${size} bytes`)
+    // Store the ZIP ID for download
+    this.zipId = data.zip_id
 
-    // Format size
-    const formattedSize = this.formatBytes(size)
+    const formattedSize = this.formatBytes(data.size)
 
     if (this.hasDownloadButtonTarget) {
       this.downloadButtonTarget.disabled = false
@@ -124,7 +168,7 @@ export default class extends Controller {
     }
 
     if (this.hasDownloadButtonTextTarget) {
-      this.downloadButtonTextTarget.textContent = `Download ${count} photos (${formattedSize})`
+      this.downloadButtonTextTarget.textContent = `Download ${data.photo_count} photos (${formattedSize})`
     }
 
     if (this.hasStatusTextTarget) {
@@ -140,13 +184,33 @@ export default class extends Controller {
     if (this.hasZipSectionTarget) {
       this.zipSectionTarget.classList.add('hidden')
     }
+
+    // Close EventSource
+    if (this.eventSource) {
+      this.eventSource.close()
+    }
   }
+
+  handleError(data) {
+    console.error("Server error:", data.message)
+    this.showError(data.message || "An error occurred during download preparation")
+
+    if (this.eventSource) {
+      this.eventSource.close()
+    }
+  }
+
 
   // Handle the final download button click
   async startDownload() {
     try {
-      // Download the file normally (without Turbo Stream)
-      window.location.href = this.downloadUrlValue
+      if (!this.zipId) {
+        this.showError("Download not ready. Please wait for preparation to complete.")
+        return
+      }
+
+      // Download the pre-built ZIP file using the zip_id
+      window.location.href = `${this.downloadUrlValue}?zip_id=${this.zipId}`
     } catch (error) {
       console.error("Failed to download:", error)
       this.showError("Failed to download file. Please try again.")

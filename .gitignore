@@ -80,14 +80,47 @@ card_download*/
 iphone_sessions/
 recovered_files/
 zero_byte_files*/
-*.jpg
-*.jpeg
+
+# Exclude photo data files but allow app assets
 *.heic
-*.png
 *.raw
 *.cr2
 *.nef
 *.arw
+
+# Exclude JPG/JPEG/PNG files except in app/assets
+/*.jpg
+/*.jpeg
+/*.png
+/sessions/**/*.jpg
+/sessions/**/*.jpeg
+/sessions/**/*.png
+/session_originals/**/*.jpg
+/session_originals/**/*.jpeg
+/session_originals/**/*.png
+/card_download*/**/*.jpg
+/card_download*/**/*.jpeg
+/card_download*/**/*.png
+/iphone_sessions/**/*.jpg
+/iphone_sessions/**/*.jpeg
+/iphone_sessions/**/*.png
+/recovered_files/**/*.jpg
+/recovered_files/**/*.jpeg
+/recovered_files/**/*.png
+/zero_byte_files*/**/*.jpg
+/zero_byte_files*/**/*.jpeg
+/zero_byte_files*/**/*.png
+/public/photos/**/*.jpg
+/public/photos/**/*.jpeg
+/public/photos/**/*.png
+
+# Allow images in app/assets/images
+!/app/assets/images/*.jpg
+!/app/assets/images/*.jpeg
+!/app/assets/images/*.png
+!/app/assets/images/**/*.jpg
+!/app/assets/images/**/*.jpeg
+!/app/assets/images/**/*.png
 
 # Temporary files
 *.log
@@ -136,3 +169,4 @@ deploy_key.pub
 vendor/javascript/chart.js.js
 vendor/javascript/chart.js--helpers.js
 db_backups/
+/tmp/downloads/*.zip

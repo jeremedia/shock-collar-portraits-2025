@@ -1,4 +1,6 @@
 class GalleryController < ApplicationController
+  include ActionController::Live
+
   helper VariantUrlHelper
   helper HeroHelper
   skip_before_action :verify_authenticity_token, only: [ :update_hero, :reject_photo, :save_email, :hide_session ]
@@ -382,18 +384,147 @@ class GalleryController < ApplicationController
     require "fileutils"
     require "zip"
 
-    # Check if this is a Turbo Stream request (from prepare_download page)
-    if request.format.turbo_stream?
-      respond_to do |format|
-        format.turbo_stream do
-          render turbo_stream: turbo_stream.action(:append, "body", partial: "gallery/download_stream",
-                                                   locals: { session: @session, photos: photos })
+    # Check if this is a Server-Sent Events (SSE) request for progress streaming
+    if params[:stream] == "true"
+      response.headers["Content-Type"] = "text/event-stream"
+      response.headers["Cache-Control"] = "no-cache"
+      response.headers["X-Accel-Buffering"] = "no"
+
+      temp_zip = nil
+      zip_id = SecureRandom.hex(16)
+
+      begin
+        # Use a persistent temp file that we can retrieve later
+        temp_zip_path = Rails.root.join("tmp", "downloads", "#{zip_id}.zip")
+        FileUtils.mkdir_p(File.dirname(temp_zip_path))
+
+        copied_count = 0
+        total_size = 0
+
+        Zip::OutputStream.open(temp_zip_path) do |zos|
+          photos.each_with_index do |photo, index|
+            unless photo.image.attached?
+              Rails.logger.warn "Photo #{photo.id} has no attachment"
+              next
+            end
+
+            begin
+              blob = photo.image.blob
+              blob_size = blob.byte_size
+
+              # Send progress update: starting this photo
+              response.stream.write("data: #{JSON.generate({
+                type: "photo_start",
+                photo_id: photo.id,
+                index: index,
+                total: photos.count,
+                size: blob_size
+              })}\n\n")
+
+              filename = "#{photo.position.to_s.rjust(3, '0')}_#{blob.filename}"
+
+              # Download and add to ZIP with progress tracking
+              zos.put_next_entry(filename)
+
+              bytes_downloaded = 0
+              blob.download do |chunk|
+                zos.write(chunk)
+                bytes_downloaded += chunk.bytesize
+
+                # Send progress update every 10% or so
+                progress = (bytes_downloaded.to_f / blob_size * 100).round
+                if progress % 20 == 0 || bytes_downloaded == blob_size
+                  response.stream.write("data: #{JSON.generate({
+                    type: "photo_progress",
+                    photo_id: photo.id,
+                    progress: progress,
+                    bytes: bytes_downloaded,
+                    total_bytes: blob_size
+                  })}\n\n")
+                end
+              end
+
+              copied_count += 1
+              total_size += blob_size
+
+              # Send progress update: photo complete
+              response.stream.write("data: #{JSON.generate({
+                type: "photo_complete",
+                photo_id: photo.id,
+                index: index,
+                total: photos.count
+              })}\n\n")
+
+            rescue => e
+              Rails.logger.error "Failed to add photo #{photo.id} to ZIP: #{e.message}"
+              response.stream.write("data: #{JSON.generate({
+                type: "photo_error",
+                photo_id: photo.id,
+                error: e.message
+              })}\n\n")
+              next
+            end
+          end
         end
+
+        # Send ZIP creation update
+        response.stream.write("data: #{JSON.generate({
+          type: "zip_start",
+          photo_count: copied_count
+        })}\n\n")
+
+        # Small delay to show the barber shop animation
+        sleep 1
+
+        # Send completion update with ZIP ID
+        response.stream.write("data: #{JSON.generate({
+          type: "complete",
+          photo_count: copied_count,
+          size: File.size(temp_zip_path),
+          zip_id: zip_id
+        })}\n\n")
+
+      rescue => e
+        Rails.logger.error "Error in download_all stream: #{e.message}"
+        response.stream.write("data: #{JSON.generate({
+          type: "error",
+          message: e.message
+        })}\n\n")
+        # Clean up on error
+        File.delete(temp_zip_path) if temp_zip_path && File.exist?(temp_zip_path)
+      ensure
+        response.stream.close
       end
+
       return
     end
 
-    # Regular download (direct link or after preparation)
+    # Check if this is a ZIP download request (after preparation)
+    if params[:zip_id].present?
+      zip_path = Rails.root.join("tmp", "downloads", "#{params[:zip_id]}.zip")
+
+      unless File.exist?(zip_path)
+        redirect_to gallery_path(@session.burst_id), alert: "Download expired. Please try again."
+        return
+      end
+
+      # Get session info for filename
+      session_number = @session.burst_id.match(/burst_(\d+)/)&.[](1) || @session.burst_id
+      zip_filename = "oknotok_scp_2025_session_#{session_number}.zip"
+
+      # Send the pre-built zip file
+      send_file zip_path,
+                filename: zip_filename,
+                type: "application/zip",
+                disposition: "attachment"
+
+      # Clean up after sending
+      File.delete(zip_path) rescue nil
+
+      return
+    end
+
+    # Regular download (after preparation or direct link)
     temp_zip = nil
 
     begin
